@@ -1,12 +1,24 @@
 'use client'
 
-import { createClient } from '@/utils/supabase/client'
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import Link from 'next/link'
+import { Zap, Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createClient()
+  const [mode, setMode] = useState<'google' | 'email'>('google')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function handleLogin() {
+  async function handleGoogleLogin() {
+    setLoading(true)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -15,33 +27,59 @@ export default function LoginPage() {
     })
   }
 
+  async function handleEmailLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (!email.trim()) { setError('Email is required'); return }
+    if (!password) { setError('Password is required'); return }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed')
+        setLoading(false)
+        return
+      }
+
+      if (data.session) {
+        await supabase.auth.setSession(data.session)
+      }
+
+      if (!data.setup_completed) {
+        window.location.href = '/setup'
+      } else {
+        window.location.href = '/dashboard'
+      }
+    } catch {
+      setError('Connection error. Please try again.')
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl text-center">
-        <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-6">
-          <svg
-            className="w-10 h-10 text-black"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="3"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            ></path>
-          </svg>
+        <div className="mx-auto w-16 h-16 bg-[#CCFF00] rounded-2xl flex items-center justify-center mb-6">
+          <Zap className="w-10 h-10 text-black" />
         </div>
         <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Echo</h1>
         <p className="text-zinc-400 mb-8 font-medium">
           The definitive operating system for clothing rentals. Sign in to your store.
         </p>
 
+        {/* Google Login */}
         <Button
-          onClick={handleLogin}
-          className="w-full text-black font-semibold h-12 text-lg rounded-xl flex items-center justify-center gap-3 transition-transform hover:scale-[1.02]"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full text-black font-semibold h-12 text-lg rounded-xl flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] disabled:opacity-50"
         >
           <svg className="w-5 h-5 bg-white rounded-full p-0.5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -51,6 +89,78 @@ export default function LoginPage() {
           </svg>
           Continue with Google
         </Button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-6">
+          <div className="h-px flex-1 bg-zinc-800" />
+          <span className="text-zinc-500 text-xs font-semibold uppercase tracking-widest">or</span>
+          <div className="h-px flex-1 bg-zinc-800" />
+        </div>
+
+        {/* Email Login */}
+        {mode === 'google' ? (
+          <Button
+            variant="outline"
+            onClick={() => setMode('email')}
+            className="w-full h-11 border-zinc-700 bg-zinc-800/50 text-zinc-300 rounded-xl font-medium hover:bg-zinc-800 hover:text-white"
+          >
+            Sign in with Email & Password
+          </Button>
+        ) : (
+          <form onSubmit={handleEmailLogin} className="space-y-3 text-left">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-zinc-400 text-xs font-medium">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-zinc-400 text-xs font-medium">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-400 text-sm font-medium">
+                {error}
+              </div>
+            )}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 text-black font-semibold rounded-xl transition-transform hover:scale-[1.02] disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
+            </Button>
+          </form>
+        )}
+
+        {/* Signup Link */}
+        <p className="text-zinc-500 text-sm mt-6">
+          Don&apos;t have a store?{' '}
+          <Link href="/signup" className="text-[#CCFF00] font-semibold hover:underline">
+            Create one free
+          </Link>
+        </p>
       </div>
     </div>
   )
