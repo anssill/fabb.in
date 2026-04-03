@@ -1,1008 +1,1912 @@
-# Echo — Product Requirements Document
-**Version 1.0 | Confidential**
-**Owner: Ansil | Status: Final — Ready for Development**
+# ECHO — FULL CLAUDE CODE BUILD PROMPT FOR ANTIGRAVITY
+# Paste this entire prompt as your system prompt in Antigravity before starting any work.
+# Version: 2.0 | Owner: Ansil | Status: Production-Ready
 
 ---
 
-## Table of Contents
-1. Executive Summary
-2. Product Overview
-3. Brand Identity
-4. Tech Stack & Architecture
-5. User Roles & Permissions
-6. Section 1: Dashboard
-7. Section 2: Bookings
-8. Section 3: Inventory
-9. Section 4: Customers
-10. Section 5: Washing Queue
-11. Section 6: Payments & Finance
-12. Section 7: Staff & HR
-13. Section 8: Analytics
-14. Section 9: Calendar
-15. Section 10: Settings
-16. Section 11: Expenses
-17. Section 12: Franchise
-18. Section 13: Security & Audit
-19. Section 14: Notifications & WhatsApp
-20. Section 15: Landing Page & Plans
-21. Section 16: Data Sync & Offline
-22. Section 17: Database & Infrastructure
-23. Section 18: Sprint Roadmap
+## IDENTITY & MISSION
+
+You are the lead developer building **Echo** — a production-grade, multi-tenant, India-first clothing rental management SaaS. This is not a prototype. This is a million-dollar commercial product. Every decision you make must reflect production quality: security, performance, scalability, and clean code.
+
+You are working inside **Antigravity** with access to the Echo codebase at `c:\echo`. Before writing any code, always check what already exists. Never rebuild what is already built.
 
 ---
 
-## 1. Executive Summary
+## ABSOLUTE RULES (NEVER VIOLATE THESE)
 
-Echo is a multi-tenant, India-first, internal clothing rental management SaaS. It is built for clothing rental businesses to manage bookings, inventory, customers, washing, payments, staff, and franchise operations from a single platform. Echo is designed to scale to a million-dollar SaaS, serving multiple clothing rental businesses across India under a franchise model. Each approved business gets its own subdomain (businessname.echo.app) with full data isolation via Supabase RLS.
-
-**Vision:** The definitive operating system for clothing rental businesses in India.
-**Market:** India-first (INR/GST/Asia/Kolkata timezone)
-**Delivery Model:** Self-pickup only
-**Payment:** Staff-managed (Cash, UPI, Bank Transfer, Store Credit with manager approval)
-
----
-
-## 2. Product Overview
-
-### Core Modules
-- Dashboard (role-based, real-time)
-- Bookings (6-step creation, pickup, return flows)
-- Inventory (variants, QR labels, washing tracking)
-- Customers (tiers, risk, loyalty, blacklist)
-- Washing Queue (stage tracking, SLA, vendor)
-- Payments & Finance (reconciliation, P&L)
-- Staff & HR (attendance, performance, documents)
-- Analytics (revenue, bookings, utilisation, P&L)
-- Calendar (Gantt availability view)
-- Settings (branch, print, roles, integrations)
-- Expenses (daily logs, Notion sync)
-- Franchise (multi-branch, royalty, transfers)
-- Security & Audit (full audit trail, sessions)
-- Notifications (in-app bell, WhatsApp manual)
-- Landing Page (marketing + Super Admin onboarding)
-
-### Item Categories
-**Women's:** Lehenga, Saree, Salwar Kameez, Gown, Anarkali
-**Men's:** Kurtha, Suit, Sherwani, Jodhpuri, Bandhgala
-**Accessories:** Shawl, Dupatta, Jewellery, Belt, Mojri, Loafer
+1. **TypeScript strict mode everywhere** — zero `any` types, zero `as unknown`
+2. **RLS on every Supabase table** — no exceptions, ever
+3. **Never bypass auth** — check `staff.status === 'approved'` on every protected route
+4. **Audit log every write** — every INSERT/UPDATE/DELETE logs to `audit_log` table
+5. **Skeleton loading only** — never use spinners or loading text
+6. **No AI features** — zero LLM/AI integration in the product itself
+7. **No coupon system** — discount only via price override
+8. **No auto WhatsApp** — all WhatsApp sends are manual by staff
+9. **Mobile-first** — design for phone screens first, desktop second
+10. **India-first** — INR (₹), IST timezone (Asia/Kolkata), Indian phone numbers
 
 ---
 
-## 3. Brand Identity
+## TECH STACK (LOCKED — DO NOT CHANGE ANYTHING)
 
-- **Product Name:** Echo
-- **Primary Color:** #CCFF00 (Electric Yellow-Green / Chartreuse)
-- **Logo Mark:** Black abstract pinwheel/burst icon
-- **Logo Background:** Brand primary (#CCFF00)
-- **Text:** #000000 on primary, #FFFFFF on dark backgrounds
-- **Font:** Inter or Geist (system-level)
-- **Tone:** Bold, modern, fast, India-first
+```
+Frontend:
+  - Next.js 14+ (App Router + Server Components)
+  - TailwindCSS
+  - shadcn/ui + custom design system
+  - Zustand (global state)
+  - TanStack Query v5 (server state)
+  - TypeScript strict mode
 
----
+Backend:
+  - Supabase PostgreSQL (primary database)
+  - Supabase Auth (Google OAuth ONLY)
+  - Supabase Storage (photos / documents / receipts buckets)
+  - Supabase Realtime (ALL real-time data)
+  - Supabase Edge Functions (Notion sync, WhatsApp, cron jobs)
+  - Row Level Security (RLS) on EVERY table
 
-## 4. Tech Stack & Architecture
+Deployment:
+  - Vercel (frontend — Next.js native)
+  - Supabase Cloud (ap-south-1 Mumbai region)
+  - Subdomains: businessname.echo.app via Vercel wildcard routing
 
-### Frontend
-- **Framework:** Next.js 14+ (App Router + Server Components)
-- **Styling:** TailwindCSS + shadcn/ui + custom design system
-- **State:** Zustand (global) + TanStack Query (server state)
-- **Language:** TypeScript (strict mode)
-- **Testing:** Playwright (E2E) + Vitest (unit)
+Integrations:
+  - Notion API (via Edge Function webhooks)
+  - WhatsApp Business API Meta (manual sends only)
+  - Google OAuth (via Supabase Auth)
+  - QR codes: api.qrserver.com (free, no key)
+  - Barcodes: barcodeapi.org (free, no key)
 
-### Backend
-- **Database:** Supabase PostgreSQL
-- **Auth:** Supabase Auth — Google OAuth only (approval-based, Google login does NOT bypass manager approval)
-- **Storage:** Supabase Storage — separate buckets per file type (photos / documents / receipts)
-- **Realtime:** Supabase Realtime subscriptions (ALL data)
-- **Edge Functions:** Notion sync + WhatsApp Business API + cron jobs (overdue status, royalty calc)
-- **RLS:** Row-Level Security per branch + row-level isolation per business
-
-### Integrations
-- **Notion API** — bookings, P&L, inventory, washing history auto-synced via Edge Function webhooks
-- **WhatsApp Business API (Meta)** — manual messages sent by staff (no auto-send)
-- **Google OAuth** — authentication only
-
-### Deployment
-- **Frontend:** Vercel (Next.js native)
-- **Backend:** Supabase Cloud (ap-south-1 Mumbai region)
-- **Subdomains:** businessname.echo.app via Vercel subdomain routing
-- **CI/CD:** GitHub → Vercel auto-deploy
-
-### Printer
-- **Model:** Vyapar VYPRTP3001 (3-inch/68mm thermal, Bluetooth + USB)
-- **Configuration:** Fully customisable in Settings → Print Settings
+Testing:
+  - Playwright (E2E)
+  - Vitest (unit)
+```
 
 ---
 
-## 5. User Roles & Permissions
+## BRAND & DESIGN SYSTEM
 
-| Role | Access Level |
-|------|-------------|
-| Super Admin | Full system access — all branches, all businesses, franchise panel, billing, impersonation |
-| Store Manager | Full branch access — all features, staff management, analytics, approvals |
-| Floor Staff | Bookings, inventory, customers, washing, payments — no analytics, no staff management |
-| Auditor | Read-only across all sections |
-| Custom Roles | Created by Super Admin only with configurable permission sets |
+```
+Primary color: #CCFF00 (electric yellow-green / chartreuse)
+Black: #000000
+White: #FFFFFF
+Background: #FFFFFF (light mode)
+Error: #ef4444
+Warning: #f59e0b
+Success: #22c55e
+Info: #3b82f6
 
-**Key access rules:**
-- All staff + manager + Super Admin can create bookings and edit inventory items
-- Analytics visible to manager + Super Admin only
-- Audit trail visible to Super Admin only
-- Price change log visible to Super Admin only
-- Custom roles created by Super Admin only
-- Session expires after configurable hours of inactivity
-- PIN required for logout confirmation + manual lock
+Use #CCFF00 for:
+  - Active sidebar items
+  - Primary buttons
+  - Status badges (confirmed bookings)
+  - Progress bars
+  - Active tab indicators
+  - Highlights and focus rings
 
----
+Font: Inter or Geist (system)
+Border radius: rounded-xl for cards, rounded-lg for buttons
+Shadow: shadow-sm for cards
 
-## 6. Section 1: Dashboard
-
-### Layout
-- **Default view:** Today's summary (pickups + returns + washing)
-- **Navigation:** Left sidebar (collapsible to icons on desktop)
-- **Theme:** Light default (staff can switch)
-- **Top bar:** Store logo + staff name + branch (left) | Bell + PIN lock + date/time live clock (right)
-- **Mobile tabs:** Dashboard / Bookings / Inventory / Customers / More
-- **Loading:** Skeleton screens
-- **Offline:** Yellow banner at top
-
-### Stat Cards (Top Row)
-1. Revenue live counter (real-time)
-2. Today's pickups count
-3. Today's returns count
-4. Overdue count (red badge)
-5. Staff on duty now
-
-### Quick Actions
-- + New Booking → redirects to booking Step 1
-- Mark Return → opens booking search first
-- Open Scanner → asks: scan item QR or booking QR
-- Add Inventory Item
-- View Today's Schedule
-
-### Widget Grid
-- **Revenue goal widget:** ₹ amount remaining + progress bar
-- **Performance scorecard:** Today vs yesterday / week vs week / monthly target / staff score vs target
-- **Weekly revenue chart:** Last 7 days bar chart
-- **Washing summary:** Count + urgent count + next ready item
-- **Mini-widgets:** Top 3 items rented this week | Today's revenue vs yesterday | Washing queue urgent count
-- **Upcoming week strip:** Mini calendar (next 7 days booking density)
-- **Outstanding customer balance:** ₹ total owed across active bookings
-- **Inventory availability:** Count of items available now
-- **Deposit liability:** Card showing total deposits held
-- **Today's expenses:** Manager only — today's total (salaries, commission, overtime)
-- **NPS trend:** Mini card with score
-- **GST collected:** Super Admin only
-- **Projected revenue:** Based on remaining pickups
-
-### Alert Centre
-- Overdue list (colour-coded by days late)
-- Washing URGENT items
-- Pending approvals (manager + above only)
-- Low stock alerts
-- Blacklisted customer attempted booking
-
-### Schedule Widget
-- Grouped by status (pickups first, then returns)
-- Colour = staff-chosen scheme
-- Tap entry → booking detail slide-over (from right)
-- Swipe left on mobile → quick actions (return/print/WhatsApp)
-- Overdue highlighted in red + sorted to top
-
-### Franchise Summary (Super Admin)
-- All branches revenue side-by-side (live)
-- Most overdue branch
-- Pending approvals per branch
-- Total franchise revenue this month vs last
-- Lowest NPS branch
-
-### Role-Based Views
-- **Floor Staff:** Schedule + new booking only
-- **Manager:** Full + revenue + approvals + staff attendance
-- **Super Admin:** All + franchise summary
-- **Auditor:** Read-only
-
-### Real-Time Updates (Supabase Realtime)
-- Revenue counter (instant)
-- Washing queue count (instant)
-- Overdue at midnight (cron job)
-- New booking appears in schedule (instant)
-- Booking cancelled (instant)
-
-### Other Dashboard Features
-- Global search bar (search anything)
-- Handover notes banner (visible to all staff)
-- Opening checklist (staff completes before dashboard unlocks, flagged if incomplete after 30 min)
-- Announcements banner (above all widgets)
-- Manual PIN lock icon in top bar
-- Sound + vibration on new notifications
-- Pending tasks badge on sidebar + widget
-- Pull-to-refresh (all sections reload)
-- Critical alerts: full-screen popup (blocks all actions)
-- Undo toast for destructive actions (5 seconds)
-- Data auto-refresh every 30 seconds
-- Sidebar: manager sets widget/menu order for all staff
-- Dashboard footer: Store name + branch + version + support link
-- Widget customisation: manager sets layout, staff cannot change
-- Sidebar badge: overdue pill + pending approvals dot (manager+)
-- Revenue goal: inside main widget grid
-- Notification inbox: actions depend on type (approve/reject inline)
+Design rules:
+  - Skeleton loading screens (NEVER spinners)
+  - Slide-overs from RIGHT for detail panels (desktop)
+  - Bottom sheets for mobile (full screen)
+  - Swipe left on list items = quick actions (mobile)
+  - Undo toast for destructive actions (5 second window)
+  - Sound + vibration for new notifications (mobile)
+  - Offline yellow banner at top when disconnected
+  - Pull-to-refresh on all list pages
+```
 
 ---
 
-## 7. Section 2: Bookings
+## PROJECT STRUCTURE
 
-### 6-Step Booking Creation Flow
-
-**Step 1 — Customer**
-- Search by phone number
-- If not found → create customer inline (name + phone mandatory) without leaving booking
-- Customer card shows: name + phone
-
-**Step 2 — Items**
-- Search by name/SKU or scan item QR code
-- Item card shows: photo + name + SKU + sizes with exact stock count (e.g. M: 3 available)
-- Size buttons (S/M/L/XL) with quantity +/- per size
-- Maximum quantity per size = actual stock available (cannot exceed)
-- Greyed out with "In Washing" label if not ready
-- Category + colour + occasion filter available
-- Colour shown as text label only (no swatch)
-- Tag search as separate filter only
-- No AI outfit/size suggestions
-- Selected items: summary bar at bottom (name + sizes + quantities + subtotal)
-- Tap X on item card to remove
-- Single price for all sizes per item
-- Deposit shown in Step 5 only
-- Accessories searched and added separately (no auto-pairing suggestions)
-- Running total updates as items added
-- Item stock locked immediately when added to cart
-- Draft auto-saved at every step transition
-
-**Step 3 — Dates**
-- Calendar date picker for pickup date + return date
-- No return time slot (just return date)
-- Advance booking window configurable (e.g. max 6 months ahead)
-- Buffer day enforced between bookings (washing time)
-
-**Step 4 — Pricing**
-- Auto-calculated: daily rate × number of days
-- Same-day pickup + return = 1-day rate
-- Staff can apply price override: replaces original price (original NOT shown), mandatory reason required
-- No coupon system (discount via price override only)
-- Price override shown in pricing breakdown as replaced price
-
-**Step 5 — Payment**
-- Staff selects payment method + enters advance amount + deposit amount separately
-- Split payment: 2 methods in 1 transaction (e.g. Cash + UPI)
-- Store credit: manager approval required
-- Minimum advance % enforced (configurable)
-- Deposit shown separately with "Refundable" label
-- No GST invoice (thermal receipt only)
-
-**Step 6 — Confirm**
-- Thermal receipt preview on screen before printing
-- Full summary shown
-- Confirm → QR label auto-sent to printer
-
-### Booking Creation Rules
-- **Minimum to confirm:** Customer + items + dates + minimum advance payment
-- **Progress indicator:** Numbered circles at top (1–6)
-- **Back navigation:** Yes — any step without data loss
-- **Draft expiry:** No expiry — staff can complete anytime
-- **Draft location:** Listed in bookings section with "Draft" status badge
-- **Booking ID format:** Branch prefix + date + sequence (e.g. TRT-260326-001)
-- **Notion sync:** Notion page auto-created for every new booking
-
-### Booking List
-- **Layout:** List with filters + search + status tabs
-- **Status filters:** All / Pending / Confirmed / Active / Returned / Overdue / Cancelled + date range + staff + payment status
-- **Card shows:** Booking ID + customer name + items + dates + status badge + payment badge
-- **Status badges:** green=confirmed / blue=active / red=overdue / grey=returned
-- **Overdue:** Sorted to top + red highlight
-- **Sort:** Newest first / oldest / pickup date / return date / amount
-- **Search:** ID / customer name / phone / item name / SKU
-- **Pagination:** Load 20 + infinite scroll
-- **Summary stats:** Total count + total revenue this period at top
-- **Sidebar badge:** Total active bookings count
-- **Today's bookings:** On dashboard schedule only (not in booking list)
-- **Bulk export:** By date range as Excel
-
-### Booking Detail Page
-**Layout:** Tabbed — Details / Payments / Items / Notes / Timeline
-
-**Details tab:**
-- Booking ID as large text + QR code at top (tap to copy)
-- Customer name + phone + tier (tier badge not shown in booking — only in customer profile)
-- Items + size + quantity + condition grade
-- Payment breakdown
-- Pickup date + return date
-- Staff attribution: created by + created at + last edited by + last edited at
-- CCTV timestamp + camera zone field (e.g. Counter A) — auto-logged at pickup confirmation
-- Booking source (walk-in / WhatsApp / referral / phone call)
-- No WhatsApp log on booking detail (only in notifications section)
-- Occasion field
-
-**Payments tab:**
-- Advance / balance / deposit / penalty as separate rows with method + staff + timestamp
-
-**Items tab:**
-- Item name + size + quantity only (no photos on items tab)
-
-**Notes tab:**
-- Any staff can add notes, only manager can view
-- Manager can pin 1 note
-
-**Timeline tab:**
-- Every status change + payment + edit + staff name + timestamp
-
-**Action buttons on booking detail:**
-- Print Receipt
-- Mark Pickup (if not yet picked up)
-- Edit Booking
-- Cancel Booking
-- Add Payment
-- Print Label (customer name + items + return date)
-- Mark as Returned (any staff, on active bookings)
-- Share (sends booking ID + pickup date only)
-
-### Pickup Flow
-**Initiation:** Scan booking QR or search by ID/phone → opens booking + staff must manually tap "Start Pickup"
-
-**Steps:**
-1. Aadhaar front + back photo upload (pickup time only — NOT at booking creation)
-2. Item condition check + before-photo (optional — staff can skip)
-3. Collect balance + deposit
-4. Customer signs physical receipt (no digital signature)
-5. Accessories checklist (tick each accessory at pickup)
-6. Print thermal receipt + staff sends WhatsApp manually
-
-**On completion:** Booking status auto-changes to Active
-
-### Return Flow
-**Initiation:** Scan item QR or search by ID/phone
-
-**Steps:**
-1. Item condition per item: Excellent / Good / Damaged / Missing
-2. Deposit decision: Release All / Deduct Amount (staff enters amount + reason)
-3. Accessories checklist (tick items returned)
-4. Manually add to washing queue (auto-add is NOT on by default)
-5. Print return receipt + staff sends WhatsApp manually
-
-**Partial return:** Yes — mark some items, booking stays active for rest
-**On all items returned:** Status auto-changes to Returned
-
-### Status Automations
-- **Overdue:** Auto-applied by midnight cron job (Supabase Edge Function)
-- **Active:** Auto when all pickup steps completed + confirmed
-- **Returned:** Auto when all items marked returned
-
-### Other Booking Features
-- **Item swap:** Allowed + triggers new availability check
-- **Customer change:** Any staff can change
-- **Extend return date:** Any staff can extend anytime (logged: old date + new date + staff)
-- **Cancel booking:** Any staff with mandatory reason
-- **Edit confirmed booking:** Any staff can edit any field anytime
-- **Receipt reprint:** Anytime from booking detail (logged in audit)
-- **Payment void:** Any staff can void with reason
-- **Additional payment:** Any staff can add anytime from booking detail
-- **Duplicate detection:** Warning shown but staff can proceed
-- **Blacklisted customer:** Level 1=warning, Level 2=manager override, Level 3=hard block
-- **High-risk customer:** Booking auto-holds for manager approval
-- **Multiple active bookings per customer:** Allowed (no restriction)
-- **Pre-booking hold:** Items held X days without payment (configurable)
-- **Inter-branch transfer:** Super Admin approval required
-- **Accessories checklist items:** Dupatta / Mojri / Jewellery / Belt — tracked at pickup AND return
-- **Waitlist:** 4-hour confirmation window on availability
-- **Occasion field:** Wedding / Reception / Mehendi / Festival / Party / Other
-- **Damage report:** Auto-generated PDF (before/after photos + condition notes + charges)
-- **Rental terms:** Printed on receipt bottom
-- **Bundle/package booking:** Manager creates preset outfit packages in settings
-- **Booking source:** Walk-in / WhatsApp / Referral / Phone call
-- **Overdue penalty:** Staff manually enters amount at return
-- **Penalty waiver:** Any staff can waive with reason (logged in audit)
-- **Deposit waiver:** Any staff can waive with reason (logged in audit)
-- **No-show:** Manager gets alert + manually cancels
-- **CCTV timestamp + camera zone:** Auto-logged at pickup
-- **Staff can initiate booking from inventory item page:** Yes (Book This Item → availability calendar → booking flow)
+```
+c:\echo\
+├── app\
+│   ├── (auth)\
+│   │   ├── login\page.tsx
+│   │   ├── pending-approval\page.tsx
+│   │   └── layout.tsx
+│   ├── (dashboard)\
+│   │   ├── layout.tsx              ← Sidebar + TopBar wrapper
+│   │   ├── page.tsx                ← Dashboard
+│   │   ├── bookings\
+│   │   │   ├── page.tsx            ← Booking list
+│   │   │   ├── new\page.tsx        ← 6-step booking wizard
+│   │   │   └── [id]\
+│   │   │       ├── page.tsx        ← Booking detail
+│   │   │       ├── pickup\page.tsx ← Pickup flow
+│   │   │       └── return\page.tsx ← Return flow
+│   │   ├── inventory\
+│   │   │   ├── page.tsx
+│   │   │   └── [id]\page.tsx
+│   │   ├── customers\
+│   │   │   ├── page.tsx
+│   │   │   └── [id]\page.tsx
+│   │   ├── washing\page.tsx
+│   │   ├── payments\page.tsx
+│   │   ├── staff\
+│   │   │   ├── page.tsx
+│   │   │   └── [id]\page.tsx
+│   │   ├── analytics\page.tsx
+│   │   ├── calendar\page.tsx
+│   │   ├── expenses\page.tsx
+│   │   ├── franchise\page.tsx
+│   │   ├── settings\
+│   │   │   ├── page.tsx
+│   │   │   ├── branch\page.tsx
+│   │   │   ├── print\page.tsx
+│   │   │   ├── roles\page.tsx
+│   │   │   └── integrations\page.tsx
+│   │   └── notifications\page.tsx
+│   ├── (landing)\
+│   │   └── page.tsx                ← Public marketing page
+│   └── api\webhooks\route.ts
+├── components\
+│   ├── ui\                         ← shadcn/ui components
+│   ├── shared\
+│   │   ├── Sidebar.tsx
+│   │   ├── TopBar.tsx
+│   │   ├── SlideOver.tsx
+│   │   ├── BottomSheet.tsx
+│   │   ├── SkeletonCard.tsx
+│   │   ├── NotificationInbox.tsx
+│   │   ├── PinLock.tsx
+│   │   └── PrintReceipt.tsx
+│   ├── dashboard\
+│   ├── bookings\
+│   ├── inventory\
+│   ├── customers\
+│   ├── washing\
+│   ├── payments\
+│   ├── analytics\
+│   └── staff\
+├── lib\
+│   ├── supabase\
+│   │   ├── client.ts               ← Browser client
+│   │   ├── server.ts               ← Server client
+│   │   └── middleware.ts
+│   ├── stores\                     ← Zustand stores
+│   │   ├── authStore.ts
+│   │   ├── bookingStore.ts
+│   │   └── uiStore.ts
+│   ├── queries\                    ← TanStack Query hooks
+│   │   ├── bookings.ts
+│   │   ├── inventory.ts
+│   │   ├── customers.ts
+│   │   ├── payments.ts
+│   │   ├── analytics.ts
+│   │   └── staff.ts
+│   └── utils\
+│       ├── formatters.ts           ← INR formatter, date formatters
+│       ├── validators.ts           ← Indian phone validation
+│       └── constants.ts
+├── supabase\
+│   ├── migrations\                 ← All SQL migrations
+│   ├── functions\
+│   │   ├── notion-sync\
+│   │   ├── whatsapp-send\
+│   │   ├── cron-overdue\
+│   │   └── cron-royalty\
+│   └── seed.sql
+└── public\
+```
 
 ---
 
-## 8. Section 3: Inventory
+## COMPLETE DATABASE SCHEMA
 
-### Inventory List
-- **Default view:** Staff chooses (saved per account/staff)
-- **Filters:** Category/sub-category / Status / Condition grade / Colour-Occasion tag / Price range / Date added
-- **Item card:** Name + SKU + cover photo + status badge + condition grade + price + rental count + last scanned
-- **Sort options:** Name / SKU / date added / price / utilisation rate / condition (saved per staff)
-- **Summary stats at top:** Total items / Available / In booking / In washing
-- **Search:** Name / SKU / barcode / storage location (main search bar searches all these)
-- **Tag search:** Available as separate filter only (not in main search bar)
-- **Tap card:** Opens full item detail page
-- **Bulk operations:** Status change / QR label print / price update (%) — select multiple → apply to all
+Run ALL of these migrations in order. Every table has RLS enabled.
 
-### Item Detail Page
-**Tabs:** Details / Photos / Bookings / Washing / Pricing / Analytics / Timeline
+### Migration 001 — Core Tables
 
-**Details tab:**
-- Name, SKU (manually assigned), category, sub-category
-- Condition grade (A/B/C) — updated only if damage found at return
-- Grade C items can still be booked (staff decides)
-- Storage location: Rack + Shelf + Bay (e.g. Rack A / Shelf 3)
-- Internal notes (staff only, never printed)
-- Item age tracker: days since purchase date
-- Colour (text label only)
-- Occasion tags / fabric tags / embellishment tags / custom tags
-- Pairing database: admin defines complementary pairs (Lehenga → Mojri + Dupatta)
-- Collections: items can belong to multiple (Bridal Exclusive, Eid Collection, Premium)
-- Completeness score: % (photos + desc + tags + pricing)
-- Depreciation: % per year per category, book value auto-calculated
-- Last scanned: timestamp shown on item card + detail
-- Next booking date: shown on item detail
+```sql
+-- BUSINESSES (multi-tenant root)
+create table businesses (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  subdomain text unique not null,
+  plan text not null default 'basic',
+  status text not null default 'active',
+  trial_ends_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table businesses enable row level security;
 
-**Photos tab:**
-- Multiple photos — cover photo selection (tap to set as cover)
-- Display order control
-- Photo watermark: optional toggle per branch
-- Upload: camera or gallery — staff manually crops before saving
-- No photo quality check
-- No AI photo tagging
+-- BRANCHES
+create table branches (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid references businesses(id) on delete cascade not null,
+  name text not null,
+  prefix text not null default 'BRN', -- 3-letter prefix for booking IDs
+  address text,
+  gst_number text,
+  contact text,
+  lat numeric, -- for GPS clock-in
+  lng numeric,
+  logo_url text,
+  opening_hours jsonb default '{}',
+  settings jsonb default '{}',
+  created_at timestamptz default now()
+);
+alter table branches enable row level security;
 
-**Bookings tab:**
-- Active bookings: customer name + dates
-- Full booking history
+-- STAFF
+create table staff (
+  id uuid primary key references auth.users(id),
+  business_id uuid references businesses(id) on delete cascade,
+  branch_id uuid references branches(id),
+  email text not null,
+  name text,
+  phone text,
+  role text not null default 'floor_staff',
+  -- roles: super_admin / manager / floor_staff / auditor / custom
+  status text not null default 'pending',
+  -- statuses: pending / approved / suspended
+  custom_permissions jsonb default '{}',
+  google_id text,
+  last_login timestamptz,
+  created_at timestamptz default now()
+);
+alter table staff enable row level security;
+create policy "staff_own_row" on staff for select using (id = auth.uid());
+create policy "manager_see_branch" on staff for select using (
+  branch_id in (
+    select branch_id from staff s2 where s2.id = auth.uid()
+    and s2.role in ('manager','super_admin') and s2.status = 'approved'
+  )
+);
+create policy "super_admin_all" on staff using (
+  exists (select 1 from staff s2 where s2.id = auth.uid() and s2.role = 'super_admin')
+);
 
-**Washing tab:**
-- All wash entries: date + staff + cost
-- Washing history auto-pushed to Notion monthly
+-- NOTIFICATIONS
+create table notifications (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid references businesses(id),
+  branch_id uuid references branches(id),
+  target_staff_id uuid references staff(id),
+  type text not null,
+  title text not null,
+  body text,
+  action_url text,
+  action_type text,
+  action_data jsonb,
+  is_read boolean default false,
+  created_at timestamptz default now()
+);
+alter table notifications enable row level security;
+create policy "own_notifications" on notifications for select using (
+  target_staff_id = auth.uid() or (
+    target_staff_id is null and branch_id in (
+      select branch_id from staff where id = auth.uid() and status = 'approved'
+    )
+  )
+);
 
-**Pricing tab:**
-- Daily rate (price = daily rate × number of days, no tiers)
-- All variants share same price as parent item
-- Deposit %: configurable per item + per variant
-- Price change history: logged, visible to Super Admin only
+-- AUDIT LOG (append-only, super_admin read only)
+create table audit_log (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid references businesses(id),
+  branch_id uuid references branches(id),
+  staff_id uuid references staff(id),
+  action text not null,
+  table_name text,
+  record_id uuid,
+  old_value jsonb,
+  new_value jsonb,
+  ip_address text,
+  timestamp timestamptz default now()
+);
+alter table audit_log enable row level security;
+create policy "super_admin_read" on audit_log for select using (
+  exists (select 1 from staff where id = auth.uid() and role = 'super_admin')
+);
+create policy "all_insert" on audit_log for insert with check (staff_id = auth.uid());
+```
 
-**Analytics tab:**
-- Item revenue + monthly trend chart
-- Rental count (total times rented)
-- No ROI calculation
+### Migration 002 — Customers
 
-**Timeline tab:**
-- Full history: bookings + washing + repairs + status changes + price edits + scans
+```sql
+create table customers (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id) on delete cascade not null,
+  business_id uuid references businesses(id),
+  name text not null,
+  phone text not null,
+  email text,
+  aadhaar_front_url text,
+  aadhaar_back_url text,
+  tier text default 'bronze',
+  risk_score integer default 0,
+  risk_level text default 'low',
+  blacklist_level integer default 0,
+  blacklist_reason text,
+  blacklisted_by uuid references staff(id),
+  blacklisted_at timestamptz,
+  vip_flag boolean default false,
+  vip_set_by uuid references staff(id),
+  loyalty_points integer default 0,
+  debt_amount numeric(10,2) default 0,
+  family_group_id uuid,
+  total_spend numeric(10,2) default 0,
+  total_bookings integer default 0,
+  avg_booking_value numeric(10,2) default 0,
+  created_by uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table customers enable row level security;
+create policy "branch_staff_customers" on customers using (
+  branch_id in (
+    select branch_id from staff where id = auth.uid() and status = 'approved'
+  )
+);
 
-### Inventory Management
-- **New item flow:** Quick add (name + category + price) → "Complete this item" checklist → QR label auto-sent to printer (no prompt)
-- **Variant system:** Parent item → child variants (size/colour), each has own QR + availability
-- **Batch variant creation:** Fill parent once → all variants auto-generated
-- **Duplicate item:** Creates new variant under same parent (warning if same name+category)
-- **Pause item:** No new bookings allowed, existing unaffected, shown greyed out in list
-- **No off-season status**
-- **Repair tracking:** Status changes to "In Repair" + item unavailable during repair
-  - Fields: vendor name + cost + status + return date
-- **Missing item flag:** Any staff can flag → manager alerted
-- **Bulk import:** CSV with downloadable template + row-by-row validation
-- **Write-off:** Super Admin approval required
-- **Retirement:** Status → Retired, stays in history forever
-- **Item deletion:** Super Admin can permanently delete
-- **Inter-branch transfer:** Super Admin initiates + both managers approve
-- **'Book This Item' button:** Shows availability calendar first → then starts booking flow
-- **Availability calendar:** Gantt bars on item detail page
-- **Item profitability:** Revenue – purchase cost – washing – repair = net profit
-- **Low stock alerts:** Below configurable threshold
-- **Misplaced item:** Staff manually marks as misplaced
-- **Customer wishlist:** Staff adds items, notify customer when available
-- **QR label content:** QR code + barcode on same label + storage location + SKU + care icons
-- **Bulk QR print:** Select multiple → print all in one job
-- **No max wash count tracking (removed)**
-- **No seasonal pricing**
-- **No supplier tracking per item**
-- **No AI description generator**
-- **No insurance tracking**
-- **No photo quality check**
-- **Notion sync:** Every new item + every status change pushed to Notion inventory DB
-- **Inventory settings:** Editable by manager per branch (SKU format, buffer days, low stock threshold, depreciation)
+create table customer_groups (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  name text not null,
+  type text not null
+);
+alter table customer_groups enable row level security;
 
-### Booking Step 2 — Item Selection Detail
-- Item card shows: photo + name + SKU + sizes + exact stock count per size (e.g. M: 3 available)
-- All sizes shown; unavailable sizes greyed out with exact count
-- Size buttons (S/M/L/XL) — quantity +/- per size
-- Max quantity = actual available stock (hard limit, cannot exceed)
-- Selected items: summary bar at bottom of screen
-- Tap X on item card to remove from cart
-- Single price for all sizes
+create table customer_group_memberships (
+  customer_id uuid references customers(id) on delete cascade,
+  group_id uuid references customer_groups(id) on delete cascade,
+  primary key (customer_id, group_id)
+);
+alter table customer_group_memberships enable row level security;
+
+create table loyalty_ledger (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id),
+  branch_id uuid references branches(id),
+  type text not null,
+  points integer not null,
+  reason text not null,
+  booking_id uuid,
+  staff_id uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table loyalty_ledger enable row level security;
+
+create table family_groups (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  name text,
+  pool_points boolean default false
+);
+alter table family_groups enable row level security;
+
+create table customer_notes (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  content text not null,
+  created_by uuid references staff(id),
+  created_at timestamptz default now(),
+  is_pinned boolean default false
+);
+alter table customer_notes enable row level security;
+create policy "staff_insert_note" on customer_notes for insert with check (true);
+create policy "manager_read_notes" on customer_notes for select using (
+  exists (select 1 from staff where id = auth.uid() and role in ('manager','super_admin'))
+);
+
+create table nps_responses (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid,
+  customer_id uuid references customers(id),
+  branch_id uuid references branches(id),
+  score integer not null check (score >= 0 and score <= 10),
+  collected_by uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table nps_responses enable row level security;
+```
+
+### Migration 003 — Inventory
+
+```sql
+create table items (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id) on delete cascade not null,
+  name text not null,
+  sku text,
+  category text not null,
+  sub_category text,
+  condition_grade text default 'A',
+  status text default 'available',
+  price numeric(10,2) not null,
+  deposit_pct integer default 20,
+  storage_rack text,
+  storage_shelf text,
+  storage_bay text,
+  purchase_date date,
+  purchase_cost numeric(10,2),
+  colour_label text,
+  internal_notes text,
+  cover_photo_url text,
+  completeness_score integer default 0,
+  description text,
+  qr_code text,
+  barcode text,
+  last_scanned_at timestamptz,
+  last_scanned_by uuid references staff(id),
+  notion_page_id text,
+  created_by uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table items enable row level security;
+create policy "branch_staff_items" on items using (
+  branch_id in (select branch_id from staff where id = auth.uid() and status = 'approved')
+);
+
+create table item_variants (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references items(id) on delete cascade,
+  size text,
+  colour text,
+  sku text unique,
+  qr_code text,
+  barcode text,
+  status text default 'available',
+  available_count integer default 1,
+  reserved_count integer default 0,
+  created_at timestamptz default now()
+);
+alter table item_variants enable row level security;
+create policy "item_variants_rls" on item_variants using (
+  item_id in (select id from items where branch_id in (
+    select branch_id from staff where id = auth.uid() and status = 'approved'
+  ))
+);
+
+create table item_photos (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references items(id) on delete cascade,
+  url text not null,
+  is_cover boolean default false,
+  display_order integer default 0,
+  uploaded_by uuid references staff(id),
+  uploaded_at timestamptz default now()
+);
+alter table item_photos enable row level security;
+
+create table item_tags (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references items(id) on delete cascade,
+  tag_type text not null,
+  tag_value text not null
+);
+alter table item_tags enable row level security;
+
+create table item_collections (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  name text not null
+);
+alter table item_collections enable row level security;
+
+create table item_collection_memberships (
+  item_id uuid references items(id) on delete cascade,
+  collection_id uuid references item_collections(id) on delete cascade,
+  primary key (item_id, collection_id)
+);
+alter table item_collection_memberships enable row level security;
+
+create table item_pairings (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  primary_item_id uuid references items(id),
+  paired_item_id uuid references items(id),
+  created_by uuid references staff(id)
+);
+alter table item_pairings enable row level security;
+
+create table item_repairs (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid references items(id) on delete cascade,
+  vendor_name text,
+  cost numeric(10,2),
+  status text default 'sent',
+  sent_date date,
+  expected_return date,
+  actual_return date,
+  notes text,
+  created_by uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table item_repairs enable row level security;
+
+create table wishlist (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id),
+  item_id uuid references items(id),
+  branch_id uuid references branches(id),
+  notified boolean default false,
+  created_at timestamptz default now()
+);
+alter table wishlist enable row level security;
+```
+
+### Migration 004 — Bookings
+
+```sql
+create table bookings (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id) on delete cascade not null,
+  customer_id uuid references customers(id),
+  status text not null default 'draft',
+  booking_source text,
+  occasion text,
+  pickup_date date not null,
+  return_date date not null,
+  total_amount numeric(10,2) not null default 0,
+  advance_paid numeric(10,2) default 0,
+  deposit_amount numeric(10,2) default 0,
+  balance_due numeric(10,2) default 0,
+  price_override_amount numeric(10,2),
+  price_override_reason text,
+  cctv_timestamp timestamptz,
+  cctv_zone text,
+  aadhaar_collected boolean default false,
+  aadhaar_front_url text,
+  aadhaar_back_url text,
+  created_by uuid references staff(id),
+  created_at timestamptz default now(),
+  last_edited_by uuid references staff(id),
+  last_edited_at timestamptz,
+  notion_page_id text,
+  booking_id_display text unique
+);
+alter table bookings enable row level security;
+create policy "branch_staff_bookings" on bookings using (
+  branch_id in (select branch_id from staff where id = auth.uid() and status = 'approved')
+);
+
+create table booking_items (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid references bookings(id) on delete cascade,
+  item_id uuid references items(id),
+  variant_id uuid references item_variants(id),
+  size text,
+  quantity integer not null default 1,
+  daily_rate numeric(10,2) not null,
+  subtotal numeric(10,2) not null,
+  condition_before text,
+  condition_after text,
+  before_photo_url text,
+  added_at timestamptz default now()
+);
+alter table booking_items enable row level security;
+create policy "booking_items_rls" on booking_items using (
+  booking_id in (select id from bookings where branch_id in (
+    select branch_id from staff where id = auth.uid() and status = 'approved'
+  ))
+);
+
+create table booking_accessories (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid references bookings(id) on delete cascade,
+  accessory_type text not null,
+  given_at_pickup boolean default false,
+  returned_at_return boolean default false
+);
+alter table booking_accessories enable row level security;
+
+create table booking_payments (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid references bookings(id) on delete cascade,
+  type text not null,
+  amount numeric(10,2) not null,
+  method text not null,
+  staff_id uuid references staff(id),
+  timestamp timestamptz default now(),
+  void_reason text,
+  is_voided boolean default false
+);
+alter table booking_payments enable row level security;
+create policy "booking_payments_rls" on booking_payments using (
+  booking_id in (select id from bookings where branch_id in (
+    select branch_id from staff where id = auth.uid() and status = 'approved'
+  ))
+);
+
+create table booking_notes (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid references bookings(id) on delete cascade,
+  content text not null,
+  created_by uuid references staff(id),
+  created_at timestamptz default now(),
+  is_pinned boolean default false
+);
+alter table booking_notes enable row level security;
+create policy "staff_insert_booking_note" on booking_notes for insert with check (true);
+create policy "manager_read_booking_notes" on booking_notes for select using (
+  exists (select 1 from staff where id = auth.uid() and role in ('manager','super_admin'))
+);
+
+create table booking_timeline (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid references bookings(id) on delete cascade,
+  event_type text not null,
+  description text,
+  old_value jsonb,
+  new_value jsonb,
+  staff_id uuid references staff(id),
+  staff_name text,
+  timestamp timestamptz default now()
+);
+alter table booking_timeline enable row level security;
+
+create table booking_drafts (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  staff_id uuid references staff(id),
+  current_step integer default 1,
+  draft_data jsonb default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+alter table booking_drafts enable row level security;
+create policy "own_drafts" on booking_drafts using (staff_id = auth.uid());
+```
+
+### Migration 005 — Washing & Operations
+
+```sql
+create table washing_queue (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id) on delete cascade,
+  item_id uuid references items(id),
+  variant_id uuid references item_variants(id),
+  booking_id uuid references bookings(id),
+  stage text not null default 'queue',
+  priority text not null default 'normal',
+  assigned_to uuid references staff(id),
+  cost numeric(10,2),
+  notes text,
+  is_external boolean default false,
+  external_vendor text,
+  vendor_handover_date date,
+  vendor_expected_return date,
+  sla_deadline timestamptz,
+  entered_at timestamptz default now(),
+  ready_at timestamptz
+);
+alter table washing_queue enable row level security;
+create policy "branch_staff_washing" on washing_queue using (
+  branch_id in (select branch_id from staff where id = auth.uid() and status = 'approved')
+);
+
+create table expenses (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id) on delete cascade,
+  category text not null,
+  amount numeric(10,2) not null,
+  description text,
+  receipt_url text,
+  staff_id uuid references staff(id),
+  date date not null default current_date,
+  created_at timestamptz default now()
+);
+alter table expenses enable row level security;
+create policy "branch_staff_expenses" on expenses using (
+  branch_id in (select branch_id from staff where id = auth.uid() and status = 'approved')
+);
+```
+
+### Migration 006 — Staff & Attendance
+
+```sql
+create table staff_attendance (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references staff(id),
+  branch_id uuid references branches(id),
+  clock_in timestamptz,
+  clock_out timestamptz,
+  clock_in_lat numeric,
+  clock_in_lng numeric,
+  date date not null,
+  is_valid_location boolean default false
+);
+alter table staff_attendance enable row level security;
+create policy "own_or_manager_attendance" on staff_attendance using (
+  staff_id = auth.uid() or
+  exists (select 1 from staff where id = auth.uid() and role in ('manager','super_admin'))
+);
+
+create table staff_performance_targets (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references staff(id),
+  branch_id uuid references branches(id),
+  month date not null,
+  revenue_target numeric(10,2),
+  booking_count_target integer,
+  created_by uuid references staff(id)
+);
+alter table staff_performance_targets enable row level security;
+
+create table opening_checklists (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  staff_id uuid references staff(id),
+  date date not null,
+  completed_at timestamptz,
+  items jsonb default '[]'
+);
+alter table opening_checklists enable row level security;
+
+create table cash_reconciliation (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  date date not null,
+  expected_amount numeric(10,2),
+  actual_amount numeric(10,2),
+  difference numeric(10,2),
+  notes text,
+  approved_by uuid references staff(id),
+  created_at timestamptz default now()
+);
+alter table cash_reconciliation enable row level security;
+
+create table login_requests (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references staff(id),
+  status text default 'pending',
+  requested_at timestamptz default now(),
+  reviewed_by uuid references staff(id),
+  reviewed_at timestamptz,
+  rejection_reason text
+);
+alter table login_requests enable row level security;
+
+create table whatsapp_log (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references branches(id),
+  customer_id uuid references customers(id),
+  booking_id uuid references bookings(id),
+  staff_id uuid references staff(id),
+  template_type text,
+  message_body text,
+  sent_at timestamptz default now(),
+  status text default 'sent'
+);
+alter table whatsapp_log enable row level security;
+create policy "branch_staff_whatsapp" on whatsapp_log using (
+  branch_id in (select branch_id from staff where id = auth.uid() and status = 'approved')
+);
+```
 
 ---
 
-## 9. Section 4: Customers
+## AUTH SYSTEM — BUILD EXACTLY AS SPECIFIED
 
-### Customer List
-- **Default layout:** List view with search + filters + status tabs
-- **Filters:** Tier / Risk score / Blacklist status / Last booking date / Total spend range / Gender/age group
-- **Card shows:** Customer name + phone + tier badge + risk badge + last booking date
-- **Tap card:** Opens full customer detail page
-- **Search:** Name / phone / Aadhaar last 4 / email
-- **Duplicate detection:** Alert if phone already exists
+### Google OAuth Flow (Critical — Do Not Deviate):
+```typescript
+// lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr'
+export const createClient = () =>
+  createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
-### Customer Detail Page
-**Tabs:** Overview / Bookings / Measurements / Payments / Documents / Notes / Communication
+// app/(auth)/login/page.tsx
+async function signInWithGoogle() {
+  const supabase = createClient()
+  await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${location.origin}/auth/callback` }
+  })
+}
+```
 
-**Overview tab:**
-- Total bookings / total spend / avg booking value / loyalty tier
-- Contact info
-- Risk badge: Low (green) / Medium (yellow) / High (red)
-- VIP flag (manual toggle by manager — unlocks perks like deposit skip)
-- Family group membership + loyalty point pooling info
+### Auth Callback Route:
+```typescript
+// app/auth/callback/route.ts
+// 1. Exchange code for session
+// 2. Check if staff record exists for this auth.uid()
+// 3a. If NO staff record:
+//     - Create staff record with status = 'pending'
+//     - Create login_request record
+//     - Send notification to all managers in business
+//     - Redirect to /pending-approval
+// 3b. If staff record exists + status = 'approved':
+//     - Update last_login timestamp
+//     - Redirect to /dashboard
+// 3c. If staff record exists + status = 'pending':
+//     - Redirect to /pending-approval
+// 3d. If staff record exists + status = 'suspended':
+//     - Redirect to /login?error=suspended
+```
 
-**Bookings tab:**
-- Full booking history + outfit history as visual grid (item photos + occasion + date)
+### Middleware:
+```typescript
+// middleware.ts
+export async function middleware(request: NextRequest) {
+  const supabase = createServerClient(...)
+  const { data: { user } } = await supabase.auth.getUser()
 
-**Measurements tab:** (Tab exists but no measurement tracking — empty)
+  // Not authenticated → login
+  if (!user) {
+    if (!request.nextUrl.pathname.startsWith('/login')) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return NextResponse.next()
+  }
 
-**Payments tab:**
-- All transactions + store credit + debt tracking
+  // Get staff record
+  const { data: staffRecord } = await supabase
+    .from('staff').select('role, status, branch_id, business_id')
+    .eq('id', user.id).single()
 
-**Documents tab:**
-- Aadhaar front + back photos (viewable by all staff, stored permanently, no auto-deletion)
+  // Not approved → pending approval
+  if (!staffRecord || staffRecord.status !== 'approved') {
+    return NextResponse.redirect(new URL('/pending-approval', request.url))
+  }
 
-**Notes tab:**
-- Any staff can add; only manager can view
-- One pinned note at top (visible to all staff)
+  // Role-based route protection
+  const path = request.nextUrl.pathname
+  if (path.startsWith('/analytics') && !['manager','super_admin'].includes(staffRecord.role)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+  if (path.startsWith('/franchise') && staffRecord.role !== 'super_admin') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
 
-**Communication tab:**
-- WhatsApp log: only in Notifications section (not here)
-- Activity timeline: all interactions (bookings/payments/notes) chronological
+  return NextResponse.next()
+}
+```
 
-### Customer Features
-- **Minimum fields:** Name + phone (both mandatory)
-- **Tier upgrade:** Auto based on cumulative spend thresholds (configurable)
-- **Risk score:** Auto-calculated (late returns + damage + cancellations + disputes) → Low/Medium/High badge
-- **Blacklist levels:**
-  - Level 1 = warning tag (branch-specific)
-  - Level 2 = manager override required (branch-specific)
-  - Level 3 = hard block (franchise-wide)
-  - Manager only can blacklist
-- **No measurement tracking**
-- **No occasion calendar**
-- **No store credit feature**
-- **Debt tracking:** Outstanding balance owed by customer (unpaid penalties/charges)
-- **Loyalty points ledger:** Every earn + redeem + expire entry with date + reason
-- **No referral code system**
-- **Customer data export:** Individual + bulk both available
-- **Aadhaar access:** All staff can view, stored permanently
-- **Pinned note:** One pinned note at top (visible to all staff)
-- **WhatsApp log:** Only in Notifications section
-- **VIP flag:** Manual toggle by manager (unlocks perks like deposit skip)
-- **Customer groups:** VIP / Bridal / Regular / Lapsed / Custom (for WhatsApp campaign targeting)
-- **Outfit history:** Visual grid (item photos + occasion + date) in Bookings tab
-- **Activity timeline:** All interactions chronological
-- **Duplicate merge:** Super Admin approval required
-- **Customer deletion:** Super Admin can permanently delete
-- **Customer stats:** Total bookings / total spend / avg booking value / loyalty tier on overview
-- **Family group:** Link members + pool loyalty points (optional)
-- **No birthday automation**
-- **No re-engagement automation**
-- **Customer settings:** Editable by manager per branch
-
----
-
-## 10. Section 5: Washing Queue
-
-### Queue Layout
-- **Default view:** List view with stage tabs: Queue / Washing / Drying / Ironing / QC / Ready
-- **Priority order:** Urgent → High → Normal → Low (auto-sorted)
-- **URGENT auto-flag:** Item has booking starting within 24 hours
-- **SLA countdown:** Shown only for URGENT items
-- **Real-time:** Via Supabase Realtime subscription
-
-### Item Card Shows
-Name + SKU + category + next booking date + priority badge + stage
-
-### Queue Entry
-- Auto-added on return scan + manual add by staff (default = manual; auto-add toggle exists in Settings)
-
-### Stage Updates
-- Both: QR scan or manual select from list
-- Bulk stage update: select multiple → move all to next stage at once
-- Remove from queue: Manager only
-
-### Staff Assignment
-- Staff self-assigns by tapping "Take this item"
-
-### Washing Features
-- **Batching:** Optional — staff decides
-- **SLA:** Configurable per category (hours to completion)
-- **SLA breach:** Manager in-app alert + staff reminder
-- **External vendor:** Log items sent + handover date + expected return + vendor cost
-- **Overdue vendor alert:** Manager alert when not returned by expected date
-- **Washing cost:** Entered manually per item → linked to expenses section automatically
-- **Washing notes:** Per item (e.g. "stain on sleeve, pre-treat")
-- **Item auto-returns:** To Available status once marked Ready
-- **Washing history:** All wash entries (date + staff + cost) — auto-pushed to Notion monthly
-- **No care instructions popup**
-- **No washing photos**
-- **No quality rating**
-- **No machine tracking**
-- **No chemicals tracking**
-- **No washing queue export**
-- **No washing analytics on washing page** (analytics only in main analytics section)
-- **Max wash count:** REMOVED — not tracked
-- **Washing settings:** Super Admin only (SLA per category, auto-add toggle, cost formula)
-
-### Search & Filters
-- **Search:** Item name / SKU / booking ID / customer name
-- **Filter:** Category / priority / stage / assigned staff
-- **Sort:** Priority / next booking date / time entered queue
+### PIN Lock (Zustand):
+```typescript
+// lib/stores/authStore.ts
+interface AuthStore {
+  staff: Staff | null
+  isLocked: boolean
+  pin: string | null
+  setStaff: (staff: Staff | null) => void
+  lock: () => void
+  unlock: (enteredPin: string) => boolean
+  setPin: (pin: string) => void
+}
+// PIN lock = visual overlay only (session stays active)
+// Logout requires PIN confirmation before supabase.auth.signOut()
+```
 
 ---
 
-## 11. Section 6: Payments & Finance
+## DASHBOARD MODULE
 
-### Access
-- Dedicated Payments section in sidebar only
-- Accessible by all staff (any staff can view + add expenses)
+### Realtime Subscriptions (Set Up on Mount):
+```typescript
+useEffect(() => {
+  const bookingChannel = supabase.channel('bookings-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings',
+      filter: `branch_id=eq.${branchId}` },
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['bookings', 'today'] })
+        queryClient.invalidateQueries({ queryKey: ['stats'] })
+      })
+    .subscribe()
 
-### Payment Methods
-- Cash
-- UPI (GPay/PhonePe/Paytm)
-- Bank Transfer / NEFT / IMPS
-- Store Credit (manager approval required)
-- (No Cheque)
+  const washingChannel = supabase.channel('washing-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'washing_queue',
+      filter: `branch_id=eq.${branchId}` },
+      () => queryClient.invalidateQueries({ queryKey: ['washing', 'summary'] }))
+    .subscribe()
 
-### Payments Home Page
-- Daily revenue summary: total collected today by method
-- Outstanding balance: shown on dashboard + payments section
-- Deposit liability: shown on dashboard + payments section
-- Transaction list: all transactions with booking ID + type + amount + method + staff + timestamp
+  const paymentChannel = supabase.channel('payments-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'booking_payments' },
+      () => queryClient.invalidateQueries({ queryKey: ['revenue', 'live'] }))
+    .subscribe()
 
-### Reconciliation
-- Daily cash reconciliation: staff count vs system records + manager approves discrepancy
+  const notifChannel = supabase.channel('notifications-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications',
+      filter: `target_staff_id=eq.${staffId}` },
+      (payload) => {
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] })
+        // Play notification sound
+        new Audio('/sounds/notification.mp3').play().catch(() => {})
+        // Vibrate on mobile
+        if ('vibrate' in navigator) navigator.vibrate(200)
+      })
+    .subscribe()
 
-### Reports
-- Payment method breakdown: analytics section only
-- Overdue penalty: inside each booking only
-- P&L: analytics section only
-- Royalty: Super Admin only (auto-calculated monthly as configurable % of branch revenue)
-- No commission tracking
+  return () => {
+    supabase.removeChannel(bookingChannel)
+    supabase.removeChannel(washingChannel)
+    supabase.removeChannel(paymentChannel)
+    supabase.removeChannel(notifChannel)
+  }
+}, [branchId, staffId])
+```
 
-### Receipts & Export
-- Payment receipt: thermal print + PDF option
-- Payment export: PDF only
-- Payment void log: all voided transactions with reason + staff + timestamp
-- Advance payment tracking: shows advance paid vs balance remaining per booking
+### Sidebar:
+```typescript
+// Role-based menu items:
+const menuItems = [
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', roles: ['all'] },
+  { label: 'Bookings', icon: Calendar, href: '/bookings', roles: ['all'], badge: overdueCount },
+  { label: 'Inventory', icon: Package, href: '/inventory', roles: ['all'] },
+  { label: 'Customers', icon: Users, href: '/customers', roles: ['all'] },
+  { label: 'Washing', icon: Droplets, href: '/washing', roles: ['all'] },
+  { label: 'Payments', icon: CreditCard, href: '/payments', roles: ['all'] },
+  { label: 'Staff', icon: UserCheck, href: '/staff', roles: ['manager','super_admin'] },
+  { label: 'Analytics', icon: BarChart, href: '/analytics', roles: ['manager','super_admin'] },
+  { label: 'Calendar', icon: CalendarDays, href: '/calendar', roles: ['all'] },
+  { label: 'Expenses', icon: Receipt, href: '/expenses', roles: ['all'] },
+  { label: 'Franchise', icon: Building2, href: '/franchise', roles: ['super_admin'] },
+  { label: 'Settings', icon: Settings, href: '/settings', roles: ['all'] },
+  { label: 'Notifications', icon: Bell, href: '/notifications', roles: ['all'] },
+]
+
+// Active item: bg-[#CCFF00] text-black font-semibold
+// Collapsed: show icons only
+// Manager controls order for all staff
+```
+
+### Opening Checklist:
+```typescript
+// On login, after auth: check if today's checklist is completed
+// If NOT completed → show checklist modal overlay
+// Dashboard is LOCKED until checklist is completed
+// After 30 minutes: send alert notification to manager
+// Checklist items configured by manager in Settings → Opening Checklist
+```
+
+---
+
+## BOOKINGS MODULE — 6-STEP WIZARD
+
+### Step State Management (Zustand):
+```typescript
+// lib/stores/bookingStore.ts
+interface BookingStep {
+  // Step 1
+  customer: Customer | null
+  isNewCustomer: boolean
+  newCustomerData: { name: string; phone: string } | null
+
+  // Step 2
+  selectedItems: {
+    itemId: string
+    variantId: string
+    size: string
+    quantity: number
+    dailyRate: number
+    itemName: string
+    itemPhoto: string
+  }[]
+
+  // Step 3
+  pickupDate: Date | null
+  returnDate: Date | null
+  rentalDays: number
+
+  // Step 4
+  totalAmount: number
+  priceOverride: number | null
+  priceOverrideReason: string | null
+
+  // Step 5
+  advance: number
+  deposit: number
+  method1: 'cash' | 'upi' | 'bank' | 'store_credit'
+  method2: 'cash' | 'upi' | 'bank' | null
+  amount1: number
+  amount2: number
+  bookingSource: string
+  occasion: string
+
+  // Meta
+  draftId: string | null
+}
+```
+
+### Step 2 — Item Selection (Critical Logic):
+```typescript
+// Item availability query
+const getVariantAvailability = async (
+  variantId: string,
+  pickupDate: Date,
+  returnDate: Date
+): Promise<number> => {
+  const { data: variant } = await supabase
+    .from('item_variants').select('available_count, reserved_count')
+    .eq('id', variantId).single()
+
+  // Check overlapping confirmed/active bookings
+  const { count: conflictCount } = await supabase
+    .from('booking_items')
+    .select('*', { count: 'exact' })
+    .eq('variant_id', variantId)
+    .in('booking_id', supabase
+      .from('bookings')
+      .select('id')
+      .in('status', ['confirmed', 'active'])
+      .lte('pickup_date', returnDate.toISOString().split('T')[0])
+      .gte('return_date', pickupDate.toISOString().split('T')[0])
+    )
+
+  return (variant?.available_count || 0) - (conflictCount || 0)
+}
+
+// Stock locking on cart add:
+// Use Supabase transaction via RPC function
+const lockStock = async (variantId: string, quantity: number) => {
+  const { error } = await supabase.rpc('lock_item_stock', {
+    p_variant_id: variantId,
+    p_quantity: quantity
+  })
+  if (error) throw new Error('Stock not available')
+}
+
+// SQL function:
+// create or replace function lock_item_stock(p_variant_id uuid, p_quantity integer)
+// returns void language plpgsql as $$
+// begin
+//   update item_variants
+//   set reserved_count = reserved_count + p_quantity
+//   where id = p_variant_id
+//   and (available_count - reserved_count) >= p_quantity;
+//   if not found then
+//     raise exception 'Insufficient stock';
+//   end if;
+// end;$$;
+```
+
+### Booking Confirmation (Step 6):
+```typescript
+const confirmBooking = async (data: BookingStep) => {
+  // 1. Generate booking display ID
+  const bookingDisplayId = await generateBookingId(branchId)
+
+  // 2. Insert booking
+  const { data: booking } = await supabase.from('bookings').insert({
+    branch_id: branchId,
+    customer_id: data.customer!.id,
+    status: 'confirmed',
+    booking_source: data.bookingSource,
+    occasion: data.occasion,
+    pickup_date: data.pickupDate,
+    return_date: data.returnDate,
+    total_amount: data.priceOverride ?? data.totalAmount,
+    advance_paid: data.advance,
+    deposit_amount: data.deposit,
+    balance_due: (data.priceOverride ?? data.totalAmount) - data.advance,
+    price_override_amount: data.priceOverride,
+    price_override_reason: data.priceOverrideReason,
+    created_by: staff.id,
+    booking_id_display: bookingDisplayId,
+    last_edited_by: staff.id,
+    last_edited_at: new Date().toISOString()
+  }).select().single()
+
+  // 3. Insert booking_items
+  for (const item of data.selectedItems) {
+    await supabase.from('booking_items').insert({
+      booking_id: booking.id,
+      item_id: item.itemId,
+      variant_id: item.variantId,
+      size: item.size,
+      quantity: item.quantity,
+      daily_rate: item.dailyRate,
+      subtotal: item.dailyRate * item.quantity * data.rentalDays
+    })
+  }
+
+  // 4. Insert accessories checklist
+  const accessories = ['dupatta', 'mojri', 'jewellery', 'belt']
+  for (const acc of accessories) {
+    await supabase.from('booking_accessories').insert({
+      booking_id: booking.id,
+      accessory_type: acc
+    })
+  }
+
+  // 5. Insert payment record
+  await supabase.from('booking_payments').insert({
+    booking_id: booking.id,
+    type: 'advance',
+    amount: data.advance,
+    method: data.method1,
+    staff_id: staff.id
+  })
+
+  // 6. Insert deposit record
+  if (data.deposit > 0) {
+    await supabase.from('booking_payments').insert({
+      booking_id: booking.id,
+      type: 'deposit',
+      amount: data.deposit,
+      method: data.method1,
+      staff_id: staff.id
+    })
+  }
+
+  // 7. Log to timeline
+  await supabase.from('booking_timeline').insert({
+    booking_id: booking.id,
+    event_type: 'BOOKING_CREATED',
+    description: `Booking created by ${staff.name}`,
+    staff_id: staff.id,
+    staff_name: staff.name
+  })
+
+  // 8. Log to audit_log
+  await logAudit('CREATE_BOOKING', 'bookings', booking.id, null, booking)
+
+  // 9. Auto-print QR label (no prompt)
+  await autoPrintQRLabel(booking)
+
+  // 10. Trigger Notion sync via Edge Function
+  await supabase.functions.invoke('notion-sync', {
+    body: { type: 'booking_created', booking_id: booking.id }
+  })
+
+  // 11. Clear draft
+  if (data.draftId) {
+    await supabase.from('booking_drafts').delete().eq('id', data.draftId)
+  }
+
+  // 12. Update customer stats
+  await updateCustomerStats(data.customer!.id)
+
+  return booking
+}
+```
+
+### Booking ID Generation:
+```typescript
+async function generateBookingId(branchId: string): Promise<string> {
+  const { data: branch } = await supabase
+    .from('branches').select('prefix').eq('id', branchId).single()
+
+  const today = format(new Date(), 'ddMMyy') // e.g. 260326
+  const todayStart = startOfDay(new Date()).toISOString()
+
+  const { count } = await supabase.from('bookings')
+    .select('*', { count: 'exact' })
+    .eq('branch_id', branchId)
+    .gte('created_at', todayStart)
+
+  return `${branch?.prefix || 'BRN'}-${today}-${String((count || 0) + 1).padStart(3, '0')}`
+}
+```
+
+---
+
+## INVENTORY MODULE
+
+### Quick Add + Auto-Print Flow:
+```typescript
+const quickAddItem = async (data: { name: string; category: string; price: number }) => {
+  // 1. Insert item
+  const { data: item } = await supabase.from('items').insert({
+    branch_id: branchId,
+    name: data.name,
+    category: data.category,
+    price: data.price,
+    status: 'available',
+    created_by: staff.id
+  }).select().single()
+
+  // 2. Generate QR data
+  const qrData = `ECHO-ITEM-${item.id}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`
+  const barcodeUrl = `https://barcodeapi.org/api/128/${encodeURIComponent(item.sku || item.id)}`
+
+  // 3. Update item with QR
+  await supabase.from('items').update({ qr_code: qrData }).eq('id', item.id)
+
+  // 4. Auto-print QR label (no prompt — fire and forget)
+  await printQRLabel(item)
+
+  // 5. Trigger Notion sync
+  await supabase.functions.invoke('notion-sync', {
+    body: { type: 'item_created', item_id: item.id }
+  })
+
+  // 6. Log to audit
+  await logAudit('CREATE_ITEM', 'items', item.id, null, item)
+
+  // 7. Show "Complete this item" checklist slide-over
+  setShowCompletionChecklist(true)
+  setCurrentItemId(item.id)
+
+  return item
+}
+```
+
+### Item Status Change (Always Audit):
+```typescript
+const updateItemStatus = async (
+  itemId: string,
+  newStatus: string,
+  oldStatus: string
+) => {
+  await supabase.from('items').update({
+    status: newStatus,
+    last_edited_by: staff.id
+  }).eq('id', itemId)
+
+  // Always log status change
+  await logAudit('STATUS_CHANGE', 'items', itemId,
+    { status: oldStatus }, { status: newStatus })
+
+  // Trigger Notion sync
+  await supabase.functions.invoke('notion-sync', {
+    body: { type: 'item_status_changed', item_id: itemId, new_status: newStatus }
+  })
+
+  // Check wishlist if becoming available
+  if (newStatus === 'available') {
+    await notifyWishlistCustomers(itemId)
+  }
+}
+```
+
+---
+
+## WASHING QUEUE MODULE
+
+### Priority Auto-Assignment:
+```typescript
+const calculatePriority = async (itemId: string): Promise<string> => {
+  const { data: nextBooking } = await supabase
+    .from('booking_items')
+    .select('bookings(pickup_date)')
+    .eq('item_id', itemId)
+    .in('booking_id', supabase.from('bookings').select('id')
+      .in('status', ['confirmed'])
+      .gte('pickup_date', new Date().toISOString().split('T')[0])
+    )
+    .order('bookings(pickup_date)', { ascending: true })
+    .limit(1)
+    .single()
+
+  if (!nextBooking?.bookings?.pickup_date) return 'low'
+
+  const hoursUntil = differenceInHours(
+    new Date(nextBooking.bookings.pickup_date),
+    new Date()
+  )
+
+  if (hoursUntil <= 24) return 'urgent'
+  if (hoursUntil <= 48) return 'high'
+  if (hoursUntil <= 96) return 'normal'
+  return 'low'
+}
+```
+
+### Stage Update:
+```typescript
+const updateWashingStage = async (queueId: string, newStage: string) => {
+  const oldRecord = await getWashingQueueItem(queueId)
+
+  const updates: any = { stage: newStage }
+  if (newStage === 'ready') {
+    updates.ready_at = new Date().toISOString()
+  }
+
+  await supabase.from('washing_queue').update(updates).eq('id', queueId)
+
+  // If ready → auto-update item status to available
+  if (newStage === 'ready') {
+    await updateItemStatus(oldRecord.item_id, 'available', 'in_washing')
+  }
+
+  // Link washing cost to expenses
+  if (updates.cost) {
+    await supabase.from('expenses').insert({
+      branch_id: branchId,
+      category: 'washing',
+      amount: updates.cost,
+      description: `Washing: ${oldRecord.item_name}`,
+      date: new Date().toISOString().split('T')[0],
+      staff_id: staff.id
+    })
+  }
+
+  await logAudit('WASHING_STAGE_UPDATE', 'washing_queue', queueId,
+    { stage: oldRecord.stage }, { stage: newStage })
+}
+```
+
+---
+
+## CUSTOMER MODULE
+
+### Risk Score Calculation:
+```typescript
+const recalculateRiskScore = async (customerId: string) => {
+  const [lateReturns, damages, cancellations] = await Promise.all([
+    supabase.from('bookings').select('id', { count: 'exact' })
+      .eq('customer_id', customerId).eq('status', 'overdue'),
+    supabase.from('booking_items').select('id', { count: 'exact' })
+      .eq('booking_id', supabase.from('bookings').select('id').eq('customer_id', customerId))
+      .in('condition_after', ['damaged', 'missing']),
+    supabase.from('bookings').select('id', { count: 'exact' })
+      .eq('customer_id', customerId).eq('status', 'cancelled')
+  ])
+
+  const score = Math.min(
+    (lateReturns.count || 0) * 25 +
+    (damages.count || 0) * 30 +
+    (cancellations.count || 0) * 15,
+    100
+  )
+
+  const level = score <= 25 ? 'low' : score <= 60 ? 'medium' : 'high'
+
+  await supabase.from('customers').update({ risk_score: score, risk_level: level })
+    .eq('id', customerId)
+}
+```
+
+### Tier Upgrade:
+```typescript
+const updateCustomerTier = async (customerId: string) => {
+  const { data: customer } = await supabase.from('customers')
+    .select('total_spend, tier, branch_id').eq('id', customerId).single()
+
+  const { data: branch } = await supabase.from('branches')
+    .select('settings').eq('id', customer.branch_id).single()
+
+  const thresholds = branch?.settings?.tier_thresholds || {
+    silver: 5000, gold: 15000, platinum: 30000
+  }
+
+  let newTier = 'bronze'
+  if (customer.total_spend >= thresholds.platinum) newTier = 'platinum'
+  else if (customer.total_spend >= thresholds.gold) newTier = 'gold'
+  else if (customer.total_spend >= thresholds.silver) newTier = 'silver'
+
+  if (newTier !== customer.tier) {
+    await supabase.from('customers').update({ tier: newTier }).eq('id', customerId)
+    // Create tier upgrade notification
+    await createNotification({
+      type: 'tier_upgrade',
+      title: `Customer Tier Upgraded`,
+      body: `Customer upgraded to ${newTier.toUpperCase()}`
+    })
+  }
+}
+```
+
+---
+
+## PAYMENTS MODULE
+
+### Payment Recording (from booking detail):
+```typescript
+const addPayment = async (bookingId: string, payment: {
+  type: 'advance' | 'balance' | 'deposit' | 'penalty'
+  amount: number
+  method: string
+}) => {
+  await supabase.from('booking_payments').insert({
+    booking_id: bookingId,
+    ...payment,
+    staff_id: staff.id,
+    timestamp: new Date().toISOString()
+  })
+
+  // Recalculate booking balance
+  const { data: allPayments } = await supabase.from('booking_payments')
+    .select('type, amount, is_voided')
+    .eq('booking_id', bookingId)
+
+  const totalPaid = allPayments
+    ?.filter(p => !p.is_voided && ['advance', 'balance'].includes(p.type))
+    .reduce((sum, p) => sum + p.amount, 0) || 0
+
+  const { data: booking } = await supabase.from('bookings')
+    .select('total_amount').eq('id', bookingId).single()
+
+  await supabase.from('bookings').update({
+    advance_paid: totalPaid,
+    balance_due: (booking?.total_amount || 0) - totalPaid,
+    last_edited_by: staff.id,
+    last_edited_at: new Date().toISOString()
+  }).eq('id', bookingId)
+
+  // Update customer total spend + trigger tier check
+  if (['advance', 'balance'].includes(payment.type)) {
+    await updateCustomerSpend(bookingId, payment.amount)
+  }
+
+  // Log to booking timeline
+  await supabase.from('booking_timeline').insert({
+    booking_id: bookingId,
+    event_type: 'PAYMENT_ADDED',
+    description: `₹${payment.amount} ${payment.type} recorded via ${payment.method}`,
+    staff_id: staff.id,
+    staff_name: staff.name
+  })
+
+  await logAudit('ADD_PAYMENT', 'booking_payments', bookingId, null, payment)
+}
+```
+
+---
+
+## EDGE FUNCTIONS
+
+### 1. notion-sync (supabase/functions/notion-sync/index.ts):
+```typescript
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+
+serve(async (req) => {
+  const { type, booking_id, item_id } = await req.json()
+  const NOTION_TOKEN = Deno.env.get('NOTION_TOKEN')!
+  const headers = {
+    'Authorization': `Bearer ${NOTION_TOKEN}`,
+    'Content-Type': 'application/json',
+    'Notion-Version': '2022-06-28'
+  }
+
+  if (type === 'booking_created') {
+    // Fetch booking data
+    // Create Notion page in bookings database
+    // Store notion_page_id back to bookings table
+  }
+  if (type === 'item_created' || type === 'item_status_changed') {
+    // Create/update Notion page in inventory database
+  }
+  if (type === 'monthly_washing') {
+    // Compile month's washing data
+    // Push to Notion washing history database
+  }
+  if (type === 'monthly_expenses') {
+    // Compile month's expenses
+    // Push to Notion expenses database
+  }
+
+  return new Response(JSON.stringify({ success: true }))
+})
+```
+
+### 2. cron-overdue (supabase/functions/cron-overdue/index.ts):
+```typescript
+// Scheduled: every day at midnight Asia/Kolkata (UTC+5:30 = 18:30 UTC)
+// In Supabase: select cron.schedule('overdue-check', '30 18 * * *', ...)
+
+serve(async () => {
+  const supabase = createClient(...)
+
+  // Find all confirmed/active bookings where return_date < today
+  const today = new Date().toISOString().split('T')[0]
+  const { data: overdueBookings } = await supabase
+    .from('bookings')
+    .select('id, branch_id, customer_id, customer:customers(name), return_date')
+    .in('status', ['confirmed', 'active'])
+    .lt('return_date', today)
+
+  for (const booking of overdueBookings || []) {
+    // Update status to overdue
+    await supabase.from('bookings')
+      .update({ status: 'overdue' }).eq('id', booking.id)
+
+    // Log to timeline
+    await supabase.from('booking_timeline').insert({
+      booking_id: booking.id,
+      event_type: 'STATUS_CHANGED',
+      description: 'Booking marked as overdue (auto)',
+      old_value: { status: 'active' },
+      new_value: { status: 'overdue' }
+    })
+
+    // Notify manager
+    await supabase.from('notifications').insert({
+      branch_id: booking.branch_id,
+      type: 'overdue',
+      title: 'Overdue Booking',
+      body: `Booking is overdue — ${booking.customer?.name}`,
+      action_url: `/bookings/${booking.id}`
+    })
+  }
+
+  return new Response(JSON.stringify({ processed: overdueBookings?.length || 0 }))
+})
+```
+
+### 3. whatsapp-send (supabase/functions/whatsapp-send/index.ts):
+```typescript
+// Called manually by staff tapping WhatsApp button
+serve(async (req) => {
+  const { booking_id, template_type, customer_phone, staff_id } = await req.json()
+  const WA_TOKEN = Deno.env.get('WHATSAPP_TOKEN')!
+  const WA_PHONE_ID = Deno.env.get('WHATSAPP_PHONE_NUMBER_ID')!
+
+  // Build message from template
+  const message = buildWhatsAppTemplate(template_type, await getBookingData(booking_id))
+
+  // Send via Meta WhatsApp Business API
+  const response = await fetch(
+    `https://graph.facebook.com/v17.0/${WA_PHONE_ID}/messages`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${WA_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: customer_phone,
+        type: 'template',
+        template: { name: template_type, language: { code: 'en' } }
+      })
+    }
+  )
+
+  // Log to whatsapp_log
+  await supabase.from('whatsapp_log').insert({
+    booking_id, template_type, staff_id,
+    sent_at: new Date().toISOString(),
+    status: response.ok ? 'sent' : 'failed'
+  })
+
+  return new Response(JSON.stringify({ success: response.ok }))
+})
+```
+
+---
+
+## AUDIT LOG HELPER (Use Everywhere)
+
+```typescript
+// lib/utils/audit.ts
+export const logAudit = async (
+  action: string,
+  tableName: string,
+  recordId: string,
+  oldValue: any,
+  newValue: any
+) => {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: staffData } = await supabase.from('staff')
+    .select('business_id, branch_id').eq('id', user?.id).single()
+
+  await supabase.from('audit_log').insert({
+    business_id: staffData?.business_id,
+    branch_id: staffData?.branch_id,
+    staff_id: user?.id,
+    action,
+    table_name: tableName,
+    record_id: recordId,
+    old_value: oldValue,
+    new_value: newValue,
+    timestamp: new Date().toISOString()
+  })
+}
+```
+
+---
+
+## INDIA-SPECIFIC UTILITIES
+
+```typescript
+// lib/utils/formatters.ts
+
+// Currency — Indian format (₹1,24,500)
+export const formatINR = (amount: number): string =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 0
+  }).format(amount)
+
+// Phone — validate Indian mobile
+export const validateIndianPhone = (phone: string): boolean =>
+  /^[6-9]\d{9}$/.test(phone.replace(/[\s\-\+]/g, ''))
+
+// Phone — display format
+export const formatIndianPhone = (phone: string): string => {
+  const cleaned = phone.replace(/\D/g, '').slice(-10)
+  return `+91 ${cleaned.slice(0,5)} ${cleaned.slice(5)}`
+}
+
+// Date — IST timezone
+export const toIST = (date: Date): Date => {
+  const ist = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  return ist
+}
+
+// Rental duration — same day = 1 day
+export const calculateRentalDays = (pickupDate: Date, returnDate: Date): number => {
+  const days = differenceInDays(returnDate, pickupDate)
+  return Math.max(days, 1)
+}
+```
+
+---
+
+## PRINT SYSTEM (68mm Thermal)
+
+```typescript
+// components/shared/PrintReceipt.tsx
+// CSS for 68mm thermal printer:
+const thermalStyles = `
+  @media print {
+    body { width: 68mm; margin: 0; padding: 0; font-size: 10px; }
+    .no-print { display: none; }
+  }
+  .receipt { width: 268px; font-family: monospace; font-size: 11px; }
+  .receipt-line { border-top: 1px dashed #000; margin: 4px 0; }
+  .receipt-center { text-align: center; }
+  .receipt-bold { font-weight: bold; }
+`
+
+// QR code for receipt:
+const getQRUrl = (bookingId: string) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=ECHO-BOOKING-${bookingId}&format=png`
+
+// Item QR label (38mm × 25mm):
+const getItemQRUrl = (itemId: string) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=ECHO-ITEM-${itemId}&format=png`
+
+const getBarcodeUrl = (sku: string) =>
+  `https://barcodeapi.org/api/128/${encodeURIComponent(sku)}`
+
+// Auto-print via window.print():
+const autoPrint = () => {
+  window.print()
+}
+```
+
+---
+
+## TANSTACK QUERY SETUP
+
+```typescript
+// app/providers.tsx
+'use client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,      // 30 seconds
+      gcTime: 5 * 60_000,    // 5 minutes
+      retry: 2,
+      refetchOnWindowFocus: true
+    }
+  }
+})
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  )
+}
+```
+
+---
+
+## OFFLINE HANDLING
+
+```typescript
+// components/shared/OfflineBanner.tsx
+'use client'
+import { useEffect, useState } from 'react'
+
+export function OfflineBanner() {
+  const [isOffline, setIsOffline] = useState(false)
+
+  useEffect(() => {
+    const handleOffline = () => setIsOffline(true)
+    const handleOnline = () => setIsOffline(false)
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+    return () => {
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [])
+
+  if (!isOffline) return null
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-400 text-black
+      text-center text-sm py-2 font-medium">
+      ⚠️ You are offline — changes are disabled until connection is restored
+    </div>
+  )
+}
+
+// Disable all write operations when offline:
+// In every form/action, check: if (!navigator.onLine) show toast and return
+```
+
+---
+
+## COMPLETE FEATURE CHECKLIST
+
+### Auth
+- [x] Google OAuth via Supabase Auth
+- [x] Approval flow (pending → approved by manager)
+- [x] Middleware: every route checks staff.status
+- [x] PIN lock overlay
+- [x] Logout requires PIN confirmation
+- [x] Session expiry (configurable hours of inactivity)
+- [x] Pending approval screen with auto-refresh
+
+### Dashboard
+- [x] Role-based widget visibility
+- [x] Supabase Realtime for bookings, washing, payments, notifications
+- [x] Stat cards: revenue, pickups, returns, overdue, staff on duty
+- [x] Schedule widget (today's pickups + returns)
+- [x] Alert centre (overdue, washing urgent, approvals, low stock)
+- [x] Notification inbox (bell → slide-over, inline actions)
+- [x] Opening checklist modal (blocks dashboard until complete)
+- [x] Revenue goal widget
+- [x] Weekly revenue chart
+- [x] Franchise summary (super_admin only)
+- [x] Offline yellow banner
+
+### Bookings
+- [x] 6-step wizard
+- [x] Step 1: customer search + inline creation
+- [x] Step 2: item search + QR scan + size selector with stock counts
+- [x] Step 3: date picker with buffer day enforcement
+- [x] Step 4: auto-pricing + price override (no coupons)
+- [x] Step 5: payment (split payment, min advance enforcement)
+- [x] Step 6: thermal receipt preview + auto-print
+- [x] Draft auto-save at every step
+- [x] Booking list with filters, sort, infinite scroll
+- [x] Booking detail: 5 tabs (Details/Payments/Items/Notes/Timeline)
+- [x] Pickup flow: step-by-step (Aadhaar → condition → payment → accessories → confirm)
+- [x] Return flow: step-by-step (condition → deposit → accessories → washing → confirm)
+- [x] Status automations (active on pickup, returned on full return, overdue via cron)
+- [x] Accessories checklist (pickup + return)
+
+### Inventory
+- [x] Item list with filters, sort, search
+- [x] Quick add + auto-print QR label
+- [x] Item detail: 7 tabs
+- [x] Variant system (size/colour, batch creation)
+- [x] Photo upload + crop + watermark toggle
+- [x] Availability Gantt calendar
+- [x] Repair tracking
+- [x] Collections + pairings
+- [x] Wishlist (staff adds + notify on availability)
+- [x] Bulk operations (status change, QR print, price update)
+- [x] CSV import
+- [x] QR + barcode generation
+
+### Customers
+- [x] Customer list with filters, risk badges, tier badges
+- [x] Customer detail: 7 tabs
+- [x] Risk score auto-calculation
+- [x] Tier auto-upgrade based on spend
+- [x] Blacklist levels (1/2/3) with franchise-wide for Level 3
+- [x] Loyalty points ledger (append-only)
+- [x] Family groups + loyalty pooling
+- [x] VIP flag (manager only)
+- [x] Outfit history visual grid
+- [x] Activity timeline
+
+### Washing Queue
+- [x] Stage tabs (Queue/Washing/Drying/Ironing/QC/Ready)
+- [x] Priority auto-sort (Urgent → High → Normal → Low)
+- [x] URGENT auto-flag (booking within 24h)
+- [x] SLA countdown (URGENT items only)
+- [x] Self-assign ("Take this item")
+- [x] Bulk stage update
+- [x] External vendor tracking
+- [x] Washing cost → auto-linked to expenses
+- [x] Washing notes per item
+- [x] Realtime subscriptions
+
+### Payments
+- [x] Payments home: daily revenue summary, outstanding balance, deposit liability
+- [x] Transaction list with filters
+- [x] Daily cash reconciliation
+- [x] Payment void log
+- [x] PDF export
+
+### Analytics
+- [x] Revenue over time (bar chart)
+- [x] Booking metrics (source, occasion breakdown)
+- [x] Item utilisation table
+- [x] Staff performance vs targets
+- [x] Customer metrics
+- [x] P&L statement
+- [x] NPS tracking
+
+### Staff
+- [x] Staff list (manager only)
+- [x] Staff detail: 5 tabs
+- [x] GPS clock-in validation
+- [x] Performance targets (monthly revenue + booking count)
+- [x] Documents upload
 
 ### Settings
-- Payment settings: Super Admin only
+- [x] Branch settings
+- [x] Print settings (live 68mm preview)
+- [x] Roles & permissions (custom roles by super_admin)
+- [x] Integrations (Notion, WhatsApp)
+- [x] Inventory settings
+- [x] Booking settings
+- [x] Customer tier thresholds
+
+### Notifications
+- [x] In-app bell inbox with inline actions
+- [x] WhatsApp log (searchable by customer/booking)
+- [x] PWA push notifications
+
+### Franchise
+- [x] All branches revenue comparison
+- [x] Royalty tracking
+- [x] Inter-branch transfers
+
+### Security
+- [x] RLS on every table
+- [x] Full audit log (every write)
+- [x] Session management
+- [x] Approval-based login
 
 ---
 
-## 12. Section 7: Staff & HR
+## FEATURES EXPLICITLY NOT BUILT
 
-### Staff List
-- Manager can: add/remove/role change + inventory + bookings
-- Staff card: Name + role badge + status (online/offline) + last login + clock-in status
-
-### Staff Detail Page
-**Tabs:** Profile / Attendance / Performance / Documents / Payroll
-
-### Attendance
-- GPS clock-in: must be within X metres of store (configurable)
-- No shift scheduling — staff just clock in when they arrive
-- Attendance report: only inside each staff profile (no export)
-
-### Performance
-- Monthly revenue target + booking count target per staff
-- Performance report: revenue + bookings per staff per month (manager only)
-- No leaderboard
-
-### Documents
-- Staff documents stored (Aadhaar/PAN/contract) — no expiry tracking
-
-### Other Staff Features
-- Payroll: not in system (handled externally)
-- Handover system: none (verbal only)
-- Password reset: staff resets own via forgot password link
-- Daily opening checklist: manager configures per branch → staff completes on login → flagged if incomplete after 30 min
-- Staff can be added/removed/role-changed by manager
-- No daily briefing system
-
----
-
-## 13. Section 8: Analytics
-
-### Access
-- Dedicated Analytics section in sidebar
-- Visible to manager + Super Admin only
-- Exportable as PDF + Excel (all reports)
-
-### Default Date Range
-- This month (can switch to last 7 days / 30 days / custom range)
-
-### Reports Available
-1. Revenue over time (daily/weekly/monthly)
-2. Booking count + conversion rate
-3. Item utilisation rate per item
-4. Staff performance (revenue per staff)
-5. Customer acquisition + retention
-6. Washing cost vs revenue (P&L)
-
-### NPS
-- Collected in-app by staff (staff asks customer to rate before leaving)
-
-### Super Admin Revenue Dashboard
-- MRR + total clients + active vs churned + plan breakdown
+```
+❌ No AI features of any kind
+❌ No coupon system (price override only)
+❌ No seasonal pricing
+❌ No measurement tracking (empty tab)
+❌ No store credit balance
+❌ No referral codes
+❌ No birthday automation
+❌ No re-engagement automation
+❌ No digital customer signature (physical receipt only)
+❌ No max wash count tracking
+❌ No photo quality check
+❌ No care instructions popup in washing
+❌ No washing photos
+❌ No quality rating in washing
+❌ No washing machine tracking
+❌ No chemicals tracking
+❌ No washing queue export
+❌ No auto WhatsApp sends (100% manual)
+❌ No SMS fallback
+❌ No PDF export for booking detail (thermal receipt only)
+❌ No staff leaderboard
+❌ No payroll calculations (empty tab only)
+❌ No shift scheduling
+❌ No handover system
+❌ No off-season item status
+❌ No supplier tracking per item
+❌ No insurance tracking
+❌ No colour swatches (text labels only)
+❌ No installment plans
+❌ No gift bookings
+❌ No multi-occasion bookings
+❌ No repeat/rebook feature
+❌ No ROI calculation (revenue only)
+❌ No return time slot (date only)
+❌ No AI outfit/size suggestions in booking
+❌ No self-signup (Super Admin creates accounts manually)
+❌ No commission tracking
+❌ No WhatsApp log on customer profile or booking detail
+```
 
 ---
 
-## 14. Section 9: Calendar
+## HOW TO START EACH SESSION IN ANTIGRAVITY
 
-### View
-- Gantt chart: all items as availability bars by date
-- View modes: Day / Week / Month toggle
-- Filter: By item category / booking status / staff
-- Accessible by all staff
-
-### Interactions
-- Tap a booking → opens booking detail slide-over
-- Calendar is read-only (no booking creation from calendar)
-
----
-
-## 15. Section 10: Settings
-
-### Structure
-- Settings: different tabs visible based on role
-- Sections: Branch settings / Print settings / Roles & permissions / Integrations / Billing
-
-### Branch Settings (Manager per branch)
-- Store name + logo + address + GST number + contact + opening hours
-
-### Print Settings (Manager per branch)
-- Receipt header/footer/logo + font size + QR position + store info (fully customisable)
-- Printer: Vyapar VYPRTP3001 (3-inch/68mm thermal)
-
-### Roles & Permissions (Super Admin only)
-- Custom roles with specific permission sets
-- Fixed roles: Super Admin / Manager / Floor Staff / Auditor
-
-### Integrations (Super Admin)
-- Notion API
-- WhatsApp Business API
-- Google OAuth
-
-### Billing (Super Admin)
-- Plan + amount + due date + paid/unpaid status per business
+1. Read this entire prompt
+2. Run: `ls -la c:\echo` to see current state
+3. Check existing migrations: `ls c:\echo\supabase\migrations\`
+4. Check existing components: `ls c:\echo\components\`
+5. Ask: "What is the highest priority feature to build next?"
+6. Check what's already built before writing anything
+7. Build one complete feature at a time with full TypeScript types + RLS + audit log
+8. Run `npm run build` to verify no TypeScript errors before marking complete
 
 ---
 
-## 16. Section 11: Expenses
-
-### Access
-- Any staff can view + add expenses
-
-### What is Tracked
-- Daily expenses: rent / salaries / utilities / repairs / misc
-- Fields: category + amount + receipt photo
-- Washing costs auto-linked to expenses section
-
-### Export
-- Auto-pushed to Notion monthly
-
----
-
-## 17. Section 12: Franchise
-
-### Access
-- Super Admin only
-
-### Franchise Section Contains
-- All branches overview
-- Revenue comparison (live, side-by-side)
-- Royalty tracking (auto-calculated monthly as configurable % of branch revenue)
-- Inter-branch item transfers
-
-### Branch Data Isolation
-- RLS per branch
-- Super Admin can see all branches
-- Branch managers can only see their own branch
-
----
-
-## 18. Section 13: Security & Audit
-
-### Audit Trail
-- Full audit trail: every action logged with user + timestamp + old value + new value
-- Append-only (cannot be edited or deleted)
-- Visible to Super Admin only
-
-### Session Management
-- Sessions expire after X hours of inactivity (configurable)
-- PIN required for logout confirmation
-- PIN lock icon in top bar (manual lock)
-
-### Login Approval
-- New staff Google login requires manager approval before access granted
-- Google OAuth does NOT bypass approval
-
-### RLS
-- Row-level security on all Supabase tables
-- Isolation per branch + per business
-
----
-
-## 19. Section 14: Notifications & WhatsApp
-
-### In-App Notifications
-- Bell icon → inbox with all alerts
-- Approve/reject inline from inbox
-- Sound + badge on bell for new notifications
-- Sound + vibration on mobile
-
-### WhatsApp
-- All WhatsApp messages sent MANUALLY by staff (no automated sends)
-- WhatsApp templates configurable in Settings (one per trigger type — editable by manager per branch)
-- WhatsApp log: all messages stored in Notifications section, searchable by customer/booking
-- WhatsApp log NOT shown on customer profile or booking detail (only in Notifications section)
-
-### Push Notifications
-- In-app push notifications on mobile browser (PWA) for: new booking / overdue / approval pending
-
----
-
-## 20. Section 15: Landing Page & Plans
-
-### Landing Page
-- **Built with:** Next.js (same repo)
-- **Language:** English only
-- **Sections:** Hero + Features + How it works + Pricing + Testimonials + Contact
-- **Contact:** Email link (mailto) only
-- **Demo:** Live demo booking option (book a call)
-- **Pricing:** Basic / Pro / Enterprise plans shown
-
-### Business Onboarding (Super Admin creates accounts)
-- No public self-signup — Super Admin (Ansil) manually creates each new business account
-- Landing page = marketing only
-- Super Admin creates: name + owner + subdomain + plan → sends setup wizard link to owner
-- New business owner sets own password + completes setup wizard
-- Setup wizard: branch details → invite staff → add first items → test booking → go live
-- Onboarding support: WhatsApp support from Echo team (Ansil)
-
-### Plans
-- **Basic:** 1 branch + limited items + limited staff
-- **Pro:** 3 branches + more features
-- **Enterprise:** Unlimited branches + unlimited everything
-- **Trial:** 14 days free on any plan
-- **Plan changes:** Super Admin only
-- **Payment overdue:** Super Admin manually suspends (no auto-suspension)
-- **Billing tracked:** Plan + amount + due date + paid/unpaid per business
-
-### Super Admin Panel
-- Total businesses / active / pending / rejected
-- Usage stats + billing status per business
-- Impersonation: Super Admin can view as any business (read-only)
-- Full control: suspend / reactivate / delete / change plan
-- MRR + total clients + active vs churned + plan breakdown
-
-### Subdomains
-- Each business: businessname.echo.app via Vercel subdomain routing
-
----
-
-## 21. Section 16: Data Sync & Offline
-
-### Sync Strategy
-- Supabase Realtime for ALL data (bookings + inventory + washing + payments + notifications)
-
-### What Syncs in Real-Time
-- Booking status changes → instant sync all devices
-- Inventory availability → item removed from available instantly
-- Washing queue updates → badge drops instantly
-- Payment recorded → revenue counter updates instantly on all dashboards
-
-### Offline
-- Read-only offline (can view but not act)
-- Yellow offline banner at top
-
-### Notion Sync
-- Bookings: Notion page auto-created on every new booking
-- P&L: pushed automatically
-- Inventory changes: every new item + every status change
-- Washing history: auto-pushed monthly
-- Expenses: auto-pushed monthly
-- Method: webhook on event (Edge Function)
-
-### Conflict Resolution
-- First-write-wins (first staff action takes priority)
-
-### Failed Sync
-- Supabase handles natively
-
----
-
-## 22. Section 17: Database & Infrastructure
-
-### Database
-- Supabase PostgreSQL with RLS per branch + row-level isolation per business
-- Single Supabase project with RLS (not separate schemas per business)
-
-### Authentication
-- Google OAuth with approval flow
-- Google login does NOT bypass manager approval
-- New staff must be approved by manager before access
-
-### File Storage
-- Separate Supabase Storage buckets per file type:
-  - Photos bucket (item photos)
-  - Documents bucket (Aadhaar, staff docs)
-  - Receipts bucket
-
-### Edge Functions
-- Notion sync
-- WhatsApp Business API
-- Cron jobs: overdue status calculation (midnight) + royalty calculation (monthly)
-
-### Deployment
-- Frontend: Vercel (Next.js App Router)
-- Backend: Supabase Cloud (ap-south-1 Mumbai)
-- Subdomains: businessname.echo.app via Vercel
-
-### QR Codes & Barcodes
-- Booking receipt QR: api.qrserver.com (free, no key needed)
-- Item label barcode: barcodeapi.org (free, no key needed)
-
----
-
-## 23. Section 18: Sprint Roadmap
-
-### Phase 1 — Foundation (Weeks 1–6)
-- Auth (Google OAuth + approval flow)
-- Dashboard (role-based, real-time)
-- Inventory (items, variants, QR labels)
-- Customers (profiles, tiers, blacklist)
-
-### Phase 2 — Core Operations (Weeks 7–14)
-- Bookings (6-step flow, pickup, return, draft, QR scan)
-- Washing Queue (stages, SLA, vendor)
-- Payments (reconciliation, receipts, deposit tracking)
-- Staff (attendance GPS, performance targets, documents)
-
-### Phase 3 — Scale (Weeks 15–24)
-- Franchise (multi-branch, royalty, transfers)
-- Analytics (all reports, exports)
-- Settings (print, roles, integrations)
-- Security & Audit (full audit trail, session management)
-
-### Sprint 1 Focus (Weeks 1–4)
-- Database schema design
-- Auth with Google OAuth + approval flow
-- Core data models (businesses, branches, staff, items, bookings, customers)
-
----
-
-## Appendix: Key Locked Decisions Summary
-
-| Decision | Answer |
-|----------|--------|
-| No AI features | Confirmed — all AI removed |
-| No coupon system | Discount via price override only |
-| No seasonal pricing | Staff adjusts manually |
-| No measurement tracking | Tab exists but empty |
-| No store credit | Removed |
-| No referral codes | Removed |
-| No birthday/re-engagement automation | Removed |
-| No digital customer signature | Physical receipt only |
-| No max wash count | Removed |
-| No photo quality check | Removed |
-| No WhatsApp auto-send | Manual only |
-| No SMS fallback | WhatsApp only |
-| No PDF export for booking detail | Thermal receipt only |
-| No leaderboard | Individual profiles only |
-| No payroll | External system |
-| No handover system | Verbal only |
-| QR scan at pickup | Opens booking + staff taps "Start Pickup" |
-| Aadhaar upload | Pickup time only |
-| Draft expiry | No expiry |
-| Price override | Replaces original (original not shown) |
-| ID/Aadhaar stored permanently | No auto-deletion |
-
----
-
-*Echo PRD v1.0 — Confidential — Owner: Ansil*
+*Echo — Antigravity Master Build Prompt v2.0 | Owner: Ansil | Confidential*

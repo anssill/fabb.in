@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la tailwind* postcss* next*)",
+      "Bash(node -e \"require\\('date-fns-tz'\\)\")",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
