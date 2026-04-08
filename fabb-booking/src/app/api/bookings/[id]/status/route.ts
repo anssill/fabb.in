@@ -9,6 +9,10 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+function formatError(error: any): string {
+  return error?.message || error?.code || 'Unknown error'
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +29,7 @@ export async function PATCH(
       .select('*, customer:customers(name, phone), booking_items(item_name, size)')
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(formatError(error))
 
     const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
     const items = booking.booking_items || []

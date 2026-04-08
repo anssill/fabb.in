@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
 import { revalidatePath } from 'next/cache'
 
+function formatSupabaseError(error: any): Error {
+  if (!error) return new Error('Unknown database error')
+  return new Error(error.message || error.code || 'Database error')
+}
+
 export async function createItem(formData: any, variants: any[]) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,7 +40,7 @@ export async function createItem(formData: any, variants: any[]) {
     .select('id')
     .single()
 
-  if (itemErr) throw itemErr
+  if (itemErr) throw formatSupabaseError(itemErr)
 
   // 2. Create variants in Supabase
   const variantRows = variants.map((v) => ({
@@ -50,7 +55,7 @@ export async function createItem(formData: any, variants: any[]) {
   }))
 
   const { error: varErr } = await supabase.from('item_variants').insert(variantRows)
-  if (varErr) throw varErr
+  if (varErr) throw formatSupabaseError(varErr)
 
   // 3. Sync to Notion
   let notionPageId = null
@@ -109,11 +114,11 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
       deposit_amount: formData.deposit_amount || null,
       condition: formData.condition,
       purchase_price: formData.purchase_price || null,
-      updated_at: new Date().toISOString(), // Supabase might have a trigger but being explicit
+      updated_at: new Date().toISOString(),
     })
     .eq('id', itemId)
 
-  if (itemErr) throw itemErr
+  if (itemErr) throw formatSupabaseError(itemErr)
 
   // 2. Reconciliation of variants
   // Get existing variants
@@ -200,7 +205,7 @@ export async function updateItemStatus(itemId: string, status: string) {
     .update({ status })
     .eq('id', itemId)
 
-  if (error) throw error
+  if (error) throw formatSupabaseError(error)
 
   revalidatePath('/inventory')
   return { success: true }

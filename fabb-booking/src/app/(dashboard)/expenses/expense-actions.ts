@@ -3,6 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+function formatError(error: any): Error {
+  return new Error(error?.message || error?.code || 'Database error')
+}
+
 export async function createExpense(data: {
   description: string
   amount: number
@@ -28,7 +32,7 @@ export async function createExpense(data: {
     created_at: new Date().toISOString()
   })
 
-  if (error) throw error
+  if (error) throw formatError(error)
 
   revalidatePath('/expenses')
   revalidatePath('/analytics')

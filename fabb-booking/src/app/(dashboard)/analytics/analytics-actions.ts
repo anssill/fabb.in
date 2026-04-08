@@ -3,6 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { startOfDay, subDays, format, eachDayOfInterval, isSameDay } from 'date-fns'
 
+function formatError(error: any): Error {
+  return new Error(error?.message || error?.code || 'Database error')
+}
+
 export async function getRevenueStats(period: '7d' | '30d' | '90d' = '30d') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -106,7 +110,7 @@ export async function getUtilizationStats() {
     .select('total_stock, available_stock, reserved_stock, items!inner(business_id)')
     .eq('items.business_id', staff.business_id)
 
-  if (error) throw error
+  if (error) throw formatError(error)
 
   const total = variants.reduce((sum, v) => sum + v.total_stock, 0)
   const reserved = variants.reduce((sum, v) => sum + v.reserved_stock, 0)
@@ -136,7 +140,7 @@ export async function getInventoryPerformance() {
     .order('total_revenue', { ascending: false })
     .limit(10)
 
-  if (error) throw error
+  if (error) throw formatError(error)
 
   // Fetch expenses linked to these items
   const itemIds = items.map(i => i.id)
