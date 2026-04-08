@@ -3,9 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !serviceRoleKey || serviceRoleKey === 'YOUR_SERVICE_ROLE_KEY_HERE') {
+  console.error('CRITICAL: Supabase environment variables are missing or are using placeholders.')
+}
+
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  supabaseUrl || '',
+  serviceRoleKey || '',
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
@@ -77,8 +84,20 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
     if (bizError || !business) {
-      console.error('Business creation error:', bizError)
-      return NextResponse.json({ error: 'Failed to create business' }, { status: 500 })
+      console.error('Business creation error:', {
+        message: bizError?.message,
+        details: bizError?.details,
+        hint: bizError?.hint,
+        code: bizError?.code
+      })
+      return NextResponse.json(
+        { 
+          error: 'Failed to create business', 
+          details: bizError?.message, 
+          code: bizError?.code 
+        }, 
+        { status: 500 }
+      )
     }
 
     // Step 5: Create default branch
