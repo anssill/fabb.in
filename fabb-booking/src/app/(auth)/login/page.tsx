@@ -15,6 +15,7 @@ import { GoogleButton } from './components/GoogleButton'
 import { ForgotPasswordModal } from './components/ForgotPasswordModal'
 
 import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 function LoginContent() {
   const router = useRouter()
@@ -49,6 +50,13 @@ function LoginContent() {
         setError({ message: data.error, code: data.code })
         return
       }
+
+      // Establish the Supabase session in the browser so middleware can read it
+      const supabase = createClient()
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
 
       toast.success('Welcome back!')
       router.push(data.staff?.setup_completed === false ? '/setup' : redirect)

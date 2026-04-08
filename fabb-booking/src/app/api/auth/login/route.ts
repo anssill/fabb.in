@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
       .update({ last_login: new Date().toISOString(), failed_login_attempts: 0 })
       .eq('id', staffRecord.id)
 
-    // Step 7: Create Supabase session
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
-      user_id: staffRecord.id,
+    // Step 7: Create Supabase session via signInWithPassword
+    // The Supabase auth password is kept in sync with our bcrypt hash
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
+      email: cleanEmail,
+      password,
     })
 
     if (sessionError || !sessionData?.session) {

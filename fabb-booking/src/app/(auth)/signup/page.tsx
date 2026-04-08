@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -45,6 +46,13 @@ export default function SignupPage() {
         setError(data.error || 'Something went wrong')
         return
       }
+
+      // Establish the Supabase session in the browser so middleware can read it
+      const supabase = createClient()
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
 
       toast.success('Account created! Setting up your workspace...')
       router.push('/setup')

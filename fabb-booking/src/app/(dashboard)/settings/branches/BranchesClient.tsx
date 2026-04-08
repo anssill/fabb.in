@@ -126,7 +126,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
           .single()
         
         if (error) throw error
-        updatedBranch = data as Branch
+        updatedBranch = data as BranchData
         setBranches([...branches, updatedBranch])
         toast.success('Branch created successfully')
       } else if (editingBranch) {
@@ -138,7 +138,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
           .single()
         
         if (error) throw error
-        updatedBranch = data as Branch
+        updatedBranch = data as BranchData
         setBranches(branches.map(b => b.id === editingBranch.id ? updatedBranch : (formData.is_default ? { ...b, is_default: false } : b)))
         toast.success('Branch updated successfully')
       }

@@ -18,6 +18,9 @@ interface ItemPerformance {
   category: string
   revenue: number
   cost: number
+  maintenanceExpenses: number
+  totalCost: number
+  netProfit: number
   roi: number
   total_rentals: number
 }
@@ -43,6 +46,8 @@ export function InventoryPerformanceTable({ data }: PerformanceProps) {
               <TableHead className="font-semibold text-xs">Category</TableHead>
               <TableHead className="font-semibold text-xs text-right">Revenue</TableHead>
               <TableHead className="font-semibold text-xs text-right">Cost</TableHead>
+              <TableHead className="font-semibold text-xs text-right">Maint. Exp.</TableHead>
+              <TableHead className="font-semibold text-xs text-right">Net Profit</TableHead>
               <TableHead className="font-semibold text-xs text-right">ROI (%)</TableHead>
             </TableRow>
           </TableHeader>
@@ -72,6 +77,12 @@ export function InventoryPerformanceTable({ data }: PerformanceProps) {
                   </TableCell>
                   <TableCell className="text-right text-slate-500 text-sm">
                     ₹{item.cost.toLocaleString('en-IN')}
+                  </TableCell>
+                  <TableCell className="text-right text-amber-600 text-sm">
+                    ₹{item.maintenanceExpenses.toLocaleString('en-IN')}
+                  </TableCell>
+                  <TableCell className={`text-right font-semibold text-sm ${item.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    ₹{item.netProfit.toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 font-semibold text-sm">

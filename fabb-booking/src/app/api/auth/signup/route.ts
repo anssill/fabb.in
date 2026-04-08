@@ -147,8 +147,9 @@ export async function POST(req: NextRequest) {
       .eq('id', business.id)
 
     // Step 9: Create session so user is logged in immediately
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
-      user_id: authUserId,
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
+      email: cleanEmail,
+      password: tempPassword,
     })
 
     if (sessionError || !sessionData?.session) {
