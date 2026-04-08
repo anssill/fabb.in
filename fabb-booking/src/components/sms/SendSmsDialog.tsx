@@ -127,7 +127,7 @@ export function SendSmsDialog({
       onClose()
     } catch (error: any) {
       console.error('SMS Error:', error)
-      toast.error(error.message || 'Failed to send SMS')
+      toast.error(error?.message || 'Failed to send SMS')
     } finally {
       setIsSending(false)
     }
