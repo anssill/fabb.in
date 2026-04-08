@@ -44,7 +44,9 @@ interface BranchData {
   lat: number | string | null
   lng: number | string | null
   gps_radius_metres: number | null
-  settings: Record<string, unknown>
+  is_default: boolean
+  status: string
+  settings: Record<string, any>
 }
 
 interface AppState {

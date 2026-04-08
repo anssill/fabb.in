@@ -10,23 +10,10 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAppStore } from '@/lib/store'
+import { useAppStore, type BranchData } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Plus, Pencil, MapPin, Phone, Mail, Check, ShieldCheck, Globe } from 'lucide-react'
-
-interface Branch {
-  id: string
-  name: string
-  city: string | null
-  prefix: string
-  address: string | null
-  phone: string | null
-  email: string | null
-  is_default: boolean
-  status: string
-  settings: Record<string, any>
-}
 
 interface StaffMember {
   id: string
@@ -41,7 +28,7 @@ interface BranchesClientProps {
 export function BranchesClient({ initialStaff }: BranchesClientProps) {
   const { branches, activeBranch, setBranches } = useAppStore()
   const supabase = createClient()
-  const [editingBranch, setEditingBranch] = useState<Branch | null>(null)
+  const [editingBranch, setEditingBranch] = useState<BranchData | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isAddingNew, setIsAddingNew] = useState(false)
   
