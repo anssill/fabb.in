@@ -5,6 +5,7 @@ const notion = new Client({
 })
 
 const DATABASE_ID = process.env.NOTION_DATABASE_ID
+const DATABASE_INVENTORY_ID = process.env.NOTION_INVENTORY_DATABASE_ID
 
 export type NotionBookingData = {
   bookingNumber: string
@@ -17,6 +18,16 @@ export type NotionBookingData = {
   advancePaid: number
   depositAmount: number
   summary: string
+}
+
+export type NotionItemData = {
+  sku: string
+  name: string
+  category: string
+  dailyRate: number
+  condition: string
+  stockSummary: string
+  id?: string
 }
 
 export class NotionService {
@@ -106,6 +117,78 @@ export class NotionService {
     }
   }
 
+  /**
+   * Syncs an inventory item to the master Notion database
+   */
+  static async syncItem(data: NotionItemData, existingPageId?: string) {
+    if (!process.env.NOTION_API_KEY || !DATABASE_INVENTORY_ID) {
+      console.warn('Notion API key or Inventory Database ID not configured. Skipping sync.')
+      return null
+    }
+
+    try {
+      const properties: any = {
+        'SKU': {
+          title: [
+            {
+              text: {
+                content: data.sku,
+              },
+            },
+          ],
+        },
+        'Item Name': {
+          rich_text: [
+            {
+              text: {
+                content: data.name,
+              },
+            },
+          ],
+        },
+        'Category': {
+          select: {
+            name: data.category,
+          },
+        },
+        'Daily Rate': {
+          number: data.dailyRate,
+        },
+        'Condition': {
+          select: {
+            name: this.mapCondition(data.condition),
+          },
+        },
+        'Stock Summary': {
+          rich_text: [
+            {
+              text: {
+                content: data.stockSummary,
+              },
+            },
+          ],
+        },
+      }
+
+      if (existingPageId) {
+        const response = await notion.pages.update({
+          page_id: existingPageId,
+          properties,
+        })
+        return response.id
+      } else {
+        const response = await notion.pages.create({
+          parent: { database_id: DATABASE_INVENTORY_ID },
+          properties,
+        })
+        return response.id
+      }
+    } catch (error) {
+      console.error('Error syncing item to Notion:', error)
+      throw error
+    }
+  }
+
   private static mapStatus(status: string): string {
     // Ensure status matches Notion select options exactly
     const statusMap: Record<string, string> = {
@@ -117,5 +200,15 @@ export class NotionService {
       'cancelled': 'Cancelled',
     }
     return statusMap[status.toLowerCase()] || 'Pending'
+  }
+
+  private static mapCondition(condition: string): string {
+    const conditionMap: Record<string, string> = {
+      'excellent': 'Excellent',
+      'good': 'Good',
+      'fair': 'Fair',
+      'poor': 'Poor',
+    }
+    return conditionMap[condition.toLowerCase()] || 'Good'
   }
 }

@@ -4,6 +4,7 @@ import { SidebarWrapper } from './components/Sidebar'
 import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
 import { NotificationRealtime } from '@/components/notifications/NotificationRealtime'
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -34,7 +35,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="lg:ml-60 flex flex-col min-h-screen transition-all duration-300">
         <Header staff={staff} />
         <main className="flex-1 p-4 lg:p-6 mt-14">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

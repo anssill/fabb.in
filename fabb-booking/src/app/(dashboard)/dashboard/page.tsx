@@ -15,6 +15,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { getRevenueStats } from '../analytics/analytics-actions'
+import { WeatherWidget } from '@/components/dashboard/WeatherWidget'
+import { AttendanceWidget } from '../components/AttendanceWidget'
+
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -92,8 +95,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
           <p className="text-sm text-slate-500">
             {new Date().toLocaleDateString('en-IN', {
@@ -104,7 +107,13 @@ export default async function DashboardPage() {
             })}
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+        
+        <div className="w-full md:w-auto md:min-w-[240px] flex flex-col gap-2">
+          <WeatherWidget />
+          <AttendanceWidget />
+        </div>
+
+        <Button className="bg-blue-600 hover:bg-blue-700 h-10" asChild>
           <Link href="/bookings/new">
             <Plus className="w-4 h-4 mr-2" />
             New Booking

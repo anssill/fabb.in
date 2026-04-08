@@ -11,10 +11,10 @@ export class WhatsAppService {
   /**
    * Sends a template-based WhatsApp message via Interakt
    */
-  static async sendTemplate(data: WhatsAppTemplateData) {
-    const apiKey = process.env.INTERAKT_API_KEY
-    if (!apiKey) {
-      console.warn('INTERAKT_API_KEY not configured. Skipping WhatsApp message.')
+  static async sendTemplate(data: WhatsAppTemplateData, apiKey?: string) {
+    const finalApiKey = apiKey || process.env.INTERAKT_API_KEY
+    if (!finalApiKey) {
+      console.warn('WhatsApp API key not configured. Skipping message.')
       return null
     }
 
@@ -39,7 +39,7 @@ export class WhatsAppService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${apiKey}`,
+          'Authorization': `Basic ${finalApiKey}`,
         },
         body: JSON.stringify(payload),
       })

@@ -8,6 +8,7 @@ import {
   CalendarCheck, IndianRupee, Waves,
 } from 'lucide-react'
 import Link from 'next/link'
+import { ItemTag } from './components/ItemTag'
 
 const CONDITION_COLORS: Record<string, string> = {
   excellent: 'bg-green-100 text-green-700',
@@ -252,6 +253,9 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
               </Button>
             </CardContent>
           </Card>
+
+          {/* QR Tag */}
+          <ItemTag item={{ sku: item.sku, name: item.name, category: item.category }} />
         </div>
       </div>
     </div>

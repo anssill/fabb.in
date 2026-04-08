@@ -10,10 +10,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const bookingId = params.id
+    const { id: bookingId } = await params
 
     // 1. Fetch booking with customer data
     const { data: booking, error: bookingErr } = await supabaseAdmin

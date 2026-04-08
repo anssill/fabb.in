@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, Search, LogOut, User, Settings, Moon, Sun } from 'lucide-react'
+import { Bell, Search, LogOut, User, Settings, Moon, Sun, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useState } from 'react'
 
@@ -48,17 +48,25 @@ export function Header({ staff }: Props) {
     ? staff.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
 
+  const pathname = usePathname()
+  const pathSegments = pathname.split('/').filter(Boolean)
+
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-60 z-30 h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6 transition-all duration-300">
-      {/* Left: Search */}
-      <div className="flex-1 max-w-md ml-10 lg:ml-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search bookings, customers, items..."
-            className="pl-10 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 h-9 text-sm"
-          />
-        </div>
+      {/* Left: Breadcrumbs */}
+      <div className="flex-1 ml-10 lg:ml-0 flex items-center gap-2 overflow-hidden">
+        {pathSegments.map((segment: string, index: number) => (
+          <div key={index} className="flex items-center gap-1 shrink-0">
+            {index > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />}
+            <span className={`text-sm capitalize ${
+              index === pathSegments.length - 1 
+                ? 'font-semibold text-slate-900 dark:text-white' 
+                : 'text-slate-500'
+            }`}>
+              {segment.replace(/-/g, ' ')}
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Right: Actions */}

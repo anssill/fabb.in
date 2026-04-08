@@ -41,6 +41,9 @@ interface BranchData {
   city: string | null
   phone: string | null
   email: string | null
+  lat: number | string | null
+  lng: number | string | null
+  gps_radius_metres: number | null
   settings: Record<string, unknown>
 }
 

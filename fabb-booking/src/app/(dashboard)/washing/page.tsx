@@ -42,9 +42,9 @@ export default async function WashingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Washing Queue</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Garment Lifecycle</h1>
           <p className="text-sm text-slate-500">
-            {count ?? 0} items total · {sortedLogs.filter(l => l.stage === 'in_washing').length} currently washing
+            {count ?? 0} total items in cycle · {sortedLogs.filter(l => l.stage === 'in_washing').length} washing · {sortedLogs.filter(l => l.stage === 'in_fitting').length} fitting · {sortedLogs.filter(l => l.stage === 'maintenance').length} maintenance
           </p>
         </div>
         <WashLogDialog 

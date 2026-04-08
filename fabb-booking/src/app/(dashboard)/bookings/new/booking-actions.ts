@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/sms/msg91'
 import { createInternalNotification } from '../../notifications/notification-actions'
 import { revalidatePath } from 'next/cache'
+import { NotionService } from '@/lib/notion'
+import { WhatsAppService } from '@/lib/whatsapp'
 
 interface BookingData {
   customer: {
@@ -142,19 +144,46 @@ export async function createNewBookingFlow(data: BookingData) {
       actionUrl: `/bookings/${booking!.id}`
     })
 
-    // 8. Trigger SMS (Customer)
-    if (process.env.MSG91_AUTH_KEY) {
-      await sendSMS({
-        phone: data.customer.phone,
-        templateId: process.env.MSG91_TEMPLATE_CONFIRMATION,
-        placeholders: {
-          name: data.customer.name,
-          booking_id: bookingNumber,
-          pickup_date: data.dates.pickup_date
-        },
-        bookingId: booking!.id,
-        customerId: customerId!
+    // 8. Trigger Notion Sync
+    try {
+      await NotionService.syncBooking({
+        bookingNumber,
+        customerName: data.customer.name,
+        status: 'booked',
+        pickupDate: data.dates.pickup_date,
+        returnDate: data.dates.return_date,
+        totalAmount: data.pricing.total_amount,
+        balanceDue: data.pricing.total_amount - data.payment.advance_amount,
+        advancePaid: data.payment.advance_amount,
+        depositAmount: 0, // Fallback if not specified
+        summary: data.items.map(i => `${i.name} (${i.size})`).join(', ')
       })
+    } catch (err) {
+      console.error('Failed to sync with Notion:', err)
+      // We don't throw here to ensure the booking creation is still considered successful
+    }
+
+    // 9. Trigger WhatsApp Confirmation
+    try {
+      await WhatsAppService.sendTemplate({
+        phoneNumber: data.customer.phone,
+        templateName: 'booking_confirmation_v1', // Replace with your approved template name
+        variables: [data.customer.name, bookingNumber, data.dates.pickup_date],
+      })
+
+      // Log the WhatsApp action
+      await supabase.from('sms_log').insert({
+        business_id: data.businessId,
+        branch_id: data.branchId,
+        customer_id: customerId,
+        booking_id: booking!.id,
+        phone: data.customer.phone,
+        template_id: 'booking_confirmation_v1',
+        status: 'sent',
+        message: `Vars: ${data.customer.name}, ${bookingNumber}`
+      })
+    } catch (err) {
+      console.error('Failed to send WhatsApp:', err)
     }
 
     revalidatePath('/bookings')

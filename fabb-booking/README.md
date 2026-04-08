@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fabb.booking 👗
 
-## Getting Started
+**Fabb.booking** is a premium, full-stack rental management system designed for boutique apparel and designer wear businesses. It streamlines the lifecycle of garment rentals—from inventory management and booking to washing and final returns.
 
-First, run the development server:
+## ✨ Key Features
 
+### 🏢 Multi-Branch Management
+- Centralized control for multiple retail locations.
+- Branch-specific inventory, staff, and pricing rules.
+- Real-time stock synchronization across branches.
+
+### 📅 Advanced Booking Engine
+- Step-by-step booking flow (Customer -> Items -> Dates -> Payments).
+- Automatic rental price calculation based on duration.
+- Conflict prevention for inventory scheduling.
+
+### 🧼 Washing & Maintenance Workflow
+- Track items currently "In Washing" or "In Fitting".
+- Transition items back to live inventory with a single click.
+- Condition tracking (Excellent, Good, Fair, Maintenance).
+
+### 💳 Payments & Analytics
+- Multi-mode payment tracking (UPI, Cash, Bank Transfer).
+- Advanced analytics for revenue, bookings, and top customers.
+- Exportable expense logs and branch-wise performance metrics.
+
+### 🔔 Notifications & Third-Party Integrations
+- Internal staff alerts for overdue returns and low stock.
+- Automated customer SMS confirmations via **MSG91**.
+- **Marketplace Hub**: Modular support for external public APIs.
+- **Dynamic Weather**: Real-time conditions for rental branches.
+- **Smart Validation**: Instant phone and email verification.
+
+---
+
+## 🛠️ Technical Stack
+
+- **Framework**: [Next.js 15 (App Router)](https://nextjs.org/)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS & Lucide Icons
+- **Database**: [Supabase (PostgreSQL)](https://supabase.com/)
+- **Auth**: Supabase Auth (OTP & Password)
+- **State Management**: Zustand
+- **Components**: Radix UI (Shadcn UI)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- Node.js 18.x or later.
+- A Supabase project.
+- (Optional) MSG91 account for SMS.
+
+### 2. Environment Setup
+Copy the example environment file and fill in your credentials:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Installation & Database
+Install dependencies and initialize the database via Supabase:
+```bash
+npm install
+# Run your migrations in the Supabase SQL editor using the provided .sql files in /supabase/migrations
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Running the App
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📂 Project Structure
+- `/src/app/(dashboard)`: Main application modules (Bookings, Inventory, etc.).
+- `/src/app/(auth)`: Authentication flows.
+- `/src/lib`: Shared utilities, API wrappers (MSG91, Stripe), and state stores.
+- `/src/components/ui`: Reusable UI primitives.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 License
+Internal Proprietary Software - (c) 2026 Fabb.booking Team

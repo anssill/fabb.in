@@ -118,3 +118,38 @@ export async function getUtilizationStats() {
     utilizationRate: Math.round(utilization)
   }
 }
+
+export async function getInventoryPerformance() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: staff } = await supabase.from('staff').select('business_id').eq('id', user.id).single()
+  if (!staff) throw new Error('Staff record not found')
+
+  // Fetch top performing items by total_revenue
+  const { data: items, error } = await supabase
+    .from('items')
+    .select('id, name, category, total_revenue, purchase_cost, total_rentals')
+    .eq('business_id', staff.business_id)
+    .eq('is_active', true)
+    .order('total_revenue', { ascending: false })
+    .limit(10)
+
+  if (error) throw error
+
+  const performance = items.map(item => {
+    const revenue = Number(item.total_revenue) || 0
+    const cost = Number(item.purchase_cost) || 0
+    const roi = cost > 0 ? ((revenue - cost) / cost) * 100 : 0
+    
+    return {
+      ...item,
+      roi: Math.round(roi),
+      revenue,
+      cost
+    }
+  })
+
+  return performance
+}

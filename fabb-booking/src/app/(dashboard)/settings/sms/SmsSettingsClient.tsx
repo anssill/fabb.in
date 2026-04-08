@@ -51,10 +51,13 @@ export function SmsSettingsClient() {
   const [smsEnabled, setSmsEnabled] = useState(settings.enabled ?? false)
   const [apiKey, setApiKey] = useState(settings.api_key ?? '')
   const [senderId, setSenderId] = useState(settings.sender_id ?? '')
-  const [templates, setTemplates] = useState<Record<string, string>>(
+  const [templates, setTemplates] = useState<Record<string, { body: string, templateId: string }>>(
     SMS_TEMPLATES.reduce((acc, t) => ({
       ...acc,
-      [t.key]: settings.templates?.[t.key] ?? t.default,
+      [t.key]: {
+        body: settings.templates?.[t.key]?.body ?? settings.templates?.[t.key] ?? t.default,
+        templateId: settings.templates?.[t.key]?.templateId ?? ''
+      },
     }), {})
   )
 
@@ -156,22 +159,43 @@ export function SmsSettingsClient() {
             {SMS_TEMPLATES.map((template, idx) => (
               <div key={template.key}>
                 {idx > 0 && <Separator className="mb-6" />}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label>{template.label}</Label>
+                    <Label className="font-semibold">{template.label}</Label>
                     <div className="flex gap-1 flex-wrap justify-end">
                       {template.variables.map(v => (
-                        <Badge key={v} variant="outline" className="text-xs font-mono py-0">{v}</Badge>
+                        <Badge key={v} variant="outline" className="text-[10px] font-mono py-0 h-4">{v}</Badge>
                       ))}
                     </div>
                   </div>
-                  <Textarea
-                    value={templates[template.key]}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTemplates(p => ({ ...p, [template.key]: e.target.value }))}
-                    rows={2}
-                    className="text-sm"
-                  />
-                  <p className="text-xs text-slate-400 text-right">{templates[template.key]?.length ?? 0} chars</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-1 space-y-1.5">
+                      <Label className="text-xs text-slate-500">Template ID</Label>
+                      <Input
+                        value={templates[template.key].templateId}
+                        onChange={(e) => setTemplates(p => ({ 
+                          ...p, 
+                          [template.key]: { ...p[template.key], templateId: e.target.value } 
+                        }))}
+                        placeholder="e.g. 1207..."
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                    <div className="md:col-span-3 space-y-1.5">
+                      <Label className="text-xs text-slate-500">Message body (DLT Approved)</Label>
+                      <Textarea
+                        value={templates[template.key].body}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTemplates(p => ({ 
+                          ...p, 
+                          [template.key]: { ...p[template.key], body: e.target.value } 
+                        }))}
+                        rows={2}
+                        className="text-sm"
+                      />
+                      <p className="text-[10px] text-slate-400 text-right">{(templates[template.key].body as string)?.length ?? 0} chars</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

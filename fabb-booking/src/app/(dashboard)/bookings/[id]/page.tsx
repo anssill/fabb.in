@@ -8,6 +8,10 @@ import {
   Clock, MapPin, Printer, Share2, MoreHorizontal, AlertTriangle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { BookingActions } from './components/BookingActions'
+import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
+import { BookingSmsButton } from './components/BookingSmsButton'
+
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft: { color: 'bg-slate-100 text-slate-700', label: 'Draft' },
@@ -74,10 +78,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm"><Printer className="w-4 h-4 mr-1" />Print</Button>
+          <BookingSmsButton 
+            phone={customer?.phone || ''}
+            customerName={customer?.name || 'Customer'}
+            bookingNumber={booking.booking_number}
+            bookingId={booking.id}
+            customerId={customer?.id}
+            pickupDate={booking.pickup_date}
+            returnDate={booking.return_date}
+          />
+          <DownloadInvoiceButton booking={booking} />
           <Button variant="outline" size="sm"><Share2 className="w-4 h-4 mr-1" />Share</Button>
           <Button variant="outline" size="sm"><MoreHorizontal className="w-4 h-4" /></Button>
         </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -99,9 +113,23 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   {customer?.address && <p className="text-xs text-slate-400 mt-1">{customer.address}</p>}
                 </div>
                 {customer?.id && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/customers/${customer.id}`}>View Profile</Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <BookingSmsButton 
+                      phone={customer?.phone || ''}
+                      customerName={customer?.name || 'Customer'}
+                      bookingNumber={booking.booking_number}
+                      bookingId={booking.id}
+                      customerId={customer?.id}
+                      pickupDate={booking.pickup_date}
+                      returnDate={booking.return_date}
+                      variant="ghost"
+                      showLabel={false}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    />
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/customers/${customer.id}`}>View Profile</Link>
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -272,27 +300,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
           {/* Quick Actions */}
           <Card>
-            <CardContent className="p-3 space-y-2">
-              {booking.status === 'booked' && (
-                <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white" size="sm">
-                  Mark as Picked Up
-                </Button>
-              )}
-              {booking.status === 'out' && (
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white" size="sm">
-                  Mark as Returned
-                </Button>
-              )}
-              {booking.status === 'returned' && (
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" size="sm">
-                  Complete Booking
-                </Button>
-              )}
-              {['booked', 'draft'].includes(booking.status) && (
-                <Button variant="outline" className="w-full text-red-600" size="sm">
-                  Cancel Booking
-                </Button>
-              )}
+            <CardContent className="p-3">
+              <BookingActions booking={{ id: booking.id, status: booking.status }} />
             </CardContent>
           </Card>
 

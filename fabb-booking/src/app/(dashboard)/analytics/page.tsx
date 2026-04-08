@@ -10,10 +10,11 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react'
-import { getRevenueStats, getUtilizationStats } from './analytics-actions'
+import { getRevenueStats, getUtilizationStats, getInventoryPerformance } from './analytics-actions'
 import { RevenueTrendChart } from './components/RevenueTrendChart'
 import { PaymentMethodChart } from './components/PaymentMethodChart'
 import { BookingSourceChart } from './components/BookingSourceChart'
+import { InventoryPerformanceTable } from './components/InventoryPerformanceTable'
 import { Badge } from '@/components/ui/badge'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +22,7 @@ export const dynamic = 'force-dynamic'
 export default async function AnalyticsPage() {
   const { dailyData, summary, methodDistribution, sourceDistribution } = await getRevenueStats('30d')
   const { totalItems, utilizationRate } = await getUtilizationStats()
+  const performanceData = await getInventoryPerformance()
 
   const metrics = [
     { 
@@ -154,6 +156,10 @@ export default async function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <InventoryPerformanceTable data={performanceData} />
       </div>
 
       {/* Inventory & Performance Summary */}

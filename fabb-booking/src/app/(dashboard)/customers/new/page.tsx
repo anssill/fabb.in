@@ -9,21 +9,54 @@ import { Label } from '@/components/ui/label'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
+import { integrations } from '@/lib/integrations'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
 export default function NewCustomerPage() {
   const router = useRouter()
-  const { staff } = useAppStore()
+  const { staff, activeBranch } = useAppStore()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', id_type: '', id_number: '', notes: '' })
 
   const update = (f: string, v: string) => setForm((p) => ({ ...p, [f]: v }))
 
   const handleSubmit = async () => {
-    if (!form.name || !form.phone || !staff?.business_id) { toast.error('Name and phone are required'); return }
+    if (!form.name || !form.phone || !staff?.business_id) { 
+      toast.error('Name and phone are required'); return 
+    }
+    
     setSaving(true)
     try {
+      const integrationSettings = (activeBranch?.settings as any)?.integrations || {}
+      
+      // 1. Phone validation
+      if (integrationSettings.phone?.enabled) {
+        toast.loading('Validating phone number...', { id: 'validation' })
+        const phoneResult = await integrations.validatePhone(form.phone, integrationSettings.phone.numverify_key)
+        if (phoneResult.error) {
+           console.warn('Phone validation error:', phoneResult.error)
+        } else if (phoneResult.valid === false) {
+           toast.error('Invalid mobile number. Please check and try again.', { id: 'validation' })
+           setSaving(false)
+           return
+        }
+      }
+
+      // 2. Email validation
+      if (form.email && integrationSettings.email?.enabled) {
+        toast.loading('Verifying email address...', { id: 'validation' })
+        const emailResult = await integrations.validateEmail(form.email, integrationSettings.email.cloudmersive_key)
+        if (emailResult.error) {
+           console.warn('Email validation error:', emailResult.error)
+        } else if (emailResult.valid === false) {
+           toast.error('The email address provided is invalid or inactive.', { id: 'validation' })
+           setSaving(false)
+           return
+        }
+      }
+
+      toast.loading('Saving customer data...', { id: 'validation' })
       const supabase = createClient()
       const { data, error } = await supabase.from('customers').insert({
         business_id: staff.business_id,
@@ -31,10 +64,16 @@ export default function NewCustomerPage() {
         address: form.address || null, id_type: form.id_type || null,
         id_number: form.id_number || null, notes: form.notes || null,
       }).select('id').single()
+      
       if (error) throw error
-      toast.success('Customer added!')
+      
+      toast.success('Customer added successfully!', { id: 'validation' })
       router.push(`/customers/${data.id}`)
-    } catch { toast.error('Failed to add customer') } finally { setSaving(false) }
+    } catch (error: any) { 
+      toast.error(error.message || 'Failed to add customer', { id: 'validation' }) 
+    } finally { 
+      setSaving(false) 
+    }
   }
 
   return (
