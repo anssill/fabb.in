@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
       .eq('success', false)
       .gte('attempted_at', fifteenMinutesAgo)
 
-    if ((failCount ?? 0) >= 10) {
+    if ((failCount ?? 0) >= 5) {
       return NextResponse.json(
-        { error: 'Too many failed attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' },
+        { error: 'Too many failed attempts. Your account is locked for 15 minutes.', code: 'RATE_LIMITED' },
         { status: 429 }
       )
     }
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (staffError || !staffRecord || !staffRecord.password_hash) {
       await logAttempt(false)
       return NextResponse.json(
-        { error: 'No account found with this email.', code: 'INVALID_CREDENTIALS' },
+        { error: 'No account found with this email. Contact your business admin.', code: 'INVALID_CREDENTIALS' },
         { status: 401 }
       )
     }
@@ -63,7 +63,9 @@ export async function POST(req: NextRequest) {
       const remaining = 5 - ((failCount ?? 0) + 1)
       return NextResponse.json(
         {
-          error: remaining > 0 ? `Incorrect password. ${remaining} attempts remaining.` : 'Incorrect password.',
+          error: remaining > 0
+            ? `Incorrect password. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining before lockout.`
+            : 'Incorrect password. Account temporarily locked.',
           code: 'INVALID_CREDENTIALS',
         },
         { status: 401 }
