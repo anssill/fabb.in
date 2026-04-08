@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-// Use anon client for DB operations if service role key is placeholder
-const isServiceRoleValid = serviceRoleKey && serviceRoleKey !== 'YOUR_SERVICE_ROLE_KEY_HERE'
-const supabaseClient = createClient(
-  supabaseUrl,
-  isServiceRoleValid ? serviceRoleKey : supabaseAnonKey,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const signupSchema = z.object({
   businessName: z.string().min(2).max(100),
@@ -37,7 +25,7 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.toLowerCase()
 
     // Step 2: Check duplicate email
-    const { data: existingStaff } = await supabaseClient
+    const { data: existingStaff } = await supabaseAdmin
       .from('staff')
       .select('id')
       .eq('email', cleanEmail)
@@ -60,7 +48,7 @@ export async function POST(req: NextRequest) {
     let businessSlug = baseSlug
     let slugSuffix = 1
     while (true) {
-      const { data: existing } = await supabaseClient
+      const { data: existing } = await supabaseAdmin
         .from('businesses')
         .select('id')
         .eq('slug', businessSlug)
@@ -70,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 4: Create business
-    const { data: business, error: bizError } = await supabaseClient
+    const { data: business, error: bizError } = await supabaseAdmin
       .from('businesses')
       .insert({
         name: businessName,
@@ -94,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     // Step 5: Create default branch
     const prefix = businessName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
-    const { data: branch, error: branchError } = await supabaseClient
+    const { data: branch, error: branchError } = await supabaseAdmin
       .from('branches')
       .insert({
         business_id: business.id,
@@ -116,40 +104,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create default branch' }, { status: 500 })
     }
 
-    // Step 6: Create Auth User
-    let authUserId: string
-    const tempPassword = 'Login123!' // Default password for workaround
+    // Step 6: Create Auth User (requires service role key)
+    const tempPassword = 'Login123!'
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: cleanEmail,
+      email_confirm: true,
+      password: tempPassword,
+      user_metadata: { name: ownerName, business_id: business.id },
+    })
 
-    if (isServiceRoleValid) {
-      // Secure path: Use Admin API
-      const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
-        email: cleanEmail,
-        email_confirm: true,
-        password: tempPassword,
-        user_metadata: { name: ownerName, business_id: business.id },
-      })
-      if (authError || !authUser.user) {
-        console.error('Auth user creation error (admin):', authError)
-        return NextResponse.json({ error: 'Failed to create auth user' }, { status: 500 })
-      }
-      authUserId = authUser.user.id
-    } else {
-      // Workaround path: Use standard signUp (will work if RLS allows and Email Confirm is off, or just creates the record)
-      // Note: This might send a confirmation email if configured in Supabase
-      const { data: authUser, error: authError } = await supabaseClient.auth.signUp({
-        email: cleanEmail,
-        password: tempPassword,
-      })
-      if (authError || !authUser.user) {
-        console.error('Auth user creation error (public):', authError)
-        return NextResponse.json({ error: 'Failed to create auth user. Please use a valid service role key for production.' }, { status: 500 })
-      }
-      authUserId = authUser.user.id
+    if (authError || !authUser.user) {
+      console.error('Auth user creation error:', authError)
+      return NextResponse.json({ error: 'Failed to create auth user' }, { status: 500 })
     }
+
+    const authUserId = authUser.user.id
 
     // Step 7: Create staff record
     const passwordHash = await bcrypt.hash(tempPassword, 12)
-    const { error: staffError } = await supabaseClient.from('staff').insert({
+    const { error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUserId,
       business_id: business.id,
       branch_id: branch.id,
@@ -168,13 +141,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 8: Finalize business association
-    await supabaseClient
+    await supabaseAdmin
       .from('businesses')
       .update({ owner_id: authUserId })
       .eq('id', business.id)
 
+    // Step 9: Create session so user is logged in immediately
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
+      user_id: authUserId,
+    })
+
+    if (sessionError || !sessionData?.session) {
+      console.error('Session creation error:', sessionError)
+      return NextResponse.json({ error: 'Account created but failed to sign in. Please log in manually.' }, { status: 500 })
+    }
+
     return NextResponse.json({
       success: true,
+      session: {
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
+      },
       businessId: business.id,
       branchId: branch.id,
       redirect: '/setup',
