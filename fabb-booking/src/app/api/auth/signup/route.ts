@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
 
     // Step 6: Create Auth User (requires service role key)
     const tempPassword = 'Login123!'
+    let authUserId: string
+
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
       email_confirm: true,
@@ -113,12 +115,37 @@ export async function POST(req: NextRequest) {
       user_metadata: { name: ownerName, business_id: business.id },
     })
 
-    if (authError || !authUser.user) {
-      console.error('Auth user creation error:', authError)
+    if (authError) {
+      if (authError.code === 'email_exists') {
+        // Auth user exists from a previous partial signup or OAuth attempt.
+        // Find their ID via listUsers and reuse it.
+        const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+        const existing = userList?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
+        if (!existing) {
+          return NextResponse.json(
+            { error: 'Email already in use. Please sign in or use a different email.' },
+            { status: 400 }
+          )
+        }
+        // Reset to temp password and confirm email so they can log in
+        await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: { name: ownerName, business_id: business.id },
+        })
+        authUserId = existing.id
+      } else {
+        console.error('Auth user creation error:', authError)
+        return NextResponse.json(
+          { error: `Failed to create auth user: ${authError.message}` },
+          { status: 500 }
+        )
+      }
+    } else if (!authUser.user) {
       return NextResponse.json({ error: 'Failed to create auth user' }, { status: 500 })
+    } else {
+      authUserId = authUser.user.id
     }
-
-    const authUserId = authUser.user.id
 
     // Step 7: Create staff record
     const passwordHash = await bcrypt.hash(tempPassword, 12)
