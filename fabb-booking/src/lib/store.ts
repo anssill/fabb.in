@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-interface StaffData {
+export interface StaffData {
   id: string
   name: string | null
   email: string
@@ -13,7 +13,7 @@ interface StaffData {
   permissions: Record<string, boolean>
 }
 
-interface BusinessData {
+export interface BusinessData {
   id: string
   name: string
   slug: string
@@ -33,7 +33,7 @@ interface BusinessData {
   settings: Record<string, unknown>
 }
 
-interface BranchData {
+export interface BranchData {
   id: string
   name: string
   prefix: string

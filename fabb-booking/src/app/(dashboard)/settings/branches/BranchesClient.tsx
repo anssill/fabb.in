@@ -45,7 +45,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
   
   const [isSaving, setIsSaving] = useState(false)
 
-  function openEdit(branch: Branch) {
+  function openEdit(branch: BranchData) {
     setEditingBranch(branch)
     setIsAddingNew(false)
     setFormData({
@@ -113,7 +113,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
           .neq('id', editingBranch?.id || '00000000-0000-0000-0000-000000000000')
       }
 
-      let updatedBranch: Branch
+      let updatedBranch: BranchData
 
       if (isAddingNew) {
         const { data, error } = await supabase
@@ -189,7 +189,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" onClick={() => openEdit(branch as Branch)}>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" onClick={() => openEdit(branch)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
                 </div>
