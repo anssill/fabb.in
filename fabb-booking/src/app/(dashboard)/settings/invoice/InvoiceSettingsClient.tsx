@@ -162,7 +162,7 @@ export function InvoiceSettingsClient() {
             <div className="flex items-center justify-between pt-2">
               <div>
                 <p className="text-sm font-medium">Show Authorised Signatory line</p>
-                <p className="text-xs text-slate-400 mt-0.5">Adds "Authorised Signatory" at the bottom</p>
+                <p className="text-xs text-slate-400 mt-0.5">Adds &quot;Authorised Signatory&quot; at the bottom</p>
               </div>
               <Switch checked={signatureLine} onCheckedChange={setSignatureLine} />
             </div>

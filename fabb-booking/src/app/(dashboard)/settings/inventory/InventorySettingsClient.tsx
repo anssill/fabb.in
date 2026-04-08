@@ -117,7 +117,7 @@ export function InventorySettingsClient() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete category?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Removing &quot;{cat.name}&quot; won&apos;t affect existing items but they'll lose their category.
+                          Removing &quot;{cat.name}&quot; will not affect existing items but they will lose their category.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

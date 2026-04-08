@@ -130,7 +130,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
               </div>
               <h3 className="text-lg font-medium text-slate-900">All caught up!</h3>
               <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-                You'll see notifications here for new bookings, low stock alerts, and overdue returns.
+                You will see notifications here for new bookings, low stock alerts, and overdue returns.
               </p>
             </div>
           )}
