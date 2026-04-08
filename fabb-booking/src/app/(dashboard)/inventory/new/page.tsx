@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronLeft, Plus, Trash2, Loader2, Upload } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { ChevronLeft, Plus, Trash2, Loader2, Upload, Layers } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -17,6 +16,12 @@ import { createItem } from '../inventory-actions'
 const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
 const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
 
+const SIZE_PRESETS = {
+  'Clothing': ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'],
+  'Numeric': ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'],
+  'Shoes': ['5', '6', '7', '8', '9', '10', '11', '12'],
+}
+
 interface Variant {
   size: string
   colour: string
@@ -24,10 +29,41 @@ interface Variant {
   price_override: number | null
 }
 
+function SizePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">Size *</Label>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. M / 40 / Free Size" />
+      <div className="space-y-1">
+        {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
+          <div key={group} className="flex flex-wrap gap-1">
+            {sizes.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onChange(s)}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
+                  value === s
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function NewItemPage() {
   const router = useRouter()
   const { staff } = useAppStore()
   const [saving, setSaving] = useState(false)
+  const [bulkSizes, setBulkSizes] = useState<string[]>([])
+  const [showBulk, setShowBulk] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -44,13 +80,11 @@ export default function NewItemPage() {
     { size: 'M', colour: '', total_stock: 1, price_override: null },
   ])
 
-  const updateForm = (field: string, value: string | number) => {
+  const updateForm = (field: string, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }))
-  }
 
-  const addVariant = () => {
+  const addVariant = () =>
     setVariants([...variants, { size: '', colour: '', total_stock: 1, price_override: null }])
-  }
 
   const removeVariant = (index: number) => {
     if (variants.length <= 1) return
@@ -63,6 +97,23 @@ export default function NewItemPage() {
     setVariants(updated)
   }
 
+  const toggleBulkSize = (size: string) =>
+    setBulkSizes((prev) => prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size])
+
+  const applyBulkSizes = () => {
+    if (bulkSizes.length === 0) return
+    const existing = variants.filter((v) => v.size.trim())
+    const existingSizes = new Set(existing.map((v) => v.size))
+    const newVariants = bulkSizes
+      .filter((s) => !existingSizes.has(s))
+      .map((s) => ({ size: s, colour: '', total_stock: 1, price_override: null }))
+    const base = variants.filter((v) => v.size.trim() || variants.length === 1)
+    setVariants([...base.filter((v) => v.size.trim()), ...newVariants])
+    setBulkSizes([])
+    setShowBulk(false)
+    toast.success(`Added ${newVariants.length} size variant${newVariants.length !== 1 ? 's' : ''}`)
+  }
+
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast.error('Item name is required'); return }
     if (!form.daily_rate) { toast.error('Daily rate is required'); return }
@@ -72,7 +123,7 @@ export default function NewItemPage() {
     setSaving(true)
     try {
       const result = await createItem(form, variants)
-      toast.success('Item added and synced to Notion!')
+      toast.success('Item added successfully!')
       router.push(`/inventory/${result.id}`)
       router.refresh()
     } catch (err) {
@@ -128,7 +179,6 @@ export default function NewItemPage() {
             />
           </div>
 
-          {/* Image upload placeholder */}
           <div className="space-y-2">
             <Label>Cover Image</Label>
             <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center hover:border-blue-300 transition-colors cursor-pointer">
@@ -195,36 +245,92 @@ export default function NewItemPage() {
               <CardTitle className="text-base">Size & Stock Variants</CardTitle>
               <CardDescription>Add sizes, colours, and stock for this item</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={addVariant}>
-              <Plus className="w-4 h-4 mr-1" /> Add Variant
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowBulk(!showBulk)}>
+                <Layers className="w-4 h-4 mr-1" /> Bulk Add Sizes
+              </Button>
+              <Button variant="outline" size="sm" onClick={addVariant}>
+                <Plus className="w-4 h-4 mr-1" /> Add Row
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {variants.map((v, i) => (
-            <div key={i} className="flex gap-3 items-end">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs">Size *</Label>
-                <Input value={v.size} onChange={(e) => updateVariant(i, 'size', e.target.value)} placeholder="M / 40 / Free" />
+        <CardContent className="space-y-4">
+          {/* Bulk size picker */}
+          {showBulk && (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select sizes to add</p>
+              {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
+                <div key={group}>
+                  <p className="text-[11px] text-slate-400 mb-1.5 font-medium">{group}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sizes.map((s) => {
+                      const isSelected = bulkSizes.includes(s)
+                      const alreadyExists = variants.some((v) => v.size === s)
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          disabled={alreadyExists}
+                          onClick={() => toggleBulkSize(s)}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                            alreadyExists
+                              ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
+                              : isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                          }`}
+                        >
+                          {s}{alreadyExists && ' ✓'}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={applyBulkSizes}
+                  disabled={bulkSizes.length === 0}
+                >
+                  Add {bulkSizes.length > 0 ? bulkSizes.length : ''} size{bulkSizes.length !== 1 ? 's' : ''} →
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setShowBulk(false) }}>
+                  Cancel
+                </Button>
               </div>
-              <div className="flex-1 space-y-1">
+            </div>
+          )}
+
+          {/* Variant rows */}
+          {variants.map((v, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_80px_110px_36px] gap-3 items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <SizePicker value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
+              <div className="space-y-1.5">
                 <Label className="text-xs">Colour</Label>
                 <Input value={v.colour} onChange={(e) => updateVariant(i, 'colour', e.target.value)} placeholder="Red" />
               </div>
-              <div className="w-20 space-y-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs">Stock</Label>
                 <Input type="number" value={v.total_stock} onChange={(e) => updateVariant(i, 'total_stock', Number(e.target.value))} min={1} />
               </div>
-              <div className="w-28 space-y-1">
-                <Label className="text-xs">Price override</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Price override (₹)</Label>
                 <Input type="number" value={v.price_override ?? ''} onChange={(e) => updateVariant(i, 'price_override', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
               </div>
-              <Button variant="ghost" size="sm" className="text-red-500 shrink-0" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="pt-5">
+                <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 p-1 h-8 w-8" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           ))}
-          <p className="text-xs text-slate-400">Total stock: {variants.reduce((s, v) => s + v.total_stock, 0)} units across {variants.length} variant{variants.length !== 1 ? 's' : ''}</p>
+
+          <p className="text-xs text-slate-400">
+            Total stock: <span className="font-semibold text-slate-600">{variants.reduce((s, v) => s + v.total_stock, 0)}</span> units across <span className="font-semibold text-slate-600">{variants.length}</span> variant{variants.length !== 1 ? 's' : ''}
+          </p>
         </CardContent>
       </Card>
 

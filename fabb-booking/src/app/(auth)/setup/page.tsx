@@ -577,73 +577,119 @@ export default function SetupPage() {
                 <CardDescription>Add a few items from your collection. You can add more later.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {items.map((item, i) => (
-                  <div key={i} className="grid grid-cols-6 gap-2 items-end">
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Item name</Label>
-                      <Input
-                        value={item.name}
-                        onChange={(e) => {
-                          const updated = [...items]
-                          updated[i] = { ...updated[i], name: e.target.value }
-                          setItems(updated)
-                        }}
-                        placeholder="Red Silk Kurtha"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Category</Label>
-                      <Select
-                        value={item.category}
-                        onValueChange={(v) => {
-                          const updated = [...items]
-                          updated[i] = { ...updated[i], category: v }
-                          setItems(updated)
-                        }}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                {items.map((item, i) => {
+                  const toggleSize = (s: string) => {
+                    const current = item.sizes.split(',').map((x) => x.trim()).filter(Boolean)
+                    const next = current.includes(s) ? current.filter((x) => x !== s) : [...current, s]
+                    const updated = [...items]
+                    updated[i] = { ...updated[i], sizes: next.join(', ') }
+                    setItems(updated)
+                  }
+                  const selectedSizes = item.sizes.split(',').map((x) => x.trim()).filter(Boolean)
+                  return (
+                    <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-2 space-y-1">
+                          <Label className="text-xs">Item name</Label>
+                          <Input
+                            value={item.name}
+                            onChange={(e) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], name: e.target.value }
+                              setItems(updated)
+                            }}
+                            placeholder="Red Silk Kurtha"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">₹/day</Label>
+                          <Input
+                            type="number"
+                            value={item.dailyRate || ''}
+                            onChange={(e) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], dailyRate: Number(e.target.value) }
+                              setItems(updated)
+                            }}
+                            placeholder="500"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Category</Label>
+                          <Select
+                            value={item.category}
+                            onValueChange={(v) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], category: v }
+                              setItems(updated)
+                            }}
+                          >
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {CATEGORIES.map((c) => (
+                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Stock per size</Label>
+                          <Input
+                            type="number"
+                            value={item.stock}
+                            onChange={(e) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], stock: Number(e.target.value) }
+                              setItems(updated)
+                            }}
+                            min={1}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Sizes <span className="text-slate-400">(click to select, or type custom)</span></Label>
+                        <div className="flex flex-wrap gap-1">
+                          {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size', '38', '40', '42', '44'].map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => toggleSize(s)}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
+                                selectedSizes.includes(s)
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                              }`}
+                            >
+                              {s}
+                            </button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                        <Input
+                          value={item.sizes}
+                          onChange={(e) => {
+                            const updated = [...items]
+                            updated[i] = { ...updated[i], sizes: e.target.value }
+                            setItems(updated)
+                          }}
+                          placeholder="Or type custom: 36, 38, Custom"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 text-xs h-7"
+                          onClick={() => setItems(items.filter((_, idx) => idx !== i))}
+                        >
+                          Remove item
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Sizes</Label>
-                      <Input
-                        value={item.sizes}
-                        onChange={(e) => {
-                          const updated = [...items]
-                          updated[i] = { ...updated[i], sizes: e.target.value }
-                          setItems(updated)
-                        }}
-                        placeholder="S, M, L"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">₹/day</Label>
-                      <Input
-                        type="number"
-                        value={item.dailyRate || ''}
-                        onChange={(e) => {
-                          const updated = [...items]
-                          updated[i] = { ...updated[i], dailyRate: Number(e.target.value) }
-                          setItems(updated)
-                        }}
-                        placeholder="500"
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500"
-                      onClick={() => setItems(items.filter((_, idx) => idx !== i))}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
+                  )
+                })}
                 <Button variant="outline" size="sm" onClick={addItem}>
                   + Add item
                 </Button>
