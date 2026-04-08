@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-const isServiceRoleValid = serviceRoleKey && serviceRoleKey !== 'YOUR_SERVICE_ROLE_KEY_HERE'
-const supabaseClient = createClient(
-  supabaseUrl,
-  isServiceRoleValid ? serviceRoleKey : supabaseAnonKey,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,14 +10,14 @@ export async function POST(req: NextRequest) {
 
     // Step 1: Rate limiting check
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-    const { count: failCount } = await supabaseClient
+    const { count: failCount } = await supabaseAdmin
       .from('login_attempts')
       .select('*', { count: 'exact' })
       .eq('email', cleanEmail)
       .eq('success', false)
       .gte('attempted_at', fifteenMinutesAgo)
 
-    if ((failCount ?? 0) >= 10) { // Relaxed rate limit for dev
+    if ((failCount ?? 0) >= 10) {
       return NextResponse.json(
         { error: 'Too many failed attempts. Try again in 15 minutes.', code: 'RATE_LIMITED' },
         { status: 429 }
@@ -36,14 +25,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Find staff by email
-    const { data: staffRecord, error: staffError } = await supabaseClient
+    const { data: staffRecord, error: staffError } = await supabaseAdmin
       .from('staff')
       .select('id, email, password_hash, status, role, setup_completed, business_id, branch_id, name')
       .eq('email', cleanEmail)
       .single()
 
     const logAttempt = async (success: boolean) => {
-      await supabaseClient.from('login_attempts').insert({
+      await supabaseAdmin.from('login_attempts').insert({
         email: cleanEmail,
         ip_address: ip,
         success,
@@ -81,16 +70,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 6: Success
+    // Step 6: Log success and update last login
     await logAttempt(true)
-    await supabaseClient
+    await supabaseAdmin
       .from('staff')
       .update({ last_login: new Date().toISOString(), failed_login_attempts: 0 })
       .eq('id', staffRecord.id)
 
-    // Return info. Note: Client-side session creation should ideally happen via supabase.auth.signInWithPassword
+    // Step 7: Create Supabase session
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({
+      user_id: staffRecord.id,
+    })
+
+    if (sessionError || !sessionData?.session) {
+      console.error('Session creation error:', sessionError)
+      return NextResponse.json({ error: 'Failed to create session', code: 'SESSION_ERROR' }, { status: 500 })
+    }
+
     return NextResponse.json({
       success: true,
+      session: {
+        access_token: sessionData.session.access_token,
+        refresh_token: sessionData.session.refresh_token,
+      },
       staff: {
         id: staffRecord.id,
         name: staffRecord.name,
