@@ -63,7 +63,11 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" />Edit</Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/inventory/${item.id}/edit`}>
+              <Edit className="w-4 h-4 mr-1" />Edit
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" className="text-red-600"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
         </div>
       </div>

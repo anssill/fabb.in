@@ -211,4 +211,32 @@ export class NotionService {
     }
     return conditionMap[condition.toLowerCase()] || 'Good'
   }
+
+  /**
+   * Specifically updates only the stock summary for an item in Notion
+   */
+  static async syncItemStock(notionPageId: string, stockSummary: string) {
+    if (!process.env.NOTION_API_KEY) return null
+
+    try {
+      await notion.pages.update({
+        page_id: notionPageId,
+        properties: {
+          'Stock Summary': {
+            rich_text: [
+              {
+                text: {
+                  content: stockSummary,
+                },
+              },
+            ],
+          },
+        },
+      })
+      return true
+    } catch (error) {
+      console.error('Error syncing stock to Notion:', error)
+      return false
+    }
+  }
 }

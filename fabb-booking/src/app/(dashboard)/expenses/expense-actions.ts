@@ -8,6 +8,7 @@ export async function createExpense(data: {
   amount: number
   category: string
   expense_date: string
+  item_id?: string
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,6 +24,7 @@ export async function createExpense(data: {
     amount: data.amount,
     category: data.category,
     expense_date: data.expense_date,
+    item_id: data.item_id || null,
     created_at: new Date().toISOString()
   })
 

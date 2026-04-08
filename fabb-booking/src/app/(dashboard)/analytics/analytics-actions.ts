@@ -138,16 +138,42 @@ export async function getInventoryPerformance() {
 
   if (error) throw error
 
+  // Fetch expenses linked to these items
+  const itemIds = items.map(i => i.id)
+  let itemExpenses: Record<string, number> = {}
+  
+  if (itemIds.length > 0) {
+    const { data: expensesData } = await supabase
+      .from('expenses')
+      .select('item_id, amount')
+      .in('item_id', itemIds)
+      
+    if (expensesData) {
+      itemExpenses = expensesData.reduce((acc, exp) => {
+        if (exp.item_id) {
+          acc[exp.item_id] = (acc[exp.item_id] || 0) + Number(exp.amount)
+        }
+        return acc
+      }, {} as Record<string, number>)
+    }
+  }
+
   const performance = items.map(item => {
     const revenue = Number(item.total_revenue) || 0
     const cost = Number(item.purchase_cost) || 0
-    const roi = cost > 0 ? ((revenue - cost) / cost) * 100 : 0
+    const maintenanceExpenses = itemExpenses[item.id] || 0
+    const totalCost = cost + maintenanceExpenses
+    const netProfit = revenue - totalCost
+    const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
     
     return {
       ...item,
       roi: Math.round(roi),
       revenue,
-      cost
+      cost,
+      maintenanceExpenses,
+      netProfit,
+      totalCost
     }
   })
 

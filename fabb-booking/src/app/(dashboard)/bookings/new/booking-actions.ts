@@ -113,6 +113,33 @@ export async function createNewBookingFlow(data: BookingData) {
     }))
     await supabase.from('booking_items').insert(bookingItems)
 
+    // 4.1 Update Stock and Sync to Notion
+    for (const item of data.items) {
+      // Atomic stock adjustment
+      await supabase.rpc('adjust_item_stock', {
+        p_variant_id: item.variant_id,
+        p_quantity_change: item.quantity,
+        p_is_reservation: true
+      })
+
+      // Fetch all variants for this item to generate updated Notion summary
+      const { data: variants } = await supabase
+        .from('item_variants')
+        .select('size, total_stock, available_stock')
+        .eq('item_id', item.item_id)
+      
+      const { data: parentItem } = await supabase
+        .from('items')
+        .select('notion_page_id')
+        .eq('id', item.item_id)
+        .single()
+
+      if (parentItem?.notion_page_id && variants) {
+        const stockSummary = variants.map(v => `${v.size}: ${v.available_stock}/${v.total_stock}`).join(', ')
+        await NotionService.syncItemStock(parentItem.notion_page_id, stockSummary)
+      }
+    }
+
     // 5. Record advance payment
     if (data.payment.advance_amount > 0) {
       await supabase.from('booking_payments').insert({
