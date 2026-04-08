@@ -16,7 +16,7 @@ import {
 import Link from 'next/link'
 import { getRevenueStats } from '../analytics/analytics-actions'
 import { WeatherWidget } from '@/components/dashboard/WeatherWidget'
-import { AttendanceWidget } from '../components/AttendanceWidget'
+import { AttendanceWidget } from './components/AttendanceWidget'
 
 
 export default async function DashboardPage() {

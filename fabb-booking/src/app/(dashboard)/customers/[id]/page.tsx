@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ChevronLeft, User, Phone, Mail, MapPin, CreditCard, CalendarCheck, IndianRupee, Edit, AlertTriangle, Shield, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { CustomerSmsButton } from './components/CustomerSmsButton'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -91,6 +92,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <Card>
             <CardContent className="p-3 space-y-2">
               <Button className="w-full bg-blue-600 hover:bg-blue-700" size="sm" asChild><Link href="/bookings/new">New Booking</Link></Button>
+              <CustomerSmsButton 
+                phone={customer.phone}
+                customerName={customer.name}
+                customerId={customer.id}
+              />
               <Button variant="outline" className="w-full" size="sm" asChild><a href={`https://wa.me/91${customer.phone}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>
             </CardContent>
           </Card>

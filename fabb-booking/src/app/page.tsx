@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -10,20 +12,33 @@ import {
   ArrowRight,
   TrendingUp,
   Smartphone,
-  Users
+  Users,
+  Menu,
+  X,
+  Activity
 } from 'lucide-react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default async function LandingPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function LandingPage() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
 
-  if (user) {
-    // If logged in, redirect to dashboard
-    redirect('/dashboard')
-  }
+  useEffect(() => {
+    async function checkUser() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        router.push('/dashboard')
+      } else {
+        setIsLoading(false)
+      }
+    }
+    checkUser()
+  }, [router])
 
   const features = [
     {
@@ -64,6 +79,8 @@ export default async function LandingPage() {
     }
   ]
 
+  if (isLoading) return null
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Navigation */}
@@ -75,7 +92,9 @@ export default async function LandingPage() {
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900">Fabb.booking</span>
           </div>
-          <div className="flex items-center gap-4">
+          
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-4">
             <Link href="/login">
               <Button variant="ghost" className="text-slate-600 hover:text-slate-900">Sign In</Button>
             </Link>
@@ -83,34 +102,57 @@ export default async function LandingPage() {
               <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">Get Started</Button>
             </Link>
           </div>
+
+          {/* Mobile Nav Toggle */}
+          <div className="md:hidden">
+            <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </Button>
+          </div>
         </div>
+
+        {/* Mobile Menu Overlay */}
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b border-slate-200 animate-in slide-in-from-top duration-300">
+            <div className="p-4 flex flex-col gap-4">
+              <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start text-lg">Sign In</Button>
+              </Link>
+              <Link href="/signup" onClick={() => setIsMenuOpen(false)}>
+                <Button className="w-full text-lg bg-blue-600 hover:bg-blue-700 text-white">Get Started</Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
+      <section className="relative pt-24 md:pt-40 pb-16 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-[40%] -left-[10%] w-[70%] h-[120%] bg-blue-100/50 rounded-full blur-3xl opacity-50" />
-          <div className="absolute top-[20%] -right-[10%] w-[50%] h-[80%] bg-purple-100/50 rounded-full blur-3xl opacity-50" />
+          <div className="absolute -top-[40%] -left-[10%] w-[70%] h-[120%] bg-blue-100/50 rounded-full blur-3xl opacity-50 animate-pulse decoration-8" />
+          <div className="absolute top-[20%] -right-[10%] w-[50%] h-[80%] bg-purple-100/50 rounded-full blur-3xl opacity-50 animate-pulse duration-5000" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <Badge variant="outline" className="px-3 py-1 bg-white border-blue-100 text-blue-600 mb-6 shadow-sm">
-            Professional Rental Management
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6 bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Badge variant="outline" className="px-3 py-1 bg-white border-blue-100 text-blue-600 mb-8 shadow-sm">
+              Professional Rental Management
+            </Badge>
+          </div>
+          <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6 bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100">
             Scale Your Rental <br className="hidden md:block" /> Business with Precision.
           </h1>
-          <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 mb-10 leading-relaxed">
+          <p className="max-w-2xl mx-auto text-base md:text-xl text-slate-600 mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
             The all-in-one platform for inventory, bookings, and staff management. Designed for modern rental businesses that demand excellence.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup">
-              <Button size="lg" className="h-14 px-8 text-lg bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/25">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
+            <Link href="/signup" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/25 transition-all hover:scale-105 active:scale-95">
                 Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-slate-200 bg-white hover:bg-slate-50">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto h-14 px-8 text-lg border-slate-200 bg-white hover:bg-slate-50 transition-all">
                 View Demo
               </Button>
             </Link>
@@ -174,7 +216,7 @@ export default async function LandingPage() {
               </div>
               <div className="flex-shrink-0">
                 <Link href="/signup">
-                  <Button size="xl" className="h-16 px-10 text-xl bg-white text-slate-900 hover:bg-slate-100">
+                  <Button size="lg" className="h-16 px-10 text-xl bg-white text-slate-900 hover:bg-slate-100">
                     Get Started Now
                   </Button>
                 </Link>

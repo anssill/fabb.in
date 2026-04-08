@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { createItem } from '../inventory-actions'
 
 const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
 const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
@@ -70,62 +71,9 @@ export default function NewItemPage() {
 
     setSaving(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      // Generate SKU if empty
-      const sku = form.sku || `${form.category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
-
-      // Create item
-      const { data: item, error: itemErr } = await supabase
-        .from('items')
-        .insert({
-          business_id: staff.business_id,
-          branch_id: staff.branch_id,
-          name: form.name,
-          sku,
-          category: form.category,
-          description: form.description || null,
-          daily_rate: form.daily_rate,
-          deposit_amount: form.deposit_amount || null,
-          condition: form.condition,
-          purchase_price: form.purchase_price || null,
-          is_active: true,
-          created_by: user.id,
-        })
-        .select('id')
-        .single()
-
-      if (itemErr) throw itemErr
-
-      // Create variants
-      const variantRows = variants.map((v) => ({
-        item_id: item!.id,
-        size: v.size,
-        colour: v.colour || null,
-        total_stock: v.total_stock,
-        available_stock: v.total_stock,
-        reserved_stock: 0,
-        price_override: v.price_override,
-        is_active: true,
-      }))
-
-      const { error: varErr } = await supabase.from('item_variants').insert(variantRows)
-      if (varErr) throw varErr
-
-      // Audit log
-      await supabase.from('audit_logs').insert({
-        business_id: staff.business_id,
-        staff_id: user.id,
-        action: 'item.created',
-        entity_type: 'item',
-        entity_id: item!.id,
-        new_values: { name: form.name, sku, variants: variants.length },
-      })
-
-      toast.success('Item added successfully!')
-      router.push(`/inventory/${item!.id}`)
+      const result = await createItem(form, variants)
+      toast.success('Item added and synced to Notion!')
+      router.push(`/inventory/${result.id}`)
       router.refresh()
     } catch (err) {
       console.error('Item creation error:', err)
