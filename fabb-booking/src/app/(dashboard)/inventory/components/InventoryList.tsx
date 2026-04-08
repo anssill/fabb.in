@@ -186,7 +186,7 @@ export function InventoryList({ initialItems }: InventoryListProps) {
             </div>
             <h3 className="text-lg font-medium text-slate-900">No items found</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-              We couldn't find any items matching your current filters. Try adjusting your search term or category.
+              We could not find any items matching your current filters. Try adjusting your search term or category.
             </p>
             {(search || selectedCategory) && (
               <Button 
