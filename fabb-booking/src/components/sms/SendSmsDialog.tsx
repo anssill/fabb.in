@@ -191,7 +191,7 @@ export function SendSmsDialog({
             <div className="space-y-2">
               <Label className="text-xs text-slate-500">Preview</Label>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm text-slate-700 italic">
-                "{preview}"
+                &quot;{preview}&quot;
               </div>
               <p className="text-[10px] text-slate-400">
                 Variables: {Object.keys(variables).join(', ')}

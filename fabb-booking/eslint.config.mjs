@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore utility scripts
+    "chunk-sql.js",
+    "fix-schema.js",
+    "split.js",
+    "test-supabase.js",
+    "test-supabase-gmail.js",
   ]),
 ]);
 
