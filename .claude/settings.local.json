@@ -4,7 +4,8 @@
       "Bash(node -e \"const pkg = require\\('./node_modules/@supabase/supabase-js/package.json'\\); console.log\\(pkg.version\\)\")",
       "Bash(npx tsc:*)",
       "Bash(node -e \"const { GoTrueAdminApi } = require\\('@supabase/supabase-js'\\); console.log\\(Object.getOwnPropertyNames\\(GoTrueAdminApi.prototype\\).filter\\(m => m.includes\\('ession'\\) || m.includes\\('ign'\\) || m.includes\\('oken'\\)\\)\\)\")",
-      "Bash(node -e \"const { GoTrueAdminApi } = require\\('@supabase/supabase-js'\\); console.log\\(Object.getOwnPropertyNames\\(GoTrueAdminApi.prototype\\)\\)\")"
+      "Bash(node -e \"const { GoTrueAdminApi } = require\\('@supabase/supabase-js'\\); console.log\\(Object.getOwnPropertyNames\\(GoTrueAdminApi.prototype\\)\\)\")",
+      "Bash(npm run:*)"
     ]
   }
 }

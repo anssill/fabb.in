@@ -9,11 +9,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { sku } = await req.json()
-    const bookingId = params.id
+    const { id: bookingId } = await params
 
     // 1. Verify if the SKU belongs to an item in this booking
     const { data: bookingItem, error } = await supabaseAdmin

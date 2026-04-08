@@ -17,7 +17,7 @@ const ROLE_PROTECTED_PATHS: Record<string, string[]> = {
   '/settings/billing': ['owner', 'super_admin'],
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { supabase, user, supabaseResponse } = await updateSession(req)
   const path = req.nextUrl.pathname
 
