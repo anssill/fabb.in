@@ -25,6 +25,7 @@ export function InvoiceSettingsClient() {
   const [footerText, setFooterText] = useState(settings.footer_text ?? 'Thank you for choosing us. Items must be returned in the same condition.')
   const [termsText, setTermsText] = useState(settings.terms_text ?? 'Items are rented as-is. Any damage will be charged separately.')
   const [showBankDetails, setShowBankDetails] = useState(settings.show_bank_details ?? false)
+  const [showLogo, setShowLogo] = useState(settings.show_logo ?? true)
   const [bankName, setBankName] = useState(settings.bank_name ?? '')
   const [bankAccount, setBankAccount] = useState(settings.bank_account ?? '')
   const [bankIfsc, setBankIfsc] = useState(settings.bank_ifsc ?? '')
@@ -41,6 +42,7 @@ export function InvoiceSettingsClient() {
           prefix: invoicePrefix,
           gst_enabled: gstEnabled,
           gst_rate: gstRate,
+          show_logo: showLogo,
           footer_text: footerText,
           terms_text: termsText,
           show_bank_details: showBankDetails,
@@ -150,13 +152,20 @@ export function InvoiceSettingsClient() {
             />
             <p className="text-xs text-slate-400 text-right">{termsText.length}/500</p>
           </div>
-          <div className="flex items-center justify-between pt-2">
-            <div>
-              <p className="text-sm font-medium">Show Authorised Signatory line</p>
-              <p className="text-xs text-slate-400 mt-0.5">Adds "Authorised Signatory" at the bottom</p>
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                <p className="text-sm font-medium">Show business logo</p>
+                <p className="text-xs text-slate-400 mt-0.5">Displays your company logo at the top</p>
+              </div>
+              <Switch checked={showLogo} onCheckedChange={setShowLogo} />
             </div>
-            <Switch checked={signatureLine} onCheckedChange={setSignatureLine} />
-          </div>
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                <p className="text-sm font-medium">Show Authorised Signatory line</p>
+                <p className="text-xs text-slate-400 mt-0.5">Adds "Authorised Signatory" at the bottom</p>
+              </div>
+              <Switch checked={signatureLine} onCheckedChange={setSignatureLine} />
+            </div>
         </CardContent>
       </Card>
 
