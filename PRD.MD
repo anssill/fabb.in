@@ -1475,7 +1475,7 @@ create table items (
   category text not null,
   sku text,
   cover_image_url text,
-  daily_rate numeric(10, 2) not null default 0,
+  price numeric(10, 2) not null default 0,
   deposit_amount numeric(10, 2) not null default 0,
   purchase_cost numeric(10, 2),
   purchase_date date,
@@ -1491,6 +1491,7 @@ create table items (
   last_rented_at timestamptz,
   completeness_score integer not null default 0 check (completeness_score between 0 and 100),
   metadata jsonb not null default '{}',
+  notion_page_id text,
   created_by uuid references staff(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
