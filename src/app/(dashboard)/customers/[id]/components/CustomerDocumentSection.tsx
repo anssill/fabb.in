@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ImageUpload } from '@/components/shared/ImageUpload'
+import { MediaUpload } from '@/components/shared/MediaUpload'
 import { createClient } from '@/lib/supabase/client'
 import { Shield, User as UserIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -44,7 +44,7 @@ export function CustomerDocumentSection({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ImageUpload
+          <MediaUpload
             bucket="documents"
             path={`customers/${customerId}/id_proof`}
             value={idProofUrl}
@@ -68,7 +68,7 @@ export function CustomerDocumentSection({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ImageUpload
+          <MediaUpload
             bucket="images"
             path={`customers/${customerId}/profile`}
             value={profilePhotoUrl}

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ImageUpload } from '@/components/shared/ImageUpload'
+import { MediaUpload } from '@/components/shared/MediaUpload'
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
@@ -580,7 +580,7 @@ export default function PickupPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-500">Take photos of the customer with the items or any specific condition notes.</p>
             
-            <ImageUpload
+            <MediaUpload
               bucket="images"
               path={`bookings/${id}/pickup`}
               value={pickupPhotos}

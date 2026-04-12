@@ -20,7 +20,7 @@ interface ImageUploadProps {
   multiple?: boolean
 }
 
-export function ImageUpload({
+export function MediaUpload({
   bucket,
   path,
   onUploadComplete,
