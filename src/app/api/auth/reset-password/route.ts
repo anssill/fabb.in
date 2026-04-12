@@ -1,68 +1,55 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 
-// GET — validate token before showing the reset form
-export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token')
-  if (!token) return NextResponse.json({ valid: false })
-
-  const { data } = await supabaseAdmin
-    .from('password_reset_tokens')
-    .select('id, expires_at, used_at')
-    .eq('token', token)
-    .maybeSingle()
-
-  if (!data || data.used_at || new Date(data.expires_at) < new Date()) {
-    return NextResponse.json({ valid: false })
-  }
-
-  return NextResponse.json({ valid: true })
+function getAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
 }
 
-// POST — apply the new password
 export async function POST(req: NextRequest) {
   try {
-    const { token, password } = await req.json()
+    const supabaseAdmin = getAdmin()
+    
+    // Validate authorization header
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.split(' ')[1]
 
-    if (!token || !password || password.length < 8) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    // Verify token to get the user ID
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 })
     }
 
-    // Validate token
-    const { data: tokenRecord } = await supabaseAdmin
-      .from('password_reset_tokens' as any)
-      .select('id, staff_id, expires_at, used_at')
-      .eq('token', token)
-      .maybeSingle()
+    const { password } = await req.json()
 
-    if (!tokenRecord || tokenRecord.used_at || new Date(tokenRecord.expires_at) < new Date()) {
-      return NextResponse.json({ error: 'This link has expired or is invalid.' }, { status: 400 })
+    if (!password || password.length < 8) {
+      return NextResponse.json({ error: 'Invalid password format' }, { status: 400 })
     }
 
-    // Update Supabase auth password
+    // Since they are authenticated via a recovery link, we can update their Auth password directly
     const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-      tokenRecord.staff_id,
+      user.id,
       { password }
     )
     if (authError) {
       console.error('Auth password update error:', authError)
-      return NextResponse.json({ error: 'Failed to update password' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to update authentication password' }, { status: 500 })
     }
 
-    // Update bcrypt hash in staff table
+    // Now update bcrypt hash in staff table to keep local login parity
     const passwordHash = await bcrypt.hash(password, 12)
     await supabaseAdmin
-      .from('staff')
+      .from('staff' as any)
       .update({ password_hash: passwordHash })
-      .eq('id', tokenRecord.staff_id)
-
-    // Mark token as used
-    await supabaseAdmin
-      .from('password_reset_tokens' as any)
-      .update({ used_at: new Date().toISOString() })
-      .eq('id', tokenRecord.id)
+      .eq('id', user.id)
 
     return NextResponse.json({ success: true })
   } catch (err) {
@@ -70,4 +57,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

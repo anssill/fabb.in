@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 function getPasswordStrength(password: string): number {
   if (password.length === 0) return 0
@@ -25,10 +29,10 @@ const STRENGTH_LABELS = ['', 'Too short', 'Weak', 'Almost there', 'Strong']
 
 function ResetPasswordContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get('token')
+  // Create browser client so Supabase can automatically parse the URL hash from the recovery email
+  const [supabase] = useState(() => createClient(supabaseUrl, supabaseAnonKey))
 
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const [sessionSet, setSessionSet] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -37,15 +41,32 @@ function ResetPasswordContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!token) {
-      setTokenValid(false)
-      return
-    }
-    fetch(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
-      .then((r) => r.json())
-      .then((d) => setTokenValid(d.valid))
-      .catch(() => setTokenValid(false))
-  }, [token])
+    // Check if Supabase successfully established a session from the recovery link hash
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setSessionSet(true)
+      } else {
+        // We'll give it a moment as the hash is processed asynchronously by supabase-js
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+            setSessionSet(true)
+          } else if (event === 'SIGNED_OUT') {
+            setSessionSet(false)
+          }
+        })
+        
+        // Timeout just in case it's an invalid link
+        const timer = setTimeout(() => {
+          setSessionSet((prev) => (prev === null ? false : prev))
+        }, 3000)
+        
+        return () => {
+          authListener.subscription.unsubscribe()
+          clearTimeout(timer)
+        }
+      }
+    })
+  }, [supabase])
 
   const strength = getPasswordStrength(password)
 
@@ -63,17 +84,28 @@ function ResetPasswordContent() {
     setLoading(true)
     setError('')
     try {
+      // Get the session access token to authorize the backend request
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session) throw new Error('Not authenticated')
+
+      // Use the built-in route so we can update BOTH Auth AND the 'staff' table password_hash simultaneously.
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`
+        },
+        body: JSON.stringify({ password }),
       })
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || 'Failed to reset password')
         return
       }
-      toast.success('Password updated successfully')
+      
+      // If the backend updated it successfully, sign them out so they can log in normally
+      await supabase.auth.signOut()
+      toast.success('Password updated successfully. Please log in.')
       setTimeout(() => router.push('/login'), 3000)
     } catch {
       setError('Something went wrong. Please try again.')
@@ -82,7 +114,7 @@ function ResetPasswordContent() {
     }
   }
 
-  if (tokenValid === null) {
+  if (sessionSet === null) {
     return (
       <Card className="shadow-sm border-slate-200">
         <CardContent className="flex justify-center p-8">
@@ -92,7 +124,7 @@ function ResetPasswordContent() {
     )
   }
 
-  if (tokenValid === false) {
+  if (sessionSet === false) {
     return (
       <Card className="shadow-sm border-slate-200">
         <CardHeader className="text-center">
