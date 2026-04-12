@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const ROLE_COLORS: Record<string, string> = {
   owner: 'bg-purple-100 text-purple-700 border-purple-200',
@@ -96,7 +97,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
         body: JSON.stringify(inviteData),
       })
 
-      const result = await res.json()
+      const result = await safeJsonParse(res)
 
       if (!res.ok) throw new Error(result.error || 'Failed to invite staff')
 

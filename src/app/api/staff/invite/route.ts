@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -14,7 +15,7 @@ const inviteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await safeJsonParse(req)
     const validated = inviteSchema.safeParse(body)
     
     if (!validated.success) {
@@ -95,4 +96,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

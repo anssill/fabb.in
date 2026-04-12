@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const STEPS = [
   { label: 'Business', icon: Building2, description: 'Core profile' },
@@ -200,7 +201,7 @@ export default function SetupPage() {
           body: JSON.stringify({ password: business.password }),
         })
         if (!res.ok) {
-          const d = await res.json()
+          const d = await safeJsonParse(res)
           throw new Error(d.error || 'Failed to update password')
         }
 

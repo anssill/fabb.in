@@ -35,7 +35,8 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const _text = await res.text();
+        const data = _text ? JSON.parse(_text) : {}
         throw new Error(data.error || 'Failed to update status')
       }
 
@@ -61,7 +62,8 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const _text = await res.text();
+        const data = _text ? JSON.parse(_text) : {}
         throw new Error(data.error || 'Failed to extend trial')
       }
 

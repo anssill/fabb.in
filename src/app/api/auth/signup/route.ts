@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const signupSchema = z.object({
   businessName: z.string().min(2).max(100),
@@ -14,7 +15,7 @@ const signupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await safeJsonParse(req)
 
     // Step 1: Validate inputs
     const validated = signupSchema.safeParse(body)

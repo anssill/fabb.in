@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@supabase/supabase-js'
 import { WhatsAppService } from '@/lib/whatsapp'
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       businessId,
       branchId,
       staffId 
-    } = await req.json()
+    } = await safeJsonParse(req)
 
     // 1. Send via Service
     let status = 'sent'

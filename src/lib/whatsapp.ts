@@ -1,3 +1,5 @@
+import { safeJsonParse } from './api-utils'
+
 export type WhatsAppTemplateData = {
   phoneNumber: string
   templateName: string
@@ -44,7 +46,7 @@ export class WhatsAppService {
         body: JSON.stringify(payload),
       })
 
-      const result = await response.json()
+      const result = await safeJsonParse(response)
 
       if (!response.ok) {
         throw new Error(result.message || 'Failed to send WhatsApp message')

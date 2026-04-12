@@ -59,7 +59,8 @@ export function CancelBookingDialog({ bookingId, onSuccess }: Props) {
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const _text = await res.text();
+        const data = _text ? JSON.parse(_text) : {}
         throw new Error(data.error || 'Failed to cancel booking')
       }
 

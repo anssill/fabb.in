@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@supabase/supabase-js'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -97,7 +98,7 @@ function ResetPasswordContent() {
         },
         body: JSON.stringify({ password }),
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok) {
         setError(data.error || 'Failed to reset password')
         return

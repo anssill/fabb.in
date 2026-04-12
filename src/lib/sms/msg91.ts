@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { safeJsonParse } from '../api-utils'
 
 interface SendSMSOptions {
   phone: string
@@ -71,7 +72,7 @@ export async function sendSMS({
       body: JSON.stringify(body)
     })
 
-    const result = await response.json()
+    const result = await safeJsonParse(response)
     const isSuccess = response.ok && (result.type === 'success' || result.status === 'success')
 
     // Log to sms_log

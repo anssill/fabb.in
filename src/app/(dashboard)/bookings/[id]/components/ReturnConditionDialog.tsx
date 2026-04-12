@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { safeJsonParse } from '@/lib/api-utils'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -76,7 +77,7 @@ export function ReturnConditionDialog({
       })
 
       if (!res.ok) {
-        const data = await res.json()
+        const data = await safeJsonParse(res)
         throw new Error(data.error || 'Failed to update booking status')
       }
 

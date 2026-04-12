@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -9,7 +10,7 @@ export async function PATCH(
 ) {
   try {
     const { id: businessId } = await params
-    const { status } = await req.json()
+    const { status } = await safeJsonParse(req)
 
     if (!status) {
       return NextResponse.json({ error: 'Status is required' }, { status: 400 })

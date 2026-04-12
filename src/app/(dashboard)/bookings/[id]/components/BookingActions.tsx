@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { syncFullInventory } from '@/app/(dashboard)/inventory/inventory-actions'
 import { AddPaymentDialog } from './AddPaymentDialog'
 import { CancelBookingDialog } from './CancelBookingDialog'
+import { safeJsonParse } from '@/lib/api-utils'
 
 interface BookingActionsProps {
   booking: {
@@ -72,7 +73,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         body: JSON.stringify({ sku }),
       })
 
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (!res.ok) throw new Error(data.error || 'Scan failed')
 
       toast.success(`Item ${sku} identified: ${data.message}`)

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { safeJsonParse } from '@/lib/api-utils'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function SignupPage() {
         body: JSON.stringify(form),
       })
 
-      const data = await res.json()
+      const data = await safeJsonParse(res)
 
       if (!res.ok) {
         if (data.fieldErrors && typeof data.fieldErrors === 'object') {

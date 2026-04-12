@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 })
     }
 
-    const { password } = await req.json()
+    const { password } = await safeJsonParse(req)
 
     if (!password || password.length < 8) {
       return NextResponse.json({ error: 'Invalid password format' }, { status: 400 })

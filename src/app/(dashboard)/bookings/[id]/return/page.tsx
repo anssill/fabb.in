@@ -134,7 +134,8 @@ export default function ReturnPage() {
         }),
       })
       if (!res.ok) {
-        const d = await res.json()
+        const _text = await res.text();
+        const d = _text ? JSON.parse(_text) : {}
         throw new Error(d.error || 'Failed to update booking status')
       }
 

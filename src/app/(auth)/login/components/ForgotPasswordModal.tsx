@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { safeJsonParse } from '@/lib/api-utils'
 
 interface Props {
   open: boolean
@@ -46,7 +47,7 @@ export function ForgotPasswordModal({ open, onOpenChange, defaultEmail }: Props)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      const data = await res.json()
+      const data = await safeJsonParse(res)
       if (data.code === 'NOT_FOUND') {
         setState('not_found')
       } else {

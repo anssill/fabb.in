@@ -1,3 +1,5 @@
+import { safeJsonParse } from './api-utils';
+
 /**
  * Integrations Service Layer
  * Wraps external APIs from the public-apis list for use within Fabb.booking.
@@ -40,7 +42,7 @@ class IntegrationsService {
     if (!apiKey) return { valid: true }; // Fallback if no key
     try {
       const resp = await fetch(`http://apilayer.net/api/validate?access_key=${apiKey}&number=${phone}&country_code=IN&format=1`);
-      const data = await resp.json();
+      const data = await safeJsonParse(resp);
       return {
         valid: data.valid,
         carrier: data.carrier,
@@ -67,7 +69,7 @@ class IntegrationsService {
         headers: { 'Apikey': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify(email),
       });
-      const data = await resp.json();
+      const data = await safeJsonParse(resp);
       return {
         valid: data.ValidAddress,
         disposable: data.IsDisposable,
@@ -84,7 +86,7 @@ class IntegrationsService {
   async getExchangeRates(base: string = 'INR'): Promise<ExchangeRates | null> {
     try {
       const resp = await fetch(`https://api.exchangerate.host/latest?base=${base}`);
-      const data = await resp.json();
+      const data = await safeJsonParse(resp);
       return {
         base: data.base,
         date: data.date,
@@ -103,14 +105,14 @@ class IntegrationsService {
     if (!apiKey) return null;
     try {
       const resp = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city},IN&appid=${apiKey}&units=metric`);
-      const data = await resp.json();
-      if (data.cod !== 200) return null;
+      const data = await safeJsonParse(resp);
+      if (data.cod !== 200 && data.cod !== '200') return null;
       return {
-        temp: Math.round(data.main.temp),
-        condition: data.weather[0].main,
-        description: data.weather[0].description,
-        icon: data.weather[0].icon,
-        city: data.name,
+        temp: Math.round(data.main?.temp || 0),
+        condition: data.weather?.[0]?.main || 'Unknown',
+        description: data.weather?.[0]?.description || 'Unknown',
+        icon: data.weather?.[0]?.icon || '',
+        city: data.name || city,
       };
     } catch (error) {
       console.error('Failed to fetch weather:', error);

@@ -64,7 +64,8 @@ export function AccountSettingsClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
       })
-      const data = await res.json()
+      const _text = await res.text();
+        const data = _text ? JSON.parse(_text) : {}
       if (!res.ok) throw new Error(data.error || 'Failed to change password')
       toast.success('Password updated successfully')
       setCurrentPassword('')

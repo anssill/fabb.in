@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { GoogleButton } from './components/GoogleButton'
 import { ForgotPasswordModal } from './components/ForgotPasswordModal'
 import { createClient } from '@/lib/supabase/client'
+import { safeJsonParse } from '@/lib/api-utils'
 
 function LoginContent() {
   const router = useRouter()
@@ -40,7 +41,7 @@ function LoginContent() {
         body: JSON.stringify({ email: email.toLowerCase(), password }),
       })
 
-      const data = await res.json()
+      const data = await safeJsonParse(res)
 
       if (!res.ok) {
         setError({ message: data.error, code: data.code })

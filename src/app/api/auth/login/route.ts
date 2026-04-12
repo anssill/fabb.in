@@ -2,10 +2,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { safeJsonParse } from '@/lib/api-utils'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json()
+    const { email, password } = await safeJsonParse(req)
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
     const cleanEmail = email.toLowerCase()
 

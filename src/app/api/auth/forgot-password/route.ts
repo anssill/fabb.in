@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@supabase/supabase-js'
 
 function getAdmin() {
@@ -13,7 +14,7 @@ function getAdmin() {
 export async function POST(req: NextRequest) {
   try {
     const supabaseAdmin = getAdmin()
-    const { email } = await req.json()
+    const { email } = await safeJsonParse(req)
 
     // Check if staff exists
     const { data: staffRecord } = await supabaseAdmin
