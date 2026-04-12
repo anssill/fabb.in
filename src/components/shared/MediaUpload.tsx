@@ -12,7 +12,7 @@ interface ImageUploadProps {
   bucket: string
   path: string
   onUploadComplete: (url: string) => void
-  onRemove?: (url: string) => void
+  onRemove?: ((url: string) => void) | (() => void)
   value?: string | string[]
   label?: string
   className?: string
@@ -114,7 +114,7 @@ export function MediaUpload({
             size="sm" 
             onClick={(e) => {
               e.stopPropagation()
-              onRemove(url)
+              ;(onRemove as (url: string) => void)(url)
             }}
             className="bg-red-500/90 hover:bg-red-600"
           >
