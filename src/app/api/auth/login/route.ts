@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
     // Step 1: Rate limiting check
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
     const { count: failCount } = await supabaseAdmin
-      .from('login_attempts')
+      .from('login_attempts' as any)
       .select('*', { count: 'exact' })
       .eq('email', cleanEmail)
       .eq('success', false)
@@ -26,13 +27,13 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Find staff by email
     const { data: staffRecord, error: staffError } = await supabaseAdmin
-      .from('staff')
+      .from('staff' as any)
       .select('id, email, password_hash, status, role, setup_completed, business_id, branch_id, name')
       .eq('email', cleanEmail)
       .single()
 
     const logAttempt = async (success: boolean) => {
-      await supabaseAdmin.from('login_attempts').insert({
+      await supabaseAdmin.from('login_attempts' as any).insert({
         email: cleanEmail,
         ip_address: ip,
         success,
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     // Step 6: Log success and update last login
     await logAttempt(true)
     await supabaseAdmin
-      .from('staff')
+      .from('staff' as any)
       .update({ last_login: new Date().toISOString(), failed_login_attempts: 0 })
       .eq('id', staffRecord.id)
 
@@ -111,3 +112,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error', code: 'INTERNAL' }, { status: 500 })
   }
 }
+

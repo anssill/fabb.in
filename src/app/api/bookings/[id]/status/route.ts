@@ -4,11 +4,13 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
 
-const supabaseAdmin = createSupabaseAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+function getAdmin() {
+  return createSupabaseAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 function formatError(error: any): string {
   return error?.message || error?.code || 'Unknown error'
@@ -19,6 +21,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabaseAdmin = getAdmin()
     const { status, itemConditions, itemNotes } = await req.json()
     const { id: bookingId } = await params
     const supabase = await createServerClient()

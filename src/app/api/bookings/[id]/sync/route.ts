@@ -3,17 +3,20 @@ import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
 
-const supabaseAdmin = createSupabaseAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+function getAdmin() {
+  return createSupabaseAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabaseAdmin = getAdmin()
     const { id: bookingId } = await params
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
