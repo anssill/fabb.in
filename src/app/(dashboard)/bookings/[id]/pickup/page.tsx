@@ -580,33 +580,14 @@ export default function PickupPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-500">Take photos of the customer with the items or any specific condition notes.</p>
             
-            <div className="grid grid-cols-2 gap-4">
-              {pickupPhotos.map(url => (
-                <div key={url} className="relative group aspect-video rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="Uploaded" className="w-full h-full object-contain" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={() => setPickupPhotos(prev => prev.filter(p => p !== url))}
-                      className="bg-red-500/90 hover:bg-red-600"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="mt-4">
-              <ImageUpload
-                bucket="images"
-                path={`bookings/${id}/pickup`}
-                onUploadComplete={(url) => setPickupPhotos(prev => [...prev, url])}
-              />
-            </div>
+            <ImageUpload
+              bucket="images"
+              path={`bookings/${id}/pickup`}
+              value={pickupPhotos}
+              onUploadComplete={(url) => setPickupPhotos(prev => [...prev, url])}
+              onRemove={(url) => setPickupPhotos(prev => prev.filter(p => p !== url))}
+              multiple={true}
+            />
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>Back</Button>

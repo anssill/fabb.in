@@ -38,7 +38,11 @@
       "Bash(wc:*)",
       "Bash(python3 -c ':*)",
       "Bash(node:*)",
-      "Bash(grep -n \"stat.color\\\\|bg-\\\\${\" \"C:/fabb.booking/fabb-booking/src/app/\\(dashboard\\)/dashboard/page.tsx\")"
+      "Bash(grep -n \"stat.color\\\\|bg-\\\\${\" \"C:/fabb.booking/fabb-booking/src/app/\\(dashboard\\)/dashboard/page.tsx\")",
+      "Bash(npm show:*)",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_deployments"
     ]
   }
 }
