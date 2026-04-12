@@ -12,7 +12,7 @@ interface ImageUploadProps {
   bucket: string
   path: string
   onUploadComplete: (url: string) => void
-  onRemove?: (url: string) => void
+  onRemove?: (url?: string) => void
   value?: string | string[]
   label?: string
   className?: string
