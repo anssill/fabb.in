@@ -52,7 +52,7 @@ export function CustomerDocumentSection({
               setIdProofUrl(url)
               updateCustomer('id_proof_url', url)
             }}
-            onRemove={(url) => {
+            onRemoveFile={(url: any) => {
               setIdProofUrl(undefined)
               updateCustomer('id_proof_url', null)
             }}
@@ -76,7 +76,7 @@ export function CustomerDocumentSection({
               setProfilePhotoUrl(url)
               updateCustomer('profile_photo_url', url)
             }}
-            onRemove={(url) => {
+            onRemoveFile={(url: any) => {
               setProfilePhotoUrl(undefined)
               updateCustomer('profile_photo_url', null)
             }}

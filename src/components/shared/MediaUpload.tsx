@@ -12,7 +12,7 @@ interface ImageUploadProps {
   bucket: string
   path: string
   onUploadComplete: (url: string) => void
-  onRemove?: (url?: string) => void
+  onRemoveFile?: (url: any) => void
   value?: string | string[]
   label?: string
   className?: string
@@ -24,7 +24,7 @@ export function MediaUpload({
   bucket,
   path,
   onUploadComplete,
-  onRemove,
+  onRemoveFile,
   value,
   label,
   className = '',
@@ -108,13 +108,13 @@ export function MediaUpload({
         className="w-full h-full object-contain"
       />
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-        {onRemove && (
+        {onRemoveFile && (
           <Button 
             variant="destructive" 
             size="sm" 
             onClick={(e) => {
               e.stopPropagation()
-              onRemove(url)
+              onRemoveFile(url)
             }}
             className="bg-red-500/90 hover:bg-red-600"
           >
