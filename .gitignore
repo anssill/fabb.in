@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
-.env*
+# env files (keep .env.example)
+.env
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -40,7 +42,33 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated
 /src/generated/prisma
 
-# Cleanup of old directory
+# old duplicate directory
 fabb-booking/
+
+# dev / scratch / test scripts
+chunk-sql.js
+fix-schema.js
+split.js
+schema.sql
+schema_fixed.sql
+test-booking.js
+test-booking.mjs
+test-booking-exact.mjs
+test-supabase.js
+test-supabase-gmail.js
+signup_response.html
+dev.log
+scratch/
+skills-lock.json
+sync-git.ps1
+PRD.MD
+
+# AI assistant files
+.claude/
+.kilo/
+.agents/
+CLAUDE.md
+AGENTS.md

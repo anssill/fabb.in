@@ -585,7 +585,7 @@ export default function PickupPage() {
               path={`bookings/${id}/pickup`}
               value={pickupPhotos}
               onUploadComplete={(url) => setPickupPhotos(prev => [...prev, url])}
-              onRemoveFile={(url: any) => setPickupPhotos(prev => prev.filter(p => p !== url))}
+              onRemove={(url) => setPickupPhotos(prev => prev.filter(p => p !== url))}
               multiple={true}
             />
 
