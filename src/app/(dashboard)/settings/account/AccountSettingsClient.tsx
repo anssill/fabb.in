@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAppStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
+import { safeJsonParse } from '@/lib/api-utils'
 import { toast } from 'sonner'
 import { Save, Camera, Lock, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { PinSetupDialog } from '@/components/shared/PinSetupDialog'
@@ -59,13 +60,17 @@ export function AccountSettingsClient() {
     }
     setIsSavingPassword(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ currentPassword, newPassword }),
       })
-      const _text = await res.text();
-        const data = _text ? JSON.parse(_text) : {}
+      const data = await safeJsonParse(res)
       if (!res.ok) throw new Error(data.error || 'Failed to change password')
       toast.success('Password updated successfully')
       setCurrentPassword('')
