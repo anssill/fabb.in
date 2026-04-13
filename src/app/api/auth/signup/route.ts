@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Check duplicate email
     const { data: existingStaff } = await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .select('id')
       .eq('email', cleanEmail)
       .maybeSingle()
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
     let slugSuffix = 1
     while (true) {
       const { data: existing } = await supabaseAdmin
-        .from('businesses' as any)
+        .from('businesses')
         .select('id')
         .eq('slug', businessSlug)
         .maybeSingle()
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     // Step 4: Create business
     const { data: business, error: bizError } = await supabaseAdmin
-      .from('businesses' as any)
+      .from('businesses')
       .insert({
         name: businessName,
         slug: businessSlug,
@@ -87,7 +86,7 @@ export async function POST(req: NextRequest) {
     // Step 5: Create default branch
     const prefix = businessName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
     const { data: branch, error: branchError } = await supabaseAdmin
-      .from('branches' as any)
+      .from('branches')
       .insert({
         business_id: business.id,
         name: businessName,
@@ -124,7 +123,7 @@ export async function POST(req: NextRequest) {
         // Auth user exists from a previous partial signup or OAuth attempt.
         // Find their ID by querying the staff table first (faster than listUsers).
         const { data: existingStaffById } = await supabaseAdmin
-          .from('staff' as any)
+          .from('staff')
           .select('id')
           .eq('email', cleanEmail)
           .maybeSingle()
@@ -138,7 +137,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Auth user exists but no staff record — partial previous signup, recover
-        const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+        const { data: userList } = await supabaseAdmin.auth.admin.listUsers()
         const existing = userList?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
         if (!existing) {
           return NextResponse.json(
@@ -167,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     // Step 7: Create staff record (upsert to handle partial signup recovery)
     const passwordHash = await bcrypt.hash(tempPassword, 12)
-    const { error: staffError } = await supabaseAdmin.from('staff' as any).upsert({
+    const { error: staffError } = await supabaseAdmin.from('staff').upsert({
       id: authUserId,
       business_id: business.id,
       branch_id: branch.id,
@@ -190,7 +189,7 @@ export async function POST(req: NextRequest) {
 
     // Step 8: Finalize business association
     await supabaseAdmin
-      .from('businesses' as any)
+      .from('businesses')
       .update({ owner_id: authUserId })
       .eq('id', business.id)
 
@@ -220,4 +219,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

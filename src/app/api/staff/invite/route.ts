@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Check if user already exists in staff table
     const { data: existingStaff } = await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .select('id')
       .eq('email', email.toLowerCase())
       .single()
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(tempPassword, 12)
 
     // 5. Create Staff Record
-    const { error: staffError } = await supabaseAdmin.from('staff' as any).insert({
+    const { error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUser.user.id,
       business_id: bizId,
       branch_id: branchId,

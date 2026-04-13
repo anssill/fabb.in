@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@supabase/supabase-js'
@@ -18,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     // Check if staff exists
     const { data: staffRecord } = await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .select('id, email, name')
       .eq('email', email.toLowerCase())
       .maybeSingle()

@@ -12,10 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore kilo worktrees
+    ".kilo/**",
     // Ignore utility scripts
     "chunk-sql.js",
+    "fix-json.js",
     "fix-schema.js",
     "split.js",
+    "test-booking.js",
     "test-supabase.js",
     "test-supabase-gmail.js",
   ]),

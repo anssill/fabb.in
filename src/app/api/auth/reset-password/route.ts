@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@supabase/supabase-js'
@@ -48,7 +47,7 @@ export async function POST(req: NextRequest) {
     // Now update bcrypt hash in staff table to keep local login parity
     const passwordHash = await bcrypt.hash(password, 12)
     await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .update({ password_hash: passwordHash })
       .eq('id', user.id)
 

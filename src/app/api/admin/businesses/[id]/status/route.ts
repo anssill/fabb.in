@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { createClient } from '@/lib/supabase/server'
@@ -25,7 +24,7 @@ export async function PATCH(
     }
 
     const { data: staff } = await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .select('role')
       .eq('id', user.id)
       .single()
@@ -36,7 +35,7 @@ export async function PATCH(
 
     // Update business status
     const { data, error } = await supabaseAdmin
-      .from('businesses' as any)
+      .from('businesses')
       .update({ status })
       .eq('id', businessId)
       .select('id, name, status')
@@ -47,9 +46,10 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, business: data })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal server error'
     console.error('Admin business status update error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 

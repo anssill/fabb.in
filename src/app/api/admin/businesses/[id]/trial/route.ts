@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -19,7 +18,7 @@ export async function PATCH(
     }
 
     const { data: staff } = await supabaseAdmin
-      .from('staff' as any)
+      .from('staff')
       .select('role')
       .eq('id', user.id)
       .single()
@@ -30,7 +29,7 @@ export async function PATCH(
 
     // Fetch current trial_ends_at
     const { data: business, error: fetchError } = await supabaseAdmin
-      .from('businesses' as any)
+      .from('businesses')
       .select('id, trial_ends_at')
       .eq('id', businessId)
       .single()
@@ -50,7 +49,7 @@ export async function PATCH(
     newTrialEnd.setDate(newTrialEnd.getDate() + 14)
 
     const { data, error } = await supabaseAdmin
-      .from('businesses' as any)
+      .from('businesses')
       .update({ trial_ends_at: newTrialEnd.toISOString() })
       .eq('id', businessId)
       .select('id, name, trial_ends_at')
@@ -61,9 +60,10 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, business: data })
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal server error'
     console.error('Admin business trial extension error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
