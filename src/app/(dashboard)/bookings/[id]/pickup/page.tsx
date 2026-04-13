@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { safeJsonParse } from '@/lib/api-utils'
 import { MediaUpload } from '@/components/shared/MediaUpload'
 
 const PAYMENT_METHODS = [
@@ -210,8 +211,7 @@ export default function PickupPage() {
         body: JSON.stringify({ status: 'out' }),
       })
       if (!res.ok) {
-        const _text = await res.text();
-        const d = _text ? JSON.parse(_text) : {}
+        const d = await safeJsonParse(res)
         throw new Error(d.error || 'Failed to update booking status')
       }
 

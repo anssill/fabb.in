@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { safeJsonParse } from '@/lib/api-utils'
 import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,8 +36,7 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
       })
 
       if (!res.ok) {
-        const _text = await res.text();
-        const data = _text ? JSON.parse(_text) : {}
+        const data = await safeJsonParse(res)
         throw new Error(data.error || 'Failed to update status')
       }
 
@@ -62,8 +62,7 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
       })
 
       if (!res.ok) {
-        const _text = await res.text();
-        const data = _text ? JSON.parse(_text) : {}
+        const data = await safeJsonParse(res)
         throw new Error(data.error || 'Failed to extend trial')
       }
 

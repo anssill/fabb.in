@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const CONDITIONS = [
   { value: 'excellent', label: 'Excellent' },
@@ -134,8 +135,7 @@ export default function ReturnPage() {
         }),
       })
       if (!res.ok) {
-        const _text = await res.text();
-        const d = _text ? JSON.parse(_text) : {}
+        const d = await safeJsonParse(res)
         throw new Error(d.error || 'Failed to update booking status')
       }
 

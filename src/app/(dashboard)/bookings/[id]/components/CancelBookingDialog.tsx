@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { safeJsonParse } from '@/lib/api-utils'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -59,8 +60,7 @@ export function CancelBookingDialog({ bookingId, onSuccess }: Props) {
       })
 
       if (!res.ok) {
-        const _text = await res.text();
-        const data = _text ? JSON.parse(_text) : {}
+        const data = await safeJsonParse(res)
         throw new Error(data.error || 'Failed to cancel booking')
       }
 
