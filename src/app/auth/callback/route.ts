@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function GET(request: NextRequest) {
-  const code = new URL(request.url).searchParams.get('code')
+  const searchParams = new URL(request.url).searchParams
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? ''
 
   if (!code) {
     return NextResponse.redirect(new URL('/login?error=no_code', request.url))
@@ -31,6 +33,16 @@ export async function GET(request: NextRequest) {
 
   if (error || !session) {
     return NextResponse.redirect(new URL('/login?error=auth', request.url))
+  }
+
+  // If this is a password recovery flow, redirect straight to the reset page
+  if (next === '/reset-password') {
+    const redirectResponse = NextResponse.redirect(new URL('/reset-password', request.url))
+    // Copy the session cookies so the reset page can read the session
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return redirectResponse
   }
 
   // Look up staff record

@@ -29,10 +29,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Send native Supbase email which doesn't require SMTP/Resend setup!
+    // Send native Supabase recovery email.
+    // We route through /auth/callback so the PKCE code is properly exchanged
+    // before landing on /reset-password with a valid session.
     const origin = req.headers.get('origin') || new URL(req.url).origin
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/reset-password`,
+      redirectTo: `${origin}/auth/callback?next=/reset-password`,
     })
 
     if (resetError) {

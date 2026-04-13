@@ -10,11 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 import { safeJsonParse } from '@/lib/api-utils'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 function getPasswordStrength(password: string): number {
   if (password.length === 0) return 0
@@ -30,8 +27,7 @@ const STRENGTH_LABELS = ['', 'Too short', 'Weak', 'Almost there', 'Strong']
 
 function ResetPasswordContent() {
   const router = useRouter()
-  // Create browser client so Supabase can automatically parse the URL hash from the recovery email
-  const [supabase] = useState(() => createClient(supabaseUrl, supabaseAnonKey))
+  const [supabase] = useState(() => createClient())
 
   const [sessionSet, setSessionSet] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
@@ -42,31 +38,25 @@ function ResetPasswordContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Check if Supabase successfully established a session from the recovery link hash
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+    // onAuthStateChange fires immediately with the current auth state,
+    // including PASSWORD_RECOVERY when the session was set by /auth/callback.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setSessionSet(true)
-      } else {
-        // We'll give it a moment as the hash is processed asynchronously by supabase-js
-        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
-            setSessionSet(true)
-          } else if (event === 'SIGNED_OUT') {
-            setSessionSet(false)
-          }
-        })
-        
-        // Timeout just in case it's an invalid link
-        const timer = setTimeout(() => {
-          setSessionSet((prev) => (prev === null ? false : prev))
-        }, 3000)
-        
-        return () => {
-          authListener.subscription.unsubscribe()
-          clearTimeout(timer)
-        }
+      } else if (event === 'SIGNED_OUT') {
+        setSessionSet(false)
       }
     })
+
+    // Fallback: if no event fires within 3s, treat the link as invalid
+    const timer = setTimeout(() => {
+      setSessionSet((prev) => (prev === null ? false : prev))
+    }, 3000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timer)
+    }
   }, [supabase])
 
   const strength = getPasswordStrength(password)
