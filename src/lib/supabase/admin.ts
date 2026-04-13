@@ -25,10 +25,13 @@ export function getSupabaseAdmin() {
 }
 
 
-// Keep backward-compat export as a Proxy so existing code still works
+// Keep backward-compat export as a Proxy so existing code still works.
+// Methods must be bound to the real client instance so 'this' is correct.
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient<Database>>, {
   get(_target, prop) {
-    return (getSupabaseAdmin() as any)[prop]
+    const client = getSupabaseAdmin()
+    const value = (client as any)[prop]
+    return typeof value === 'function' ? value.bind(client) : value
   },
 })
 

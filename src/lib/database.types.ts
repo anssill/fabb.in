@@ -7,32 +7,183 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          branch_id: string | null
+          business_id: string | null
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          record_id: string | null
+          staff_id: string | null
+          staff_name: string | null
+          table_name: string
+          timestamp: string
+        }
+        Insert: {
+          action: string
+          branch_id?: string | null
+          business_id?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          staff_id?: string | null
+          staff_name?: string | null
+          table_name: string
+          timestamp?: string
+        }
+        Update: {
+          action?: string
+          branch_id?: string | null
+          business_id?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          record_id?: string | null
+          staff_id?: string | null
+          staff_name?: string | null
+          table_name?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_drafts: {
+        Row: {
+          branch_id: string
+          business_id: string
+          created_at: string
+          current_step: number
+          draft_data: Json
+          id: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          business_id: string
+          created_at?: string
+          current_step?: number
+          draft_data?: Json
+          id?: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          current_step?: number
+          draft_data?: Json
+          id?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_drafts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_drafts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_drafts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_items: {
         Row: {
           booking_id: string
+          condition_notes_on_return: string | null
+          condition_on_return: string | null
           created_at: string
           id: string
           item_id: string
+          item_name: string
+          item_sku: string | null
+          item_variant_id: string
           price: number
           quantity: number
+          rental_days: number
+          size: string
+          subtotal: number | null
         }
         Insert: {
           booking_id: string
+          condition_notes_on_return?: string | null
+          condition_on_return?: string | null
           created_at?: string
           id?: string
           item_id: string
+          item_name: string
+          item_sku?: string | null
+          item_variant_id: string
           price: number
-          quantity: number
+          quantity?: number
+          rental_days: number
+          size: string
+          subtotal?: number | null
         }
         Update: {
           booking_id?: string
+          condition_notes_on_return?: string | null
+          condition_on_return?: string | null
           created_at?: string
           id?: string
           item_id?: string
+          item_name?: string
+          item_sku?: string | null
+          item_variant_id?: string
           price?: number
           quantity?: number
+          rental_days?: number
+          size?: string
+          subtotal?: number | null
         }
         Relationships: [
           {
@@ -46,7 +197,14 @@ export type Database = {
             foreignKeyName: "booking_items_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory"
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -55,29 +213,53 @@ export type Database = {
         Row: {
           amount: number
           booking_id: string
+          branch_id: string
+          business_id: string
+          collected_by: string | null
           created_at: string
           id: string
+          is_voided: boolean
+          method: string
           notes: string | null
-          payment_method: string
+          reference_number: string | null
           type: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           amount: number
           booking_id: string
+          branch_id: string
+          business_id: string
+          collected_by?: string | null
           created_at?: string
           id?: string
+          is_voided?: boolean
+          method: string
           notes?: string | null
-          payment_method: string
+          reference_number?: string | null
           type: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           amount?: number
           booking_id?: string
+          branch_id?: string
+          business_id?: string
+          collected_by?: string | null
           created_at?: string
           id?: string
+          is_voided?: boolean
+          method?: string
           notes?: string | null
-          payment_method?: string
+          reference_number?: string | null
           type?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -87,60 +269,234 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "booking_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_payments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_payments_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_payments_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_timeline: {
+        Row: {
+          booking_id: string
+          business_id: string
+          created_at: string
+          event_description: string
+          event_type: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          performed_by: string | null
+          performed_by_name: string | null
+        }
+        Insert: {
+          booking_id: string
+          business_id: string
+          created_at?: string
+          event_description: string
+          event_type: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+        }
+        Update: {
+          booking_id?: string
+          business_id?: string
+          created_at?: string
+          event_description?: string
+          event_type?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_timeline_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_timeline_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_timeline_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bookings: {
         Row: {
-          actual_return_date: string | null
+          advance_amount: number
+          amount_paid: number
+          balance_due: number
+          booking_number: string
+          booking_source: string | null
+          branch_id: string
+          business_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          closed_at: string | null
           created_at: string
-          customer_id: string
-          delivery_address: string | null
-          delivery_type: string
+          created_by: string | null
+          customer_id: string | null
           deposit_amount: number
           discount_amount: number
+          discount_reason: string | null
           id: string
+          last_updated_by: string | null
           notes: string | null
+          notion_page_id: string | null
+          occasion: string | null
+          pickup_completed_at: string | null
           pickup_date: string
+          rental_days: number
+          return_completed_at: string | null
           return_date: string
+          staff_notes: string | null
           status: string
+          subtotal: number
+          tax_amount: number
           total_amount: number
+          updated_at: string
         }
         Insert: {
-          actual_return_date?: string | null
+          advance_amount?: number
+          amount_paid?: number
+          balance_due?: number
+          booking_number: string
+          booking_source?: string | null
+          branch_id: string
+          business_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
-          customer_id: string
-          delivery_address?: string | null
-          delivery_type: string
+          created_by?: string | null
+          customer_id?: string | null
           deposit_amount?: number
           discount_amount?: number
+          discount_reason?: string | null
           id?: string
+          last_updated_by?: string | null
           notes?: string | null
+          notion_page_id?: string | null
+          occasion?: string | null
+          pickup_completed_at?: string | null
           pickup_date: string
+          rental_days?: number
+          return_completed_at?: string | null
           return_date: string
-          status: string
-          total_amount: number
+          staff_notes?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
         }
         Update: {
-          actual_return_date?: string | null
+          advance_amount?: number
+          amount_paid?: number
+          balance_due?: number
+          booking_number?: string
+          booking_source?: string | null
+          branch_id?: string
+          business_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          closed_at?: string | null
           created_at?: string
-          customer_id?: string
-          delivery_address?: string | null
-          delivery_type?: string
+          created_by?: string | null
+          customer_id?: string | null
           deposit_amount?: number
           discount_amount?: number
+          discount_reason?: string | null
           id?: string
+          last_updated_by?: string | null
           notes?: string | null
+          notion_page_id?: string | null
+          occasion?: string | null
+          pickup_completed_at?: string | null
           pickup_date?: string
+          rental_days?: number
+          return_completed_at?: string | null
           return_date?: string
+          staff_notes?: string | null
           status?: string
+          subtotal?: number
+          tax_amount?: number
           total_amount?: number
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_last_updated_by_fkey"
+            columns: ["last_updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -160,13 +516,13 @@ export type Database = {
           lng: number | null
           name: string
           opening_hours: Json
+          phone: string | null
           pincode: string | null
           prefix: string
           settings: Json
           state: string | null
           status: string
           updated_at: string
-          phone: string | null
         }
         Insert: {
           address?: string | null
@@ -182,13 +538,13 @@ export type Database = {
           lng?: number | null
           name: string
           opening_hours?: Json
+          phone?: string | null
           pincode?: string | null
           prefix?: string
           settings?: Json
           state?: string | null
           status?: string
           updated_at?: string
-          phone?: string | null
         }
         Update: {
           address?: string | null
@@ -204,13 +560,13 @@ export type Database = {
           lng?: number | null
           name?: string
           opening_hours?: Json
+          phone?: string | null
           pincode?: string | null
           prefix?: string
           settings?: Json
           state?: string | null
           status?: string
           updated_at?: string
-          phone?: string | null
         }
         Relationships: [
           {
@@ -236,6 +592,7 @@ export type Database = {
           name: string
           owner_id: string | null
           pan_number: string | null
+          phone: string | null
           pincode: string | null
           plan: string
           settings: Json
@@ -245,7 +602,6 @@ export type Database = {
           timezone: string
           trial_ends_at: string | null
           updated_at: string
-          phone: string | null
         }
         Insert: {
           address?: string | null
@@ -260,6 +616,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           pan_number?: string | null
+          phone?: string | null
           pincode?: string | null
           plan?: string
           settings?: Json
@@ -269,7 +626,6 @@ export type Database = {
           timezone?: string
           trial_ends_at?: string | null
           updated_at?: string
-          phone?: string | null
         }
         Update: {
           address?: string | null
@@ -284,6 +640,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           pan_number?: string | null
+          phone?: string | null
           pincode?: string | null
           plan?: string
           settings?: Json
@@ -293,75 +650,403 @@ export type Database = {
           timezone?: string
           trial_ends_at?: string | null
           updated_at?: string
-          phone?: string | null
         }
         Relationships: []
       }
       customers: {
         Row: {
           address: string | null
+          blacklist_reason: string | null
+          blacklisted: boolean
+          blacklisted_at: string | null
+          blacklisted_by: string | null
+          branch_id: string | null
+          business_id: string
           created_at: string
+          created_by: string | null
           email: string | null
           id: string
+          id_number: string | null
+          id_type: string | null
           name: string
           notes: string | null
+          outstanding_balance: number
           phone: string
+          total_bookings: number
+          total_spent: number
+          updated_at: string
         }
         Insert: {
           address?: string | null
+          blacklist_reason?: string | null
+          blacklisted?: boolean
+          blacklisted_at?: string | null
+          blacklisted_by?: string | null
+          branch_id?: string | null
+          business_id: string
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          id_number?: string | null
+          id_type?: string | null
           name: string
           notes?: string | null
+          outstanding_balance?: number
           phone: string
+          total_bookings?: number
+          total_spent?: number
+          updated_at?: string
         }
         Update: {
           address?: string | null
+          blacklist_reason?: string | null
+          blacklisted?: boolean
+          blacklisted_at?: string | null
+          blacklisted_by?: string | null
+          branch_id?: string | null
+          business_id?: string
           created_at?: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          id_number?: string | null
+          id_type?: string | null
           name?: string
           notes?: string | null
+          outstanding_balance?: number
           phone?: string
+          total_bookings?: number
+          total_spent?: number
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_blacklisted_by_fkey"
+            columns: ["blacklisted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      inventory: {
+      expenses: {
         Row: {
+          added_by: string | null
+          amount: number
+          branch_id: string
+          business_id: string
           category: string
           created_at: string
-          description: string | null
+          description: string
+          expense_date: string
           id: string
-          image_url: string | null
-          name: string
-          price_per_day: number
-          quantity: number
-          status: string
+          item_id: string | null
+          notes: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          staff_id: string | null
+          updated_at: string | null
         }
         Insert: {
+          added_by?: string | null
+          amount: number
+          branch_id: string
+          business_id: string
           category: string
           created_at?: string
-          description?: string | null
+          description: string
+          expense_date: string
           id?: string
-          image_url?: string | null
-          name: string
-          price_per_day: number
-          quantity: number
-          status: string
+          item_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          staff_id?: string | null
+          updated_at?: string | null
         }
         Update: {
+          added_by?: string | null
+          amount?: number
+          branch_id?: string
+          business_id?: string
           category?: string
           created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          staff_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_images: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_cover: boolean
+          item_id: string
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_cover?: boolean
+          item_id: string
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_cover?: boolean
+          item_id?: string
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_images_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_images_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_variants: {
+        Row: {
+          available_stock: number
+          colour: string | null
+          created_at: string
+          id: string
+          item_id: string
+          price_override: number | null
+          reserved_stock: number
+          size: string
+          sku: string | null
+          status: string
+          total_stock: number
+          updated_at: string
+        }
+        Insert: {
+          available_stock?: number
+          colour?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          price_override?: number | null
+          reserved_stock?: number
+          size: string
+          sku?: string | null
+          status?: string
+          total_stock?: number
+          updated_at?: string
+        }
+        Update: {
+          available_stock?: number
+          colour?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          price_override?: number | null
+          reserved_stock?: number
+          size?: string
+          sku?: string | null
+          status?: string
+          total_stock?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_variants_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          branch_id: string
+          business_id: string
+          category: string
+          completeness_score: number
+          condition: string
+          condition_notes: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          deposit_amount: number
+          description: string | null
+          id: string
+          is_active: boolean
+          last_rented_at: string | null
+          metadata: Json
+          name: string
+          notion_page_id: string | null
+          price: number
+          purchase_cost: number | null
+          purchase_date: string | null
+          sku: string | null
+          status: string
+          storage_location: string | null
+          total_rentals: number
+          total_revenue: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          business_id: string
+          category: string
+          completeness_score?: number
+          condition?: string
+          condition_notes?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_amount?: number
           description?: string | null
           id?: string
-          image_url?: string | null
-          name?: string
-          price_per_day?: number
-          quantity?: number
+          is_active?: boolean
+          last_rented_at?: string | null
+          metadata?: Json
+          name: string
+          notion_page_id?: string | null
+          price?: number
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          sku?: string | null
           status?: string
+          storage_location?: string | null
+          total_rentals?: number
+          total_revenue?: number
+          updated_at?: string
         }
-        Relationships: []
+        Update: {
+          branch_id?: string
+          business_id?: string
+          category?: string
+          completeness_score?: number
+          condition?: string
+          condition_notes?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_amount?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_rented_at?: string | null
+          metadata?: Json
+          name?: string
+          notion_page_id?: string | null
+          price?: number
+          purchase_cost?: number | null
+          purchase_date?: string | null
+          sku?: string | null
+          status?: string
+          storage_location?: string | null
+          total_rentals?: number
+          total_revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       login_attempts: {
         Row: {
@@ -377,7 +1062,7 @@ export type Database = {
           email: string
           id?: string
           ip_address?: string | null
-          success: boolean
+          success?: boolean
           user_agent?: string | null
         }
         Update: {
@@ -390,29 +1075,191 @@ export type Database = {
         }
         Relationships: []
       }
-      settings: {
+      notifications: {
         Row: {
+          action_data: Json | null
+          action_type: string | null
+          action_url: string | null
+          body: string | null
+          branch_id: string | null
+          business_id: string
           created_at: string
           id: string
-          key: string
-          updated_at: string
-          value: Json
+          is_read: boolean
+          read_at: string | null
+          target_staff_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type?: string | null
+          action_url?: string | null
+          body?: string | null
+          branch_id?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          target_staff_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string | null
+          action_url?: string | null
+          body?: string | null
+          branch_id?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          read_at?: string | null
+          target_staff_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_target_staff_id_fkey"
+            columns: ["target_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          staff_id: string
+          token: string
+          used_at: string | null
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           id?: string
-          key: string
-          updated_at?: string
-          value: Json
+          staff_id: string
+          token?: string
+          used_at?: string | null
         }
         Update: {
           created_at?: string
+          expires_at?: string
           id?: string
-          key?: string
-          updated_at?: string
-          value?: Json
+          staff_id?: string
+          token?: string
+          used_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "password_reset_tokens_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          booking_id: string | null
+          branch_id: string | null
+          business_id: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          message: string | null
+          phone: string
+          provider_response: Json | null
+          sent_by: string | null
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          branch_id?: string | null
+          business_id: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message?: string | null
+          phone: string
+          provider_response?: Json | null
+          sent_by?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          branch_id?: string | null
+          business_id?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message?: string | null
+          phone?: string
+          provider_response?: Json | null
+          sent_by?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff: {
         Row: {
@@ -484,15 +1331,324 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staff_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-
+      staff_attendance: {
+        Row: {
+          approved_by: string | null
+          branch_id: string
+          business_id: string
+          clock_in_at: string | null
+          clock_in_lat: number | null
+          clock_in_lng: number | null
+          clock_out_at: string | null
+          created_at: string
+          date: string
+          distance_from_branch: number | null
+          hours_worked: number | null
+          id: string
+          is_valid_location: boolean | null
+          notes: string | null
+          staff_id: string
+        }
+        Insert: {
+          approved_by?: string | null
+          branch_id: string
+          business_id: string
+          clock_in_at?: string | null
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out_at?: string | null
+          created_at?: string
+          date: string
+          distance_from_branch?: number | null
+          hours_worked?: number | null
+          id?: string
+          is_valid_location?: boolean | null
+          notes?: string | null
+          staff_id: string
+        }
+        Update: {
+          approved_by?: string | null
+          branch_id?: string
+          business_id?: string
+          clock_in_at?: string | null
+          clock_in_lat?: number | null
+          clock_in_lng?: number | null
+          clock_out_at?: string | null
+          created_at?: string
+          date?: string
+          distance_from_branch?: number | null
+          hours_worked?: number | null
+          id?: string
+          is_valid_location?: boolean | null
+          notes?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_attendance_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_attendance_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_attendance_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_attendance_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_performance_targets: {
+        Row: {
+          bookings_target: number | null
+          business_id: string
+          created_at: string
+          id: string
+          month: string
+          revenue_target: number | null
+          set_by: string | null
+          staff_id: string
+        }
+        Insert: {
+          bookings_target?: number | null
+          business_id: string
+          created_at?: string
+          id?: string
+          month: string
+          revenue_target?: number | null
+          set_by?: string | null
+          staff_id: string
+        }
+        Update: {
+          bookings_target?: number | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          revenue_target?: number | null
+          set_by?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_performance_targets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_performance_targets_set_by_fkey"
+            columns: ["set_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_performance_targets_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      washing_queue: {
+        Row: {
+          added_by: string | null
+          booking_id: string | null
+          branch_id: string
+          business_id: string
+          completed_at: string | null
+          completed_by: string | null
+          condition_after: string | null
+          created_at: string
+          id: string
+          item_id: string
+          item_variant_id: string | null
+          next_booking_date: string | null
+          notes: string | null
+          priority: string
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          booking_id?: string | null
+          branch_id: string
+          business_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          condition_after?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          item_variant_id?: string | null
+          next_booking_date?: string | null
+          notes?: string | null
+          priority?: string
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          booking_id?: string | null
+          branch_id?: string
+          business_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          condition_after?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_variant_id?: string | null
+          next_booking_date?: string | null
+          notes?: string | null
+          priority?: string
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "washing_queue_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "washing_queue_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      adjust_item_stock: {
+        Args: {
+          p_is_reservation: boolean
+          p_quantity_change: number
+          p_variant_id: string
+        }
+        Returns: undefined
+      }
+      cancel_booking_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
+      complete_washing: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
+      generate_booking_number: {
+        Args: { p_branch_id: string; p_date: string }
+        Returns: string
+      }
+      get_my_staff_info: {
+        Args: never
+        Returns: {
+          business_id: string
+          role: string
+          status: string
+        }[]
+      }
+      lock_item_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
+      release_item_stock: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
+      return_item_from_booking: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
+      sync_all_inventory_stock:
+        | { Args: never; Returns: undefined }
+        | { Args: { p_business_id: string }; Returns: undefined }
+      sync_booking_financials_for_id: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      sync_inventory_stock: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -503,27 +1659,33 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -531,20 +1693,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -552,20 +1718,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -573,29 +1743,41 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
