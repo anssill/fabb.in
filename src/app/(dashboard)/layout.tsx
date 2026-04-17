@@ -20,6 +20,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   if (!staff) redirect('/login')
+  
+  // Mandatory setup check
+  // If the owner/staff hasn't completed the setup wizard, force them back
+  if (staff.setup_completed === false) {
+    redirect('/setup')
+  }
 
   // Get all branches for this business
   const { data: branches } = await supabase

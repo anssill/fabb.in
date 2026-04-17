@@ -148,6 +148,10 @@ export async function POST(req: NextRequest) {
         .eq('id', finalStaff.id)
     }
 
+    // Step 7: Determine setup status
+    // If business_id or branch_id is missing, they definitely haven't completed setup
+    const isSetupCompleted = finalStaff?.setup_completed && finalStaff?.business_id && finalStaff?.branch_id
+
     return NextResponse.json({
       success: true,
       session: {
@@ -158,7 +162,7 @@ export async function POST(req: NextRequest) {
         id: finalStaff.id,
         name: finalStaff.name,
         role: finalStaff.role,
-        setup_completed: finalStaff.setup_completed,
+        setup_completed: !!isSetupCompleted,
         business_id: finalStaff.business_id,
         branch_id: finalStaff.branch_id,
       } : {

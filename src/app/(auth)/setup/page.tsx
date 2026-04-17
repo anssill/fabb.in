@@ -195,15 +195,32 @@ export default function SetupPage() {
 
         if (bizError) throw new Error('Failed to update business details')
 
+        // Step 1 - Update Business + Password
         const res = await fetch('/api/setup/update-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: business.password }),
         })
+        
         if (!res.ok) {
           const d = await safeJsonParse(res)
           throw new Error(d.error || 'Failed to update password')
         }
+
+        // Update local state and current staff record for step 0
+        const { staffRecord, supabase } = await getStaffInfo()
+        const { error: bizError } = await supabase.from('businesses').update({
+          name: business.name || undefined,
+          phone: business.phone || null,
+          email: business.email || null,
+          address: business.address || null,
+          city: business.city || null,
+          state: business.state || null,
+          pincode: business.pincode || null,
+          gst_number: business.gst_number || null,
+        }).eq('id', staffRecord.business_id)
+
+        if (bizError) throw new Error('Failed to update business details')
 
         setCurrentStep(1)
       } else if (currentStep === 1) {
@@ -303,14 +320,29 @@ export default function SetupPage() {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('staff').update({ setup_completed: true }).eq('id', user.id)
+      if (!user) {
+        router.push('/login')
+        return
       }
+
+      // Finalize setup in DB
+      const { error } = await supabase
+        .from('staff')
+        .update({ setup_completed: true })
+        .eq('id', user.id)
+
+      if (error) throw error
+
       toast.success('Your workspace is ready!')
-      router.push('/dashboard')
-      router.refresh()
-    } catch {
-      toast.error('Something went wrong')
+      
+      // Delay slightly to ensure DB propagation before layout reload
+      setTimeout(() => {
+        router.push('/dashboard')
+        router.refresh()
+      }, 500)
+    } catch (err: any) {
+      console.error('Setup finish error:', err)
+      toast.error('Failed to finalize setup: ' + (err.message || 'Unknown error'))
     } finally {
       setLoading(false)
     }

@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
       role: 'owner',
       status: 'approved',
       password_hash: passwordHash,
-      setup_completed: false,
+      setup_completed: false, // Explicitly set to false to trigger setup wizard
     }, { onConflict: 'id' })
 
     if (staffError) {
