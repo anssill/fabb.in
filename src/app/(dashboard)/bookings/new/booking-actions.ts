@@ -16,6 +16,7 @@ interface BookingData {
     address?: string
     id_type?: string
     id_number?: string
+    id_proof_url?: string
   }
   items: any[]
   dates: any
@@ -53,6 +54,7 @@ export async function createNewBookingFlow(data: BookingData) {
             address: data.customer.address || null,
             id_type: data.customer.id_type || null,
             id_number: data.customer.id_number || null,
+            id_proof_url: data.customer.id_proof_url || null,
           })
           .select('id')
           .single()

@@ -4,6 +4,7 @@ import { SidebarWrapper } from './components/Sidebar'
 import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
 import { NotificationRealtime } from '@/components/notifications/NotificationRealtime'
+import { DataRealtime } from '@/components/shared/DataRealtime'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <StoreInitializer staff={staff} business={staff.business} branches={branches || []} />
       <SidebarWrapper staff={staff} branches={branches || []} />
       <NotificationRealtime />
+      <DataRealtime />
       <div className="lg:ml-60 flex flex-col min-h-screen transition-all duration-300">
         <Header staff={staff} />
         <main className="flex-1 p-4 lg:p-6 mt-14">

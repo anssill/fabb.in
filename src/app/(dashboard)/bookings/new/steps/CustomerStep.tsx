@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Search, UserPlus, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
+import { ImageUpload } from '../../../inventory/components/ImageUpload'
 import type { BookingCustomer } from '../page'
 
 interface Props {
@@ -189,7 +190,25 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>ID Proof Image <span className="text-slate-400">(optional)</span></Label>
+                  <ImageUpload
+                    value={customer.id_proof_url || (customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null)}
+                    onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}
+                  />
+                </div>
               </>
+            )}
+            
+            {customer.id && !customer.id_proof_url && (
+              <div className="space-y-2 pt-4 border-t border-slate-100">
+                <Label>ID Proof Image <span className="text-slate-400">(optional)</span></Label>
+                <ImageUpload
+                  value={customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null}
+                  onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}
+                />
+              </div>
             )}
           </div>
         )}

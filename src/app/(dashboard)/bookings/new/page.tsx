@@ -27,6 +27,8 @@ export interface BookingCustomer {
   address?: string
   id_type?: string
   id_number?: string
+  id_proof_url?: string
+  id_proof_file?: File | null
 }
 
 export interface BookingItem {
@@ -147,8 +149,14 @@ export default function NewBookingPage() {
     try {
       if (!staff || !activeBranch) throw new Error('Not authenticated')
 
+      let idProofUrl = customer.id_proof_url
+      if (customer.id_proof_file && staff?.business_id) {
+        const { StorageService } = await import('@/lib/storage-service')
+        idProofUrl = await StorageService.uploadCustomerID(staff.business_id, customer.id_proof_file)
+      }
+
       const result = await createNewBookingFlow({
-        customer,
+        customer: { ...customer, id_proof_url: idProofUrl },
         items,
         dates,
         pricing,

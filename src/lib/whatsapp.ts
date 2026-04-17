@@ -8,15 +8,15 @@ export type WhatsAppTemplateData = {
 }
 
 export class WhatsAppService {
-  private static API_URL = 'https://api.interakt.ai/v1/public/message/'
-
   /**
-   * Sends a template-based WhatsApp message via Interakt
+   * Sends a template-based WhatsApp message via the official Meta WhatsApp Cloud API
    */
-  static async sendTemplate(data: WhatsAppTemplateData, apiKey?: string) {
-    const finalApiKey = apiKey || process.env.INTERAKT_API_KEY
-    if (!finalApiKey) {
-      console.warn('WhatsApp API key not configured. Skipping message.')
+  static async sendTemplate(data: WhatsAppTemplateData, overrideToken?: string) {
+    const token = overrideToken || process.env.WHATSAPP_ACCESS_TOKEN
+    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
+
+    if (!token || !phoneId) {
+      console.warn('WhatsApp API token or Phone Number ID not configured. Skipping message.')
       return null
     }
 
@@ -27,21 +27,37 @@ export class WhatsAppService {
     }
 
     try {
+      // Format variables for Meta API
+      const parameters = data.variables.map(val => ({
+        type: 'text',
+        text: String(val)
+      }))
+
       const payload = {
-        fullPhoneNumber: cleanPhone,
-        type: 'Template',
+        messaging_product: 'whatsapp',
+        to: cleanPhone,
+        type: 'template',
         template: {
           name: data.templateName,
-          languageCode: data.languageCode || 'en',
-          bodyValues: data.variables,
+          language: {
+            code: data.languageCode || 'en',
+          },
+          ...((parameters.length > 0) && {
+            components: [
+              {
+                type: 'body',
+                parameters: parameters,
+              },
+            ],
+          }),
         },
       }
 
-      const response = await fetch(this.API_URL, {
+      const response = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${finalApiKey}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       })
@@ -49,7 +65,7 @@ export class WhatsAppService {
       const result = await safeJsonParse(response)
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to send WhatsApp message')
+        throw new Error(result.error?.message || 'Failed to send WhatsApp message via Meta API')
       }
 
       return result
@@ -63,7 +79,7 @@ export class WhatsAppService {
    * Helper to format variables for common templates
    */
   static formatConfirmationVars(customerName: string, bookingNumber: string, pickupDate: string) {
-    // Example: "Hi [1], your booking [2] is confirmed for [3]. Thank you!"
+    // Example: "Hi {{1}}, your booking {{2}} is confirmed for {{3}}. Thank you!"
     return [customerName, bookingNumber, new Date(pickupDate).toLocaleDateString('en-IN')]
   }
 }
