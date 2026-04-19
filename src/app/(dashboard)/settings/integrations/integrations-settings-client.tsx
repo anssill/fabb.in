@@ -23,7 +23,20 @@ export function IntegrationsSettingsClient() {
   // WhatsApp State (Official Meta API)
   const [whatsappEnabled, setWhatsappEnabled] = useState(integrationSettings.whatsapp?.enabled ?? true)
   const [whatsappPhoneId, setWhatsappPhoneId] = useState(integrationSettings.whatsapp?.phone_id ?? '1150487028140544')
+  const [interaktKey, setInteraktKey] = useState(integrationSettings.whatsapp?.interakt_key ?? '')
   const [testNumber, setTestNumber] = useState('')
+
+  // Phone State
+  const [phoneEnabled, setPhoneEnabled] = useState(integrationSettings.phone?.enabled ?? true)
+  const [numverifyKey, setNumverifyKey] = useState(integrationSettings.phone?.numverify_key ?? '')
+
+  // Email State
+  const [emailEnabled, setEmailEnabled] = useState(integrationSettings.email?.enabled ?? true)
+  const [cloudmersiveKey, setCloudmersiveKey] = useState(integrationSettings.email?.cloudmersive_key ?? '')
+
+  // Weather State
+  const [weatherEnabled, setWeatherEnabled] = useState(integrationSettings.weather?.enabled ?? true)
+  const [openweathermapKey, setOpenweathermapKey] = useState(integrationSettings.weather?.openweathermap_key ?? '')
 
   // Currency State
   const [currencyEnabled, setCurrencyEnabled] = useState(integrationSettings.currency?.enabled ?? true)

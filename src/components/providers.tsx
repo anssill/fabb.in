@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import { useState } from 'react'
-import { HeroUIProvider } from '@heroui/react'
+import { ThemeProvider } from 'next-themes'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -20,7 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <HeroUIProvider>
+      <ThemeProvider attribute="class" defaultTheme="dark">
         {children}
         <Toaster
           position="top-right"
@@ -30,7 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             duration: 4000,
           }}
         />
-      </HeroUIProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }

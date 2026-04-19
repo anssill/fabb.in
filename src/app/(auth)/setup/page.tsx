@@ -23,11 +23,25 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { 
+  Button, 
+  Card, 
+  CardHeader, 
+  CardContent, 
+  CardFooter, 
+  TextField,
+  Label,
+  Input,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectIndicator,
+  SelectPopover,
+  ListBox,
+  ListBoxItem,
+  Badge,
+  Alert
+} from '@heroui/react'
 import { safeJsonParse } from '@/lib/api-utils'
 
 const STEPS = [
@@ -207,21 +221,7 @@ export default function SetupPage() {
           throw new Error(d.error || 'Failed to update password')
         }
 
-        // Update local state and current staff record for step 0
-        const { staffRecord, supabase } = await getStaffInfo()
-        const { error: bizError } = await supabase.from('businesses').update({
-          name: business.name || undefined,
-          phone: business.phone || null,
-          email: business.email || null,
-          address: business.address || null,
-          city: business.city || null,
-          state: business.state || null,
-          pincode: business.pincode || null,
-          gst_number: business.gst_number || null,
-        }).eq('id', staffRecord.business_id)
-
-        if (bizError) throw new Error('Failed to update business details')
-
+        // Remove redundant re-fetch and re-update
         setCurrentStep(1)
       } else if (currentStep === 1) {
         const { staffRecord, supabase } = await getStaffInfo()
@@ -357,6 +357,10 @@ export default function SetupPage() {
     setItems([...items, { name: '', category: 'Kurtha', sizes: 'S, M, L, XL', stock: 1, price: 0 }])
   }
 
+  const removeItem = (i: number) => {
+    setItems(items.filter((_, idx) => idx !== i))
+  }
+
   const inputClass = "bg-white/5 border-white/10 text-white placeholder:text-slate-600 focus:border-primary/50 focus:ring-primary/20 h-11 rounded-xl"
 
   if (initializing) {
@@ -451,59 +455,51 @@ export default function SetupPage() {
               {currentStep === 0 && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                      <Label className="text-slate-300">Business Name</Label>
-                      <Input
-                        value={business.name}
-                        onChange={(e) => setBusiness({ ...business, name: e.target.value })}
-                        placeholder="Raj Bridal Collections"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Working Phone</Label>
-                      <Input
-                        value={business.phone}
-                        onChange={(e) => setBusiness({ ...business, phone: e.target.value })}
-                        placeholder="+91 98765 43210"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Business Email</Label>
-                      <Input
-                        value={business.email}
-                        onChange={(e) => setBusiness({ ...business, email: e.target.value })}
-                        placeholder="hello@rajbridal.com"
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                      <Label className="text-slate-300">Full Address</Label>
-                      <Input
-                         value={business.address}
-                         onChange={(e) => setBusiness({ ...business, address: e.target.value })}
-                         placeholder="Store street, block, etc."
-                         className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">City</Label>
-                      <Input
-                        value={business.city}
-                        onChange={(e) => setBusiness({ ...business, city: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">GST Number (Optional)</Label>
-                      <Input
-                        value={business.gst_number}
-                        onChange={(e) => setBusiness({ ...business, gst_number: e.target.value })}
-                        placeholder="22AAABB1234A1Z5"
-                        className={inputClass}
-                      />
-                    </div>
+                    <TextField 
+                      value={business.name}
+                      onChange={(v) => setBusiness({ ...business, name: v })}
+                      className="col-span-1 md:col-span-2"
+                      isRequired
+                    >
+                      <Label>Business Name</Label>
+                      <Input placeholder="Raj Bridal Collections" />
+                    </TextField>
+                    <TextField
+                      value={business.phone}
+                      onChange={(v) => setBusiness({ ...business, phone: v })}
+                    >
+                      <Label>Working Phone</Label>
+                      <Input placeholder="+91 98765 43210" />
+                    </TextField>
+                    <TextField
+                      value={business.email}
+                      onChange={(v) => setBusiness({ ...business, email: v })}
+                    >
+                      <Label>Business Email</Label>
+                      <Input placeholder="hello@rajbridal.com" />
+                    </TextField>
+                    <TextField
+                      value={business.address}
+                      onChange={(v) => setBusiness({ ...business, address: v })}
+                      className="col-span-1 md:col-span-2"
+                    >
+                      <Label>Full Address</Label>
+                      <Input placeholder="Store street, block, etc." />
+                    </TextField>
+                    <TextField
+                      value={business.city}
+                      onChange={(v) => setBusiness({ ...business, city: v })}
+                    >
+                      <Label>City</Label>
+                      <Input />
+                    </TextField>
+                    <TextField
+                      value={business.gst_number}
+                      onChange={(v) => setBusiness({ ...business, gst_number: v })}
+                    >
+                      <Label>GST Number (Optional)</Label>
+                      <Input placeholder="22AAABB1234A1Z5" />
+                    </TextField>
                   </div>
 
                   <div className="pt-6 border-t border-white/5">
@@ -513,47 +509,51 @@ export default function SetupPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label className="text-slate-300">Global Password</Label>
-                        <div className="relative">
-                          <Input
-                            type={showPass ? 'text' : 'password'}
-                            value={business.password}
-                            onChange={(e) => setBusiness({ ...business, password: e.target.value })}
-                            placeholder="Min 8 chars"
-                            className={inputClass + " pr-12"}
-                          />
-                          <button onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
-                            {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
+                        <TextField
+                          type={showPass ? 'text' : 'password'}
+                          value={business.password}
+                          onChange={(v) => setBusiness({ ...business, password: v })}
+                        >
+                          <Label>Global Password</Label>
+                          <div className="relative">
+                            <Input placeholder="Min 8 characters" className="pr-10" />
+                            <button 
+                              onClick={() => setShowPass(!showPass)} 
+                              className="absolute right-3 top-1/2 -translate-y-1/2 focus:outline-none text-slate-500 hover:text-white transition-colors"
+                            >
+                              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </TextField>
                         {business.password && (
-                          <div className="space-y-1">
+                          <div className="space-y-1 px-1">
                             <div className="flex gap-1">
                               {[1,2,3,4].map((i) => (
                                 <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= passwordStrength ? STRENGTH_COLORS[passwordStrength] : 'bg-white/10'}`} />
                               ))}
                             </div>
-                            <p className={`text-xs ${passwordStrength >= 4 ? 'text-green-400' : passwordStrength >= 3 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <p className={`text-[10px] ${passwordStrength >= 4 ? 'text-green-400' : passwordStrength >= 3 ? 'text-yellow-400' : 'text-red-400'}`}>
                               {STRENGTH_LABELS[passwordStrength]}
                             </p>
                           </div>
                         )}
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-slate-300">Confirm Password</Label>
+                      <TextField
+                        type={showConfirm ? 'text' : 'password'}
+                        value={business.confirmPassword}
+                        onChange={(v) => setBusiness({ ...business, confirmPassword: v })}
+                      >
+                        <Label>Confirm Password</Label>
                         <div className="relative">
-                          <Input
-                            type={showConfirm ? 'text' : 'password'}
-                            value={business.confirmPassword}
-                            onChange={(e) => setBusiness({ ...business, confirmPassword: e.target.value })}
-                            placeholder="Repeat password"
-                            className={inputClass + " pr-12"}
-                          />
-                          <button onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
+                          <Input placeholder="Repeat password" title="Repeat password" className="pr-10" />
+                          <button 
+                            onClick={() => setShowConfirm(!showConfirm)} 
+                            className="absolute right-3 top-1/2 -translate-y-1/2 focus:outline-none text-slate-500 hover:text-white transition-colors"
+                          >
                             {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
-                      </div>
+                      </TextField>
                     </div>
                   </div>
                 </div>
@@ -561,53 +561,46 @@ export default function SetupPage() {
 
               {currentStep === 1 && (
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Branch Name</Label>
-                    <Input
-                      value={branch.name}
-                      onChange={(e) => setBranch({ ...branch, name: e.target.value })}
-                      placeholder="Main Store - Thrissur"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Branch Address</Label>
-                    <Input
-                      value={branch.address}
-                      onChange={(e) => setBranch({ ...branch, address: e.target.value })}
-                      placeholder="Specific branch location"
-                      className={inputClass}
-                    />
-                  </div>
+                  <TextField
+                    value={branch.name}
+                    onChange={(v) => setBranch({ ...branch, name: v })}
+                    isRequired
+                  >
+                    <Label>Branch Name</Label>
+                    <Input placeholder="Main Store - Thrissur" />
+                  </TextField>
+                  <TextField
+                    value={branch.address}
+                    onChange={(v) => setBranch({ ...branch, address: v })}
+                  >
+                    <Label>Branch Address</Label>
+                    <Input placeholder="Specific branch location" />
+                  </TextField>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">City</Label>
-                      <Input
-                        value={branch.city}
-                        onChange={(e) => setBranch({ ...branch, city: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-slate-300">Phone</Label>
-                      <Input
-                        value={branch.phone}
-                        onChange={(e) => setBranch({ ...branch, phone: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
+                    <TextField
+                      value={branch.city}
+                      onChange={(v) => setBranch({ ...branch, city: v })}
+                    >
+                      <Label>City</Label>
+                      <Input />
+                    </TextField>
+                    <TextField
+                      value={branch.phone}
+                      onChange={(v) => setBranch({ ...branch, phone: v })}
+                    >
+                      <Label>Phone</Label>
+                      <Input />
+                    </TextField>
                   </div>
-                  <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 space-y-2">
-                    <Label className="text-primary text-xs font-bold uppercase tracking-widest">Booking Prefix</Label>
-                    <Input
+                  <div className="p-6 rounded-[2rem] bg-primary/5 border border-primary/10 space-y-4">
+                    <TextField
                       value={branch.prefix}
-                      onChange={(e) => setBranch({ ...branch, prefix: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
-                      placeholder="TRT"
-                      className="bg-transparent border-primary/20 text-white font-mono text-2xl h-14"
-                    />
-                    <p className="text-xs text-slate-500">
-                      Sample Booking ID: <span className="text-primary font-mono">{branch.prefix || 'TRT'}-260521-001</span>
-                    </p>
+                      onChange={(v) => setBranch({ ...branch, prefix: v.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
+                    >
+                      <Label>Branch Prefix (For Invoices)</Label>
+                      <Input placeholder="TRT" />
+                      <p className="text-xs text-slate-400 mt-1">Sample ID: {branch.prefix || 'TRT'}-2024-001</p>
+                    </TextField>
                   </div>
                 </div>
               )}
@@ -620,160 +613,171 @@ export default function SetupPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         key={i} 
-                        className="p-5 bg-white/5 border border-white/5 rounded-2xl flex flex-wrap gap-4 items-end group"
+                        className="p-5 bg-white/5 border border-white/5 rounded-[2rem] flex flex-wrap gap-4 items-center group"
                       >
-                        <div className="flex-1 min-w-[150px] space-y-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Name</Label>
-                          <Input
-                            value={s.name}
-                            onChange={(e) => {
-                              const updated = [...staffList]
-                              updated[i] = { ...updated[i], name: e.target.value }
-                              setStaffList(updated)
-                            }}
-                            className="bg-transparent border-white/10 h-10"
-                            placeholder="Full Name"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-[200px] space-y-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Email</Label>
-                          <Input
-                            value={s.email}
-                            onChange={(e) => {
-                              const updated = [...staffList]
-                              updated[i] = { ...updated[i], email: e.target.value }
-                              setStaffList(updated)
-                            }}
-                            className="bg-transparent border-white/10 h-10"
-                            placeholder="email@example.com"
-                          />
-                        </div>
-                        <div className="w-28 space-y-1.5">
-                          <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Role</Label>
-                          <Select
-                            value={s.role}
-                            onValueChange={(v) => {
-                              const updated = [...staffList]
-                              updated[i] = { ...updated[i], role: v }
-                              setStaffList(updated)
-                            }}
-                          >
-                            <SelectTrigger className="bg-transparent border-white/10 h-10 px-3"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-white/10 text-white">
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="staff">Staff</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-colors h-10"
-                          onClick={() => setStaffList(staffList.filter((_, idx) => idx !== i))}
+                        <TextField
+                          value={s.name}
+                          onChange={(v) => {
+                            const updated = [...staffList]
+                            updated[i] = { ...updated[i], name: v }
+                            setStaffList(updated)
+                          }}
+                          className="flex-1 min-w-[150px]"
                         >
-                          <Trash2 size={16} />
+                          <Label>Name</Label>
+                          <Input placeholder="Full Name" />
+                        </TextField>
+                        <TextField
+                          value={s.email}
+                          onChange={(v) => {
+                            const updated = [...staffList]
+                            updated[i] = { ...updated[i], email: v }
+                            setStaffList(updated)
+                          }}
+                          className="flex-1 min-w-[200px]"
+                        >
+                          <Label>Email</Label>
+                          <Input placeholder="email@example.com" />
+                        </TextField>
+                        <Select
+                          selectedKey={s.role}
+                          onSelectionChange={(key) => {
+                            const updated = [...staffList]
+                            updated[i] = { ...updated[i], role: key as string }
+                            setStaffList(updated)
+                          }}
+                        >
+                          <Label>Role</Label>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                            <SelectIndicator />
+                          </SelectTrigger>
+                          <SelectPopover>
+                            <ListBox>
+                              <ListBoxItem id="manager">Manager</ListBoxItem>
+                              <ListBoxItem id="staff">Staff</ListBoxItem>
+                            </ListBox>
+                          </SelectPopover>
+                        </Select>
+                        <Button
+                          isIconOnly
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          onPress={() => setStaffList(staffList.filter((_, idx) => idx !== i))}
+                        >
+                          <Trash2 size={20} />
                         </Button>
                       </motion.div>
                     ))}
                   </div>
                   
-                  <Button variant="outline" className="w-full border-dashed border-white/10 hover:border-primary/50 hover:bg-primary/5 text-slate-400 hover:text-primary py-8 rounded-2xl group transition-all" onClick={addStaff}>
-                    <div className="flex flex-col items-center gap-2">
-                       <Plus size={20} className="group-hover:scale-110 transition-transform" />
-                       <span className="text-sm font-semibold">Add Team Member</span>
-                    </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-dashed h-20 rounded-[2rem] text-slate-400 hover:text-primary transition-all flex items-center justify-center gap-2"
+                    onPress={addStaff}
+                  >
+                    <Plus size={24} />
+                    Add Team Member
                   </Button>
                 </div>
               )}
 
               {currentStep === 3 && (
                 <div className="space-y-6">
-                   <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
                     {items.map((item, i) => (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
                         key={i} 
-                        className="p-6 bg-white/5 border border-white/5 rounded-[2rem] space-y-5"
+                        className="p-6 bg-white/5 border border-white/5 rounded-[2rem] space-y-5 group"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="col-span-1 md:col-span-2 space-y-1.5">
-                            <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Item Name</Label>
-                            <Input
-                              value={item.name}
-                              onChange={(e) => {
-                                const updated = [...items]
-                                updated[i] = { ...updated[i], name: e.target.value }
-                                setItems(updated)
-                              }}
-                              className="bg-black/20 border-white/5 h-10"
-                              placeholder="Red Silk Kurtha"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">₹ / Day</Label>
-                            <Input
-                              type="number"
-                              value={item.price || ''}
-                              onChange={(e) => {
-                                const updated = [...items]
-                                updated[i] = { ...updated[i], price: Number(e.target.value) }
-                                setItems(updated)
-                              }}
-                              className="bg-black/20 border-white/5 h-10 text-primary font-bold"
-                              placeholder="500"
-                            />
-                          </div>
+                          <TextField
+                            value={item.name}
+                            onChange={(v) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], name: v }
+                              setItems(updated)
+                            }}
+                            className="md:col-span-2"
+                          >
+                            <Label>Item Name</Label>
+                            <Input placeholder="e.g. Red Silk Kurtha" />
+                          </TextField>
+                          <TextField
+                            type="number"
+                            value={item.price.toString()}
+                            onChange={(v) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], price: parseFloat(v) || 0 }
+                              setItems(updated)
+                            }}
+                            className="font-bold"
+                          >
+                            <Label>Price / Day</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">₹</span>
+                              <Input placeholder="500" className="pl-8" />
+                            </div>
+                          </TextField>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Category</Label>
-                             <Select
-                                value={item.category}
-                                onValueChange={(v) => {
-                                  const updated = [...items]
-                                  updated[i] = { ...updated[i], category: v }
-                                  setItems(updated)
-                                }}
-                              >
-                                <SelectTrigger className="bg-black/20 border-white/5 h-10"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-slate-900 border-white/10 text-white">
-                                  {CATEGORIES.map((c) => (
-                                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Base Stock</Label>
-                            <Input
-                              type="number"
-                              value={item.stock}
-                              onChange={(e) => {
-                                const updated = [...items]
-                                updated[i] = { ...updated[i], stock: Number(e.target.value) }
-                                setItems(updated)
-                              }}
-                              className="bg-black/20 border-white/5 h-10"
-                            />
-                          </div>
+                          <Select
+                            selectedKey={item.category}
+                            onSelectionChange={(key) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], category: key as string }
+                              setItems(updated)
+                            }}
+                          >
+                            <Label>Category</Label>
+                            <SelectTrigger>
+                              <SelectValue />
+                              <SelectIndicator />
+                            </SelectTrigger>
+                            <SelectPopover>
+                              <ListBox>
+                                {CATEGORIES.map((c) => (
+                                  <ListBoxItem key={c} id={c}>{c}</ListBoxItem>
+                                ))}
+                              </ListBox>
+                            </SelectPopover>
+                          </Select>
+                          <TextField
+                            type="number"
+                            value={item.stock.toString()}
+                            onChange={(v) => {
+                              const updated = [...items]
+                              updated[i] = { ...updated[i], stock: parseInt(v) || 0 }
+                              setItems(updated)
+                            }}
+                          >
+                            <Label>Base Stock</Label>
+                            <Input />
+                          </TextField>
                         </div>
                         <div className="flex justify-between items-center pt-2">
-                           <p className="text-[10px] text-slate-600 italic">Variants will be auto-generated for sizes: {item.sizes}</p>
-                           <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500/50 hover:text-red-500 hover:bg-red-500/10 h-8 text-xs"
-                              onClick={() => setItems(items.filter((_, idx) => idx !== i))}
-                            >
-                              <Trash2 size={14} className="mr-1" /> Remove
-                            </Button>
+                          <p className="text-[10px] text-slate-600 italic">Variants will be auto-generated for: {item.sizes}</p>
+                          <Button
+                            variant="ghost"
+                            className="flex items-center gap-2 text-danger hover:bg-danger/10"
+                            onPress={() => removeItem(i)}
+                          >
+                            <Trash2 size={16} />
+                            Remove Item
+                          </Button>
                         </div>
                       </motion.div>
                     ))}
                   </div>
-                   <Button variant="outline" className="w-full border-dashed border-white/10 hover:border-primary/50 hover:bg-primary/5 text-slate-400 hover:text-primary py-8 rounded-2xl transition-all" onClick={addItem}>
-                    <Plus size={20} className="mr-2" /> Add Inventory Item
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-dashed h-20 rounded-[2rem] text-slate-400 hover:text-primary transition-all flex items-center justify-center gap-2"
+                    onPress={addItem}
+                  >
+                    <Plus size={24} />
+                    Add Service / Item
                   </Button>
                 </div>
               )}
@@ -816,9 +820,8 @@ export default function SetupPage() {
           <div className="flex items-center justify-between mt-10">
             <Button 
               variant="ghost" 
-              onClick={handleBack} 
-              disabled={currentStep === 0 || loading}
-              className="text-slate-500 hover:text-white hover:bg-white/5 rounded-xl px-6"
+              onPress={handleBack} 
+              isDisabled={currentStep === 0 || loading}
             >
               <ChevronLeft className="mr-2 w-4 h-4" />
               Previous
@@ -826,37 +829,32 @@ export default function SetupPage() {
             
             <div className="flex items-center gap-4">
               {STEPS[currentStep].skippable && (
-                <button 
-                  onClick={handleSkip}
-                  className="text-slate-500 hover:text-white text-sm font-medium transition-colors"
+                <Button 
+                  variant="ghost"
+                  onPress={handleSkip}
+                  isDisabled={loading}
                 >
                   Skip for now
-                </button>
+                </Button>
               )}
               
               {currentStep < STEPS.length - 1 ? (
                 <Button 
-                  onClick={handleNext} 
-                  disabled={loading}
-                  className="bg-primary hover:bg-primary/90 text-white rounded-xl px-10 h-12 shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group"
+                  variant="primary"
+                  onPress={handleNext} 
+                  isDisabled={loading}
+                  className="px-10 h-12 shadow-lg shadow-primary/20"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
-                    <span className="flex items-center">
-                      Continue <ChevronRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  }
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ChevronRight className="ml-1 w-4 h-4" /></>}
                 </Button>
               ) : (
                 <Button 
-                  onClick={handleFinish}
-                  disabled={loading}
-                  className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-12 h-14 text-lg font-bold shadow-xl shadow-primary/30 transition-all active:scale-[0.98]"
+                  variant="primary"
+                  onPress={handleFinish}
+                  isDisabled={loading}
+                  className="px-12 h-14 text-lg font-bold shadow-xl shadow-primary/30"
                 >
-                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 
-                    <span className="flex items-center gap-2">
-                       Launch Dashboard <Rocket className="w-6 h-6" />
-                    </span>
-                   }
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Launch Dashboard <Rocket className="ml-2 w-5 h-5" /></>}
                 </Button>
               )}
             </div>

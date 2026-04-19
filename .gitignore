@@ -61,6 +61,7 @@ test-supabase.js
 test-supabase-gmail.js
 signup_response.html
 dev.log
+dev2.log
 scratch/
 skills-lock.json
 sync-git.ps1

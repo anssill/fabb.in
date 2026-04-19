@@ -3,11 +3,18 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardDescription, 
+  CardContent, 
+  Button, 
+  TextField,
+  Label,
+  Input,
+  Alert
+} from '@heroui/react'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -126,8 +133,8 @@ function ResetPasswordContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link href="/login">
-            <Button className="w-full bg-blue-600 hover:bg-blue-700">
+          <Link href="/login" className="block w-full">
+            <Button className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl">
               Request new reset link
             </Button>
           </Link>
@@ -144,18 +151,19 @@ function ResetPasswordContent() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-password">New password</Label>
+          <TextField
+            value={password}
+            onChange={setPassword}
+            className="space-y-2"
+            isRequired
+            isDisabled={loading}
+          >
+            <Label>New password</Label>
             <div className="relative">
               <Input
-                id="new-password"
                 type={showPass ? 'text' : 'password'}
                 placeholder="Min 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className="pr-10"
-                required
-                disabled={loading}
               />
               <button
                 type="button"
@@ -183,20 +191,21 @@ function ResetPasswordContent() {
                 </p>
               </div>
             )}
-          </div>
+          </TextField>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm password</Label>
+          <TextField
+            value={confirm}
+            onChange={setConfirm}
+            className="space-y-2"
+            isRequired
+            isDisabled={loading}
+          >
+            <Label>Confirm password</Label>
             <div className="relative">
               <Input
-                id="confirm-password"
                 type={showConfirm ? 'text' : 'password'}
                 placeholder="Repeat your password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
                 className="pr-10"
-                required
-                disabled={loading}
               />
               <button
                 type="button"
@@ -215,25 +224,24 @@ function ResetPasswordContent() {
                 <CheckCircle className="w-3 h-3" /> Passwords match
               </p>
             )}
-          </div>
+          </TextField>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert status="danger">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>{error}</Alert.Description>
+              </Alert.Content>
             </Alert>
           )}
 
           <Button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700"
-            disabled={loading || strength < 4 || password !== confirm}
+            className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
+            isDisabled={loading || strength < 4 || password !== confirm}
           >
             {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Updating...
-              </>
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               'Set new password'
             )}

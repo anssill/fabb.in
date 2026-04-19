@@ -1,221 +1,159 @@
-import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import { z } from 'zod'
-import { supabaseAdmin } from '@/lib/supabase/admin'
-import { safeJsonParse } from '@/lib/api-utils'
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const signupSchema = z.object({
-  businessName: z.string().min(2).max(100),
-  ownerName: z.string().min(2).max(100),
+  businessName: z.string().min(2),
+  fullName: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number'),
-  city: z.string().min(2).max(100),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-})
+  password: z.string().min(6),
+});
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await safeJsonParse(req)
+  console.log('[Signup API] Received signup request');
 
-    // Step 1: Validate inputs
-    const validated = signupSchema.safeParse(body)
+  try {
+    const body = await req.json();
+    console.log('[Signup API] Processing for email:', body.email);
+
+    const validated = signupSchema.safeParse(body);
     if (!validated.success) {
-      const fieldErrors = validated.error.flatten().fieldErrors
-      const firstError = Object.values(fieldErrors).flat()[0] ?? 'Invalid input'
-      return NextResponse.json({ error: firstError, fieldErrors }, { status: 400 })
+      console.error('[Signup API] Validation failed:', validated.error.flatten());
+      return NextResponse.json({ 
+        error: 'Invalid input', 
+        details: validated.error.flatten() 
+      }, { status: 400 });
     }
 
-    const { businessName, ownerName, email, phone, city, password } = validated.data
-    const cleanEmail = email.toLowerCase()
+    const { businessName, fullName, email, password } = validated.data;
+    const cleanEmail = email.toLowerCase().trim();
 
-    // Step 2: Check duplicate email
+    // 1. Transactional check for existing staff
     const { data: existingStaff } = await supabaseAdmin
       .from('staff')
       .select('id')
       .eq('email', cleanEmail)
-      .maybeSingle()
+      .maybeSingle();
+
     if (existingStaff) {
-      return NextResponse.json(
-        { error: 'An account with this email already exists. Sign in instead.', code: 'DUPLICATE_EMAIL' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Email already exists in staff' }, { status: 400 });
     }
 
-    // Step 3: Generate slug
-    const baseSlug = businessName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim()
+    // 2. Generate unique slug
+    const baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
 
-    let businessSlug = baseSlug
-    let slugSuffix = 1
-    while (true) {
-      const { data: existing } = await supabaseAdmin
-        .from('businesses')
-        .select('id')
-        .eq('slug', businessSlug)
-        .maybeSingle()
-      if (!existing) break
-      businessSlug = `${baseSlug}-${slugSuffix++}`
-    }
-
-    // Step 4: Create business
+    // 3. START DATA CREATION
+    console.log('[Signup API] Creating business...');
     const { data: business, error: bizError } = await supabaseAdmin
       .from('businesses')
-      .insert({
-        name: businessName,
-        slug: businessSlug,
+      .insert({ 
+        name: businessName, 
+        slug, 
         email: cleanEmail,
-        phone,
-        city,
         status: 'trial',
-        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        plan: 'basic'
       })
       .select()
-      .single()
+      .single();
 
     if (bizError || !business) {
-      console.error('Business creation error:', bizError)
-      return NextResponse.json(
-        { error: 'Failed to create business', code: bizError?.code || 'UNKNOWN' },
-        { status: 500 }
-      )
+      console.error('[Signup API] Business creation failed:', bizError);
+      return NextResponse.json({ error: 'Failed to create business', details: bizError }, { status: 500 });
     }
 
-    // Step 5: Create default branch
-    const prefix = businessName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
+    // 4. Create Default Branch
+    console.log('[Signup API] Creating default branch...');
+    const prefix = businessName.substring(0, 3).toUpperCase().padEnd(3, 'X');
     const { data: branch, error: branchError } = await supabaseAdmin
       .from('branches')
-      .insert({
-        business_id: business.id,
-        name: businessName,
-        city,
-        prefix,
+      .insert({ 
+        business_id: business.id, 
+        name: 'Main Branch', 
+        prefix, 
         is_default: true,
-        settings: {
-          booking_rules: { min_advance_pct: 30, buffer_days: 1, max_advance_days: 180, deposit_default_pct: 20 },
-          invoice: { prefix: 'INV', next_number: 1, show_gst: false, footer_text: 'Thank you for choosing ' + businessName },
-          sms: { enabled: false, api_key: '', sender_id: '' },
-        },
+        status: 'active'
       })
       .select()
-      .single()
+      .single();
 
     if (branchError || !branch) {
-      console.error('Branch creation error:', branchError)
-      return NextResponse.json({ error: 'Failed to create default branch' }, { status: 500 })
+      console.error('[Signup API] Branch creation failed:', branchError);
+      // Rollback biz (optional, but good for cleanup)
+      await supabaseAdmin.from('businesses').delete().eq('id', business.id);
+      return NextResponse.json({ error: 'Failed to create branch', details: branchError }, { status: 500 });
     }
 
-    // Step 6: Create Auth User (requires service role key)
-    let authUserId: string
-
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // 5. Create Auth User
+    console.log('[Signup API] Creating/linking auth user...');
+    const { data: authResult, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
-      email_confirm: true,
       password: password,
-      user_metadata: { name: ownerName, business_id: business.id },
-    })
+      email_confirm: true,
+      user_metadata: { name: fullName, business_id: business.id }
+    });
+
+    let authUserId = authResult?.user?.id;
 
     if (authError) {
-      if (authError.code === 'email_exists') {
-        // Auth user exists from a previous partial signup or OAuth attempt.
-        // Find their ID by querying the staff table first (faster than listUsers).
-        const { data: existingStaffById } = await supabaseAdmin
-          .from('staff')
-          .select('id')
-          .eq('email', cleanEmail)
-          .maybeSingle()
-
-        if (existingStaffById) {
-          // Complete staff record already exists — this is a real duplicate signup
-          return NextResponse.json(
-            { error: 'An account with this email already exists. Please sign in instead.', code: 'DUPLICATE_EMAIL' },
-            { status: 400 }
-          )
+      if (authError.message.includes('already registered')) {
+        console.log('[Signup API] Auth user exists, updating password...');
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = users?.users.find(u => u.email === cleanEmail);
+        if (existingUser) {
+          authUserId = existingUser.id;
+          await supabaseAdmin.auth.admin.updateUserById(authUserId, { 
+            password, 
+            user_metadata: { name: fullName, business_id: business.id } 
+          });
         }
-
-        // Auth user exists but no staff record — partial previous signup, recover
-        const { data: userList } = await supabaseAdmin.auth.admin.listUsers()
-        const existing = userList?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
-        if (!existing) {
-          return NextResponse.json(
-            { error: 'Email already in use. Please sign in or use a different email.' },
-            { status: 400 }
-          )
-        }
-        await supabaseAdmin.auth.admin.updateUserById(existing.id, {
-          password: password,
-          email_confirm: true,
-          user_metadata: { name: ownerName, business_id: business.id },
-        })
-        authUserId = existing.id
       } else {
-        console.error('Auth user creation error:', authError)
-        return NextResponse.json(
-          { error: `Failed to create auth user: ${authError.message}` },
-          { status: 500 }
-        )
+        console.error('[Signup API] Auth error:', authError);
+        return NextResponse.json({ error: 'Failed to create auth user', details: authError }, { status: 500 });
       }
-    } else if (!authUser.user) {
-      return NextResponse.json({ error: 'Failed to create auth user' }, { status: 500 })
-    } else {
-      authUserId = authUser.user.id
     }
 
-    // Step 7: Create staff record (upsert to handle partial signup recovery)
-    const passwordHash = await bcrypt.hash(password, 12)
-    const { error: staffError } = await supabaseAdmin.from('staff').upsert({
-      id: authUserId,
-      business_id: business.id,
-      branch_id: branch.id,
-      email: cleanEmail,
-      name: ownerName,
-      phone,
-      role: 'owner',
-      status: 'approved',
-      password_hash: passwordHash,
-      setup_completed: false, // Explicitly set to false to trigger setup wizard
-    }, { onConflict: 'id' })
+    if (!authUserId) {
+      return NextResponse.json({ error: 'Failed to resolve user ID' }, { status: 500 });
+    }
+
+    // 6. Create Staff Record
+    console.log('[Signup API] Creating staff record...');
+    const passwordHash = await bcrypt.hash(password, 12);
+    const { error: staffError } = await supabaseAdmin
+      .from('staff')
+      .upsert({
+        id: authUserId,
+        business_id: business.id,
+        branch_id: branch.id,
+        email: cleanEmail,
+        name: fullName,
+        role: 'owner',
+        status: 'approved',
+        password_hash: passwordHash,
+        setup_completed: false
+      }, { onConflict: 'id' });
 
     if (staffError) {
-      console.error('Staff creation error:', staffError.message, staffError.code, staffError.details)
-      return NextResponse.json(
-        { error: `Failed to create staff profile: ${staffError.message}` },
-        { status: 500 }
-      )
+      console.error('[Signup API] Staff creation error:', staffError);
+      return NextResponse.json({ error: 'Failed to save staff record', details: staffError }, { status: 500 });
     }
 
-    // Step 8: Finalize business association
+    // 7. Update Business Owner ID
     await supabaseAdmin
       .from('businesses')
       .update({ owner_id: authUserId })
-      .eq('id', business.id)
+      .eq('id', business.id);
 
-    // Step 9: Create session so user is logged in immediately
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
-      email: cleanEmail,
-      password: password,
-    })
+    console.log('[Signup API] Signup successful');
+    return NextResponse.json({ success: true, message: 'Signup successful' });
 
-    if (sessionError || !sessionData?.session) {
-      console.error('Session creation error:', sessionError)
-      return NextResponse.json({ error: 'Account created but failed to sign in. Please log in manually.' }, { status: 500 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      session: {
-        access_token: sessionData.session.access_token,
-        refresh_token: sessionData.session.refresh_token,
-      },
-      businessId: business.id,
-      branchId: branch.id,
-      redirect: '/setup',
-    })
-  } catch (err) {
-    console.error('Signup error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[Signup API] FATAL ERROR:', error);
+    return NextResponse.json({ 
+      error: 'Signup crash', 
+      details: error.message || 'Unknown error' 
+    }, { status: 500 });
   }
 }
