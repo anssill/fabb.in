@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@heroui/theme";
+
+@source "../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
 
 @custom-variant dark (&:is(.dark *));
 

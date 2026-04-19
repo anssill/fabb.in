@@ -3,11 +3,27 @@
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Eye, EyeOff, Loader2, AlertCircle, Clock } from 'lucide-react'
+import { 
+  Button, 
+  Input, 
+  Checkbox, 
+  Card, 
+  CardBody, 
+  CardHeader, 
+  Divider,
+  Alert
+} from '@heroui/react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  Lock, 
+  ArrowRight,
+  ShieldCheck,
+  AlertCircle,
+  Clock
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { GoogleButton } from './components/GoogleButton'
 import { ForgotPasswordModal } from './components/ForgotPasswordModal'
@@ -21,11 +37,13 @@ function LoginContent() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<{ message: string; code: string } | null>(null)
   const [forgotOpen, setForgotOpen] = useState(false)
+
+  const toggleVisibility = () => setIsVisible(!isVisible)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,20 +62,23 @@ function LoginContent() {
       const data = await safeJsonParse(res)
 
       if (!res.ok) {
-        setError({ message: data.error, code: data.code })
+        setError({ message: data.error || 'Login failed', code: data.code || 'UNKNOWN' })
         return
       }
 
       const supabase = createClient()
-      await supabase.auth.setSession({
+      const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       })
 
-      toast.success('Welcome back!')
+      if (sessionError) throw sessionError
+
+      toast.success('Welcome back to Fabb.booking!')
       router.push(data.staff?.setup_completed === false ? '/setup' : redirect)
       router.refresh()
-    } catch {
+    } catch (err: any) {
+      console.error('Login error:', err)
       setError({ message: 'Something went wrong. Please try again.', code: 'UNKNOWN' })
     } finally {
       setLoading(false)
@@ -67,115 +88,160 @@ function LoginContent() {
   const ErrorIcon = error?.code === 'RATE_LIMITED' ? Clock : AlertCircle
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome back</h1>
-        <p className="text-sm text-gray-500">Sign in to your dashboard to manage bookings</p>
-      </div>
-
-      <div className="space-y-4">
-        <GoogleButton />
-
-        <div className="relative flex items-center gap-3 py-1">
-          <div className="flex-1 border-t border-gray-200" />
-          <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">or continue with email</span>
-          <div className="flex-1 border-t border-gray-200" />
+    <div className="flex flex-col gap-6 w-full max-w-[420px] mx-auto px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center space-y-2"
+      >
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-2 shadow-sm">
+          <ShieldCheck className="w-6 h-6" />
         </div>
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground-600 bg-clip-text text-transparent">
+          Welcome Back
+        </h1>
+        <p className="text-default-500 text-sm">
+          Sign in to your dashboard to manage bookings
+        </p>
+      </motion.div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-sm font-medium text-gray-700">Work Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@business.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(null) }}
-              autoFocus
-              required
-              disabled={loading}
-              className="h-11 rounded-lg border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-primary focus:ring-primary/20"
-            />
-          </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="border-none bg-background/60 backdrop-blur-md shadow-2xl shadow-primary/5">
+          <CardBody className="p-6 sm:p-8 flex flex-col gap-6">
+            <GoogleButton />
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
-              <button
-                type="button"
-                onClick={() => setForgotOpen(true)}
-                className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
-                tabIndex={-1}
-              >
-                Forgot password?
-              </button>
+            <div className="flex items-center gap-4 py-2">
+              <Divider className="flex-1" />
+              <span className="text-tiny text-default-400 uppercase font-bold tracking-wider">
+                OR EMAIL
+              </span>
+              <Divider className="flex-1" />
             </div>
-            <div className="relative">
+
+            <form onSubmit={handleLogin} className="flex flex-col gap-5">
               <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(null) }}
-                required
-                disabled={loading}
-                className="h-11 rounded-lg border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-primary focus:ring-primary/20 pr-11"
+                label="Work Email"
+                placeholder="name@business.com"
+                labelPlacement="outside"
+                type="email"
+                value={email}
+                onValueChange={(val) => { setEmail(val); setError(null); }}
+                isRequired
+                isDisabled={loading}
+                startContent={<Mail className="text-default-400 w-4 h-4" />}
+                variant="bordered"
+                classNames={{
+                  inputWrapper: "h-12 border-default-200 group-data-[focus=true]:border-primary",
+                  label: "text-foreground-600 font-medium",
+                }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                tabIndex={-1}
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center mb-0.5">
+                  <label className="text-sm text-foreground-600 font-medium ml-1">Password</label>
+                  <Button 
+                    variant="light" 
+                    size="sm" 
+                    className="text-primary text-tiny font-bold h-auto min-w-0 p-0 hover:bg-transparent"
+                    onPress={() => setForgotOpen(true)}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
+                <Input
+                  placeholder="••••••••"
+                  type={isVisible ? "text" : "password"}
+                  value={password}
+                  onValueChange={(val) => { setPassword(val); setError(null); }}
+                  isRequired
+                  isDisabled={loading}
+                  startContent={<Lock className="text-default-400 w-4 h-4" />}
+                  endContent={
+                    <button className="focus:outline-none" type="button" onClick={toggleVisibility}>
+                      {isVisible ? (
+                        <EyeOff className="text-default-400 w-5 h-5" />
+                      ) : (
+                        <Eye className="text-default-400 w-5 h-5" />
+                      )}
+                    </button>
+                  }
+                  variant="bordered"
+                  classNames={{
+                    inputWrapper: "h-12 border-default-200 group-data-[focus=true]:border-primary",
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 px-1">
+                <Checkbox
+                  isSelected={rememberMe}
+                  onValueChange={setRememberMe}
+                  size="sm"
+                  classNames={{
+                    label: "text-default-500",
+                  }}
+                >
+                  Remember me for 30 days
+                </Checkbox>
+              </div>
+
+              <AnimatePresence mode="wait">
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Alert
+                      color={error.code === 'RATE_LIMITED' ? 'warning' : 'danger'}
+                      variant="flat"
+                      title={error.code === 'RATE_LIMITED' ? 'Security Notice' : 'Login Error'}
+                      description={error.message}
+                      startContent={<ErrorIcon className="w-4 h-4" />}
+                      classNames={{
+                        base: "p-3",
+                        title: "text-tiny font-bold",
+                        description: "text-tiny"
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <Button
+                type="submit"
+                color="primary"
+                size="lg"
+                className="font-bold shadow-lg shadow-primary/20 mt-2"
+                isLoading={loading}
+                endContent={!loading && <ArrowRight className="w-4 h-4" />}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
+                {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </motion.div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="remember"
-              checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked === true)}
-              className="border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-            />
-            <Label htmlFor="remember" className="text-sm font-normal text-gray-500 cursor-pointer select-none">
-              Keep me signed in for 30 days
-            </Label>
-          </div>
-
-          {error && (
-            <div className="flex items-start gap-2.5 p-3.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              <ErrorIcon className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error.message}</span>
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full h-11 rounded-lg bg-primary hover:bg-primary/90 text-white font-semibold shadow-sm shadow-primary/20 transition-all active:scale-[0.99]"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign In to Dashboard'
-            )}
-          </Button>
-        </form>
-      </div>
-
-      <div className="text-center pt-2 border-t border-gray-100">
-        <p className="text-sm text-gray-500">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="text-center"
+      >
+        <p className="text-default-500 text-sm">
           New to Fabb.booking?{' '}
-          <Link href="/signup" className="text-primary hover:text-primary/80 font-semibold transition-colors">
-            Register Business →
+          <Link href="/signup" className="text-primary font-bold hover:underline underline-offset-4 transition-all">
+            Create Business Account
           </Link>
         </p>
-      </div>
+      </motion.div>
 
       <ForgotPasswordModal open={forgotOpen} onOpenChange={setForgotOpen} defaultEmail={email} />
     </div>
@@ -184,7 +250,11 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <LoginContent />
     </Suspense>
   )

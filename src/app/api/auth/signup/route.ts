@@ -10,6 +10,7 @@ const signupSchema = z.object({
   email: z.string().email(),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number'),
   city: z.string().min(2).max(100),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: firstError, fieldErrors }, { status: 400 })
     }
 
-    const { businessName, ownerName, email, phone, city } = validated.data
+    const { businessName, ownerName, email, phone, city, password } = validated.data
     const cleanEmail = email.toLowerCase()
 
     // Step 2: Check duplicate email
@@ -108,13 +109,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 6: Create Auth User (requires service role key)
-    const tempPassword = 'Login123!'
     let authUserId: string
 
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
       email_confirm: true,
-      password: tempPassword,
+      password: password,
       user_metadata: { name: ownerName, business_id: business.id },
     })
 
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
           )
         }
         await supabaseAdmin.auth.admin.updateUserById(existing.id, {
-          password: tempPassword,
+          password: password,
           email_confirm: true,
           user_metadata: { name: ownerName, business_id: business.id },
         })
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 7: Create staff record (upsert to handle partial signup recovery)
-    const passwordHash = await bcrypt.hash(tempPassword, 12)
+    const passwordHash = await bcrypt.hash(password, 12)
     const { error: staffError } = await supabaseAdmin.from('staff').upsert({
       id: authUserId,
       business_id: business.id,
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
     // Step 9: Create session so user is logged in immediately
     const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.signInWithPassword({
       email: cleanEmail,
-      password: tempPassword,
+      password: password,
     })
 
     if (sessionError || !sessionData?.session) {

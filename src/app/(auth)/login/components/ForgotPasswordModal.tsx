@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Alert
+} from '@heroui/react'
+import { CheckCircle, XCircle, Mail, RotateCcw, ArrowLeft } from 'lucide-react'
 import { safeJsonParse } from '@/lib/api-utils'
 
 interface Props {
@@ -62,86 +62,133 @@ export function ForgotPasswordModal({ open, onOpenChange, defaultEmail }: Props)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        {state === 'input' && (
+    <Modal 
+      isOpen={open} 
+      onOpenChange={onOpenChange}
+      placement="center"
+      backdrop="blur"
+      className="max-w-[400px]"
+    >
+      <ModalContent>
+        {(onClose) => (
           <>
-            <DialogHeader>
-              <DialogTitle>Reset your password</DialogTitle>
-              <DialogDescription>Enter your email. We&apos;ll send a reset link.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">Email address</Label>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
+            {state === 'input' && (
+              <>
+                <ModalHeader className="flex flex-col gap-1 p-6 pb-2">
+                  <h3 className="text-xl font-bold">Reset your password</h3>
+                  <p className="text-sm font-normal text-default-500">Enter your email and we&apos;ll send a recovery link.</p>
+                </ModalHeader>
+                <ModalBody className="p-6 pt-2 pb-4 flex flex-col gap-4">
+                  <Input
+                    label="Work Email"
+                    placeholder="name@company.com"
+                    type="email"
+                    variant="bordered"
+                    labelPlacement="outside"
+                    value={email}
+                    onValueChange={setEmail}
+                    startContent={<Mail className="w-4 h-4 text-default-400" />}
+                    classNames={{
+                      inputWrapper: "h-12 border-default-200 group-data-[focus=true]:border-primary",
+                      label: "text-foreground-600 font-medium",
+                    }}
+                  />
+                  <Button
+                    color="primary"
+                    className="h-12 font-bold shadow-lg shadow-primary/20 mt-2"
+                    onPress={handleSend}
+                    isLoading={loading}
+                    disabled={!email}
+                  >
+                    Send reset link
+                  </Button>
+                </ModalBody>
+                <ModalFooter className="p-6 pt-0 flex flex-col">
+                  <Button
+                    variant="light"
+                    className="text-default-500 font-medium"
+                    onPress={onClose}
+                  >
+                    Cancel
+                  </Button>
+                </ModalFooter>
+              </>
+            )}
+
+            {state === 'sent' && (
+              <ModalBody className="p-8 text-center flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-2">
+                  <CheckCircle className="w-8 h-8 text-success" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold">Check your email</h3>
+                  <p className="text-sm text-default-500 leading-relaxed">
+                    We sent a recovery link to <span className="font-bold text-foreground">{email}</span>
+                  </p>
+                </div>
+                
+                <Alert
+                  color="warning"
+                  variant="flat"
+                  description="Check your spam folder if you haven't received it yet."
+                  classNames={{
+                    base: "text-tiny py-2",
+                  }}
                 />
-              </div>
-              <Button
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                onClick={handleSend}
-                disabled={loading || !email}
-              >
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Send reset link
-              </Button>
-              <button
-                onClick={() => onOpenChange(false)}
-                className="w-full text-sm text-slate-500 hover:text-slate-700"
-              >
-                Cancel
-              </button>
-            </div>
+
+                <Button
+                  variant="bordered"
+                  className="w-full h-11 mt-2 font-bold"
+                  onPress={handleSend}
+                  isDisabled={cooldown > 0}
+                  startContent={<RotateCcw className="w-4 h-4" />}
+                >
+                  {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend link'}
+                </Button>
+                
+                <Button
+                  variant="light"
+                  className="text-primary font-bold"
+                  startContent={<ArrowLeft className="w-4 h-4" />}
+                  onPress={onClose}
+                >
+                  Back to login
+                </Button>
+              </ModalBody>
+            )}
+
+            {state === 'not_found' && (
+              <ModalBody className="p-8 text-center flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center mb-2">
+                  <XCircle className="w-8 h-8 text-danger" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold">Email not found</h3>
+                  <p className="text-sm text-default-500 leading-relaxed">
+                    No account found for {email}. Please double-check or contact your admin.
+                  </p>
+                </div>
+                
+                <Button
+                  color="primary"
+                  className="w-full h-11 mt-2 font-bold shadow-lg shadow-primary/20"
+                  onPress={() => setState('input')}
+                >
+                  Try a different email
+                </Button>
+
+                <Button
+                  variant="light"
+                  className="text-default-500 font-medium"
+                  onPress={onClose}
+                >
+                  Cancel
+                </Button>
+              </ModalBody>
+            )}
           </>
         )}
-
-        {state === 'sent' && (
-          <div className="flex flex-col items-center text-center py-4 space-y-3">
-            <CheckCircle className="w-12 h-12 text-green-500" />
-            <DialogHeader>
-              <DialogTitle>Check your email</DialogTitle>
-              <DialogDescription>We sent a reset link to {email}</DialogDescription>
-            </DialogHeader>
-            <p className="text-xs text-slate-400">Check your spam folder if not received.</p>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleSend}
-              disabled={cooldown > 0}
-            >
-              {cooldown > 0 ? `Resend link (${cooldown}s)` : 'Resend link'}
-            </Button>
-            <button
-              onClick={() => onOpenChange(false)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Back to login
-            </button>
-          </div>
-        )}
-
-        {state === 'not_found' && (
-          <div className="flex flex-col items-center text-center py-4 space-y-3">
-            <XCircle className="w-12 h-12 text-red-500" />
-            <DialogHeader>
-              <DialogTitle>Email not found</DialogTitle>
-              <DialogDescription>
-                No account found for {email}. Contact your business admin to create your account.
-              </DialogDescription>
-            </DialogHeader>
-            <button
-              onClick={() => setState('input')}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Try a different email
-            </button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+      </ModalContent>
+    </Modal>
   )
 }
