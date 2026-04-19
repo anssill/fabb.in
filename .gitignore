@@ -72,3 +72,9 @@ PRD.MD
 .agents/
 CLAUDE.md
 AGENTS.md
+
+# Experimentation & Temp
+motia-app/
+motia backend/
+fix-json.js
+supabase/.temp/
