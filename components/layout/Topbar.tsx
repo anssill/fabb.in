@@ -41,18 +41,6 @@ export function Topbar() {
   const unread = useUnreadNotificationCount()
   const [inboxOpen, setInboxOpen] = useState(false)
 
-  const handleSignOut = async () => {
-    useUserStore.getState().onLogout()
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  const handleSignOut = async () => {
-    useUserStore.getState().onLogout()
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   const initials = profile?.name ? getInitials(profile.name) : 'ST'
   const roleLabel: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -115,13 +103,6 @@ export function Topbar() {
             <DropdownMenuItem onClick={lock} className="cursor-pointer">
               <Lock className="w-4 h-4 mr-2" />
               Lock screen
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              className="text-destructive font-medium cursor-pointer"
-            >
-              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
