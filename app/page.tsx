@@ -24,9 +24,8 @@ export default async function IndexPage() {
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors pt-2" href="#features">Features</Link>
           <Link className="text-sm font-medium hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors pt-2" href="#pricing">Pricing</Link>
-          <Link className="text-sm font-medium hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors pt-2" href="/login">Sign In</Link>
           <Button asChild={true} size="sm" className="bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 ml-2">
-            <Link href="/signup">Join Private Beta</Link>
+            <Link href="/dashboard">Launch Dashboard <ArrowRight className="ml-2 w-4 h-4" /></Link>
           </Button>
         </nav>
       </header>
@@ -47,7 +46,7 @@ export default async function IndexPage() {
             </p>
             <div className="flex flex-col sm:row justify-center items-center gap-4">
               <Button asChild={true} size="lg" className="h-12 px-8 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 shadow-xl hover:scale-105 active:scale-95 transition-all text-sm font-bold uppercase tracking-tight">
-                <Link href="/signup">Sign Up & Start Free Trial <ArrowRight className="ml-2 w-4 h-4" /></Link>
+                <Link href="/dashboard">Launch Dashboard <ArrowRight className="ml-2 w-4 h-4" /></Link>
               </Button>
             </div>
           </div>

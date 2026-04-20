@@ -30,31 +30,8 @@ export async function updateSession(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Protected paths logic
-    const path = request.nextUrl.pathname
-    const isAuthRoute = path.startsWith('/login') || path.startsWith('/signup') || path.startsWith('/auth')
-    const isPendingRoute = path.startsWith('/pending-approval')
-    const isApiRoute = path.startsWith('/api')
-    const isPublicStatic = path.match(/\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/)
-
-    if (isPublicStatic || isApiRoute) return supabaseResponse
-
-    if (!user && !isAuthRoute) {
-      // Check if the request is a fetch/API call that expects JSON
-      const isFetch = request.headers.get('accept')?.includes('application/json') || 
-                      request.headers.get('x-requested-with') === 'XMLHttpRequest'
-
-      if (isFetch || isApiRoute) {
-        return NextResponse.json(
-          { error: 'unauthorized', message: 'Session expired or invalid' },
-          { status: 401 }
-        )
-      }
-
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      return NextResponse.redirect(url)
-    }
+    // Bypassing all auth gates as requested
+    return supabaseResponse
 
     if (user) {
       const { data: staffData, error: staffError } = await supabase

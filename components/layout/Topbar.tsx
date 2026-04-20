@@ -104,17 +104,9 @@ export function Topbar() {
                 {roleLabel[profile?.role ?? ''] ?? profile?.role}
               </p>
             </div>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={lock} className="cursor-pointer">
               <Lock className="w-4 h-4 mr-2" />
               Lock screen
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              className="text-destructive font-medium cursor-pointer"
-            >
-              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
