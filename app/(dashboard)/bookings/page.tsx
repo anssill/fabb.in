@@ -25,12 +25,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 interface BookingRow {
   id: string
-  booking_id_display?: string
+  booking_number: string
   status: string
   pickup_date: string
   return_date: string
   total_amount: number
-  advance_paid: number
+  advance_amount: number
   customers: { id: string; name: string; phone: string } | null
   items?: unknown[]
   [key: string]: unknown
@@ -171,7 +171,7 @@ export default function BookingsPage() {
               </TableRow>
             ) : (
               allBookings.map((booking) => {
-                const balanceDue = booking.total_amount - booking.advance_paid
+                const balanceDue = booking.total_amount - (booking.advance_amount || 0)
                 return (
                   <TableRow
                     key={booking.id}
@@ -180,7 +180,7 @@ export default function BookingsPage() {
                     <TableCell className="pl-5">
                       <Link href={`/bookings/${booking.id}`} className="block">
                         <span className="font-mono text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                          {booking.booking_id_display ?? booking.id.slice(0, 8).toUpperCase()}
+                          {booking.booking_number || '—'}
                         </span>
                       </Link>
                     </TableCell>

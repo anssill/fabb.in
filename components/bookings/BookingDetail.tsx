@@ -89,7 +89,7 @@ export function BookingDetail({ booking }: BookingDetailProps) {
                      </div>
                      <div className="text-right">
                        <p className="font-mono font-bold">₹{bi.subtotal}</p>
-                       <p className="text-xs text-muted-foreground">₹{bi.daily_rate}/day</p>
+                       <p className="text-xs text-muted-foreground">₹{bi.price}/day</p>
                      </div>
                    </div>
                  ))}

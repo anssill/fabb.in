@@ -105,9 +105,9 @@ export default function ItemDetailPage() {
 
   // Calculate pricing & ROI analytics
   const purchaseCost = item.purchase_cost || 0
-  const dailyRate = item.price || 0
+  const itemPrice = item.price || 0
   const totalBookings = bookings?.length || 0
-  const estimatedRevenue = totalBookings * dailyRate * 3 // Roughly 3 days per booking
+  const estimatedRevenue = totalBookings * itemPrice * 3 // Roughly 3 days per booking
   const roi = purchaseCost > 0 ? ((estimatedRevenue / purchaseCost) * 100).toFixed(0) : '0'
 
   return (
@@ -178,7 +178,7 @@ export default function ItemDetailPage() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-zinc-500">Daily Rate</label>
+                  <label className="text-sm font-medium text-zinc-500">Price</label>
                   {isEditing ? <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} /> : <p className="text-lg font-mono font-medium">₹{item.price?.toLocaleString('en-IN')}</p>}
                 </div>
                 <div>

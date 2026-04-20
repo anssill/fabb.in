@@ -10,7 +10,7 @@ import { Zap, Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createClient()
-  const [mode, setMode] = useState<'google' | 'email'>('google')
+  const [mode, setMode] = useState<'google' | 'email'>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -36,29 +36,19 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      })
-      const data = await res.json()
+      const formData = new FormData()
+      formData.append('email', email)
+      formData.append('password', password)
 
-      if (!res.ok) {
-        setError(data.error || 'Login failed')
+      const { loginAction } = await import('@/lib/auth/actions')
+      const result = await loginAction(formData)
+
+      if (result?.error) {
+        setError(result.error)
         setLoading(false)
-        return
       }
-
-      if (data.session) {
-        await supabase.auth.setSession(data.session)
-      }
-
-      if (!data.setup_completed) {
-        window.location.href = '/setup'
-      } else {
-        window.location.href = '/dashboard'
-      }
-    } catch {
+      // Redirect is handled by the server action or will happen automatically on re-render
+    } catch (err) {
       setError('Connection error. Please try again.')
       setLoading(false)
     }

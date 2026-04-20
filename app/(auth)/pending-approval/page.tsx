@@ -61,9 +61,14 @@ export default function PendingApprovalPage() {
   }, [router, supabase])
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl text-center flex flex-col items-center">
-        <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-6">
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 selection:bg-[#ccff00] selection:text-black">
+      {/* Premium Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#ccff00]/5 blur-[120px] rounded-full animate-pulse" />
+      </div>
+
+      <div className="relative z-10 max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl text-center flex flex-col items-center">
+        <div className="w-16 h-16 bg-[#ccff00]/10 border border-[#ccff00]/20 rounded-2xl flex items-center justify-center mb-6">
           <Clock className="w-8 h-8 text-[#ccff00]" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Access Pending</h1>

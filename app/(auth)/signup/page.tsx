@@ -21,10 +21,11 @@ export default function SignupPage() {
   const [ownerName, setOwnerName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [city, setCity] = useState('')
   const [rentalType, setRentalType] = useState<RentalType>('both')
 
-  const validatePhone = (p: string): boolean => /^[6-9]\d{9}$/.test(p.replace(/[\s\-+91]/g, ''))
+  const validatePhone = (p: string): boolean => /^[6-9]\d{9}$/.test(p.trim())
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -34,87 +35,30 @@ export default function SignupPage() {
     if (!ownerName.trim()) { setError('Your name is required'); return }
     if (!validatePhone(phone)) { setError('Enter a valid 10-digit Indian phone number'); return }
     if (!email.trim() || !email.includes('@')) { setError('Enter a valid email'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     if (!city.trim()) { setError('City is required'); return }
 
     setLoading(true)
 
     try {
-      const supabase = createClient()
-      const cleanPhone = phone.replace(/[\s\-+91]/g, '').slice(-10)
-      const subdomain = businessName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+      const formData = new FormData()
+      formData.append('email', email)
+      formData.append('password', password)
+      formData.append('businessName', businessName)
+      formData.append('ownerName', ownerName)
+      formData.append('phone', phone)
+      formData.append('city', city)
 
-      // 1. Create business
-      const { data: business, error: bizErr } = await supabase.from('businesses').insert({
-        name: businessName.trim(),
-        subdomain,
-        plan: 'basic',
-        status: 'active',
-      }).select().single()
+      const { signUpAction } = await import('@/lib/auth/actions')
+      const result = await signUpAction(formData)
 
-      if (bizErr) {
-        if (bizErr.message.includes('duplicate') || bizErr.message.includes('unique')) {
-          setError('A business with this name already exists. Try a different name.')
-        } else {
-          setError('Failed to create business. Please try again.')
-        }
-        setLoading(false)
-        return
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setStep('success')
       }
-
-      // 2. Create branch
-      const { data: branch, error: branchErr } = await supabase.from('branches').insert({
-        business_id: business.id,
-        name: `${businessName.trim()} — Main`,
-        prefix: businessName.trim().slice(0, 3).toUpperCase(),
-        subdomain_prefix: subdomain,
-        contact: `+91${cleanPhone}`,
-        settings: {
-          min_advance_pct: 30,
-          max_advance_days: 180,
-          buffer_days: 1,
-          monthly_revenue_target: 100000,
-          low_stock_threshold: 1,
-          tier_thresholds: { silver: 5000, gold: 15000, platinum: 30000 },
-          watermark_enabled: false,
-        },
-      }).select().single()
-
-      if (branchErr) {
-        setError('Failed to create branch. Please try again.')
-        setLoading(false)
-        return
-      }
-
-      // 3. Store signup request (for admin visibility)
-      await supabase.from('signup_requests').insert({
-        business_name: businessName.trim(),
-        owner_name: ownerName.trim(),
-        phone: cleanPhone,
-        email: email.trim().toLowerCase(),
-        city: city.trim(),
-        rental_type: rentalType,
-        status: 'approved',
-        business_id: business.id,
-      })
-
-      // 4. Now sign up with Google OAuth — the callback will handle staff record creation
-      // For now, show success and redirect to login
-      setStep('success')
-
-      // 5. Fire process-signup edge function (fire and forget)
-      supabase.functions.invoke('process-signup', {
-        body: {
-          business_name: businessName.trim(),
-          owner_name: ownerName.trim(),
-          phone: cleanPhone,
-          email: email.trim().toLowerCase(),
-          city: city.trim(),
-          business_id: business.id,
-          subdomain,
-        },
-      }).catch(() => {})
-
-    } catch {
+    } catch (err) {
+      console.error('Signup exception:', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
@@ -125,23 +69,20 @@ export default function SignupPage() {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl text-center">
-          <div className="mx-auto w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mb-6">
-            <CheckCircle2 className="w-10 h-10 text-white" />
+          <div className="mx-auto w-16 h-16 bg-[#CCFF00] rounded-2xl flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-10 h-10 text-black" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">
-            Your store is ready! 🎉
+            Account Created! 🚀
           </h1>
-          <p className="text-zinc-400 mb-2 font-medium">
-            <span className="text-[#CCFF00] font-bold">{businessName}</span> has been created.
-          </p>
-          <p className="text-zinc-500 text-sm mb-8">
-            Sign in with Google to access your dashboard and start setting up your inventory.
+          <p className="text-zinc-400 mb-6 font-medium">
+            Welcome to Echo. Your account is ready for setup.
           </p>
           <Button
-            onClick={() => router.push('/login')}
-            className="w-full text-black font-semibold h-12 text-lg rounded-xl transition-transform hover:scale-[1.02]"
+            onClick={() => router.push('/setup-wizard')}
+            className="w-full text-black font-semibold h-12 text-lg rounded-xl transition-transform hover:scale-[1.02] bg-[#CCFF00]"
           >
-            Go to Login <ArrowRight className="ml-2 w-5 h-5" />
+            Start Setup Wizard <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
         </div>
       </div>
@@ -236,6 +177,20 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-zinc-300 text-sm font-medium">
+              Set Password *
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl focus:ring-[#CCFF00] focus:border-[#CCFF00]"
             />
           </div>
 

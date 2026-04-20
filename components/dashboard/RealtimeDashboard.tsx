@@ -41,6 +41,21 @@ export function RealtimeDashboard({ onUpdate, branchId }: Props) {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `branch_id=eq.${branchId}` },
         () => onUpdate()
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses', filter: `branch_id=eq.${branchId}` },
+        () => onUpdate()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items', filter: `branch_id=eq.${branchId}` },
+        () => onUpdate()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_log', filter: `branch_id=eq.${branchId}` },
+        () => onUpdate()
+      )
       .subscribe()
 
     return () => {

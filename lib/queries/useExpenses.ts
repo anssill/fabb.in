@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/lib/stores/useUserStore'
+import { writeAuditLog } from '@/lib/audit'
 
 export function useExpenses() {
   const supabase = createClient()
@@ -50,6 +51,16 @@ export function useAddExpense() {
         .single()
 
       if (error) throw error
+
+      await writeAuditLog({
+        action: 'CREATE',
+        tableName: 'expenses',
+        recordId: data.id,
+        newValue: data,
+        branchId: activeBranchId,
+        businessId: data.business_id
+      })
+
       return data
     },
     onSuccess: () => {

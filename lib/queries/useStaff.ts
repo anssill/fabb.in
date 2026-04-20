@@ -85,10 +85,14 @@ export function useClockOut() {
 
   return useMutation({
     mutationFn: async (attendanceId: string) => {
+      const { profile: user, activeBranchId } = useUserStore.getState()
+      if (!activeBranchId) throw new Error('No active branch')
+
       const { data, error } = await supabase
         .from('staff_attendance')
         .update({ clock_out: new Date().toISOString() })
         .eq('id', attendanceId)
+        .eq('branch_id', activeBranchId)
         .select()
         .single()
 
@@ -129,10 +133,12 @@ export function useApproveStaff() {
 
   return useMutation({
     mutationFn: async (staffId: string) => {
+      if (!activeBranchId) throw new Error('No active branch')
       const { error } = await supabase
         .from('staff')
         .update({ status: 'approved' })
         .eq('id', staffId)
+        .eq('branch_id', activeBranchId)
 
       if (error) throw error
     },

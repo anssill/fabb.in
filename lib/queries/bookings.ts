@@ -26,7 +26,7 @@ export const fetchBookings = async (filters: BookingFilters & { offset: number }
   }
 
   if (filters.search) {
-    query = query.ilike('booking_id_display', `%${filters.search}%`)
+    query = query.or(`booking_number.ilike.%${filters.search}%,customers.name.ilike.%${filters.search}%`)
   }
 
   query = query.order('created_at', { ascending: false })
@@ -62,11 +62,17 @@ export const useBooking = (id: string) =>
         .from('bookings')
         .select(`
           *,
-          customers (*),
-          booking_items (*, item:items(*), variant:item_variants(*)),
-          booking_payments (*),
-          booking_accessories (*),
-          booking_timeline (*)
+          customers (name, phone),
+          branches (
+            name, address, phone, gst_number,
+            businesses (name, logo_url)
+          ),
+          booking_items (
+            id, item_name, item_sku, size, quantity, daily_rate, subtotal,
+            condition_on_return
+          ),
+          booking_payments (id, type, amount, method, void_reason, is_voided, created_at),
+          booking_timeline (id, event_type, event_description, performed_by_name, created_at)
         `)
         .eq('id', id)
         .single()
@@ -83,9 +89,9 @@ export const useTodaySchedule = (branchId: string) =>
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, status, pickup_date, return_date, booking_id_display,
+          id, status, pickup_date, return_date, booking_number,
           customers (name, phone),
-          booking_items (item:items(name), quantity)
+          booking_items (item_name, quantity)
         `)
         .eq('branch_id', branchId)
         .or(`pickup_date.eq.${today},return_date.eq.${today}`)
@@ -103,9 +109,9 @@ export const useCalendarBookings = (branchId: string, startDate: string, endDate
       const { data, error } = await supabase
         .from('bookings')
         .select(`
-          id, status, pickup_date, return_date, booking_id_display,
-          customer:customers(name),
-          booking_items(item:items(id, name, category))
+          id, status, pickup_date, return_date, booking_number,
+          customers (name),
+          booking_items (item_name)
         `)
         .eq('branch_id', branchId)
         .gte('pickup_date', startDate)

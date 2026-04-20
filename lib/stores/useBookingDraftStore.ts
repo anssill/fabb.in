@@ -16,7 +16,7 @@ export interface DraftItem {
   sku: string
   name: string
   category: string
-  daily_rate: number
+  price: number
   cover_photo?: string
   sizes: Record<string, number> // e.g. { M: 2, L: 1 }
 }

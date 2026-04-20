@@ -117,7 +117,7 @@ export interface Item {
   sub_category: string | null
   condition_grade: ItemCondition
   status: ItemStatus
-  daily_rate: number
+  price: number
   deposit_pct: number
   storage_rack: string | null
   storage_shelf: string | null
@@ -125,7 +125,7 @@ export interface Item {
   colour: string | null
   internal_notes: string | null
   purchase_date: string | null
-  purchase_cost: number | null
+  purchase_price: number | null
   cover_photo_url: string | null
   completeness_score: number
   qr_code: string | null
@@ -143,6 +143,9 @@ export interface ItemVariant {
   colour_variant: string | null
   sku: string
   status: ItemStatus
+  available_count: number
+  reserved_count: number
+  total_stock: number
   qr_code: string | null
   created_at: string
 }
@@ -215,13 +218,15 @@ export interface Booking {
   business_id: string
   branch_id: string
   customer_id: string
+  booking_number: string
   status: BookingStatus
   pickup_date: string
   return_date: string
+  subtotal: number
   total_amount: number
-  advance_paid: number
+  advance_amount: number
   balance_due: number
-  deposit_collected: number
+  deposit_amount: number
   deposit_released: boolean
   price_override: boolean
   price_override_reason: string | null
@@ -236,23 +241,26 @@ export interface Booking {
   created_at: string
   updated_at: string
   // joined
-  customer?: Pick<Customer, 'id' | 'name' | 'phone' | 'tier'>
-  created_by_staff?: Pick<Staff, 'id' | 'name'>
+  customers?: Pick<Customer, 'id' | 'name' | 'phone' | 'tier'>
+  branches?: Branch & { businesses: Business }
+  booking_items?: BookingItem[]
+  booking_payments?: BookingPayment[]
+  booking_timeline?: BookingTimeline[]
 }
 
 export interface BookingItem {
   id: string
   booking_id: string
   item_id: string
+  item_name: string
+  item_sku: string
   variant_id: string | null
   quantity: number
   size: string | null
   daily_rate: number
-  days: number
+  rental_days: number
   subtotal: number
-  condition_before: ItemCondition | null
-  condition_after: ItemCondition | null
-  before_photo_url: string | null
+  condition_on_return: ItemCondition | null
   // joined
   item?: Pick<Item, 'id' | 'name' | 'sku' | 'cover_photo_url'>
 }

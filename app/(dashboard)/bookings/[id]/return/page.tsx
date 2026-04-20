@@ -78,7 +78,7 @@ export default function ReturnPage() {
         .select(`
           *,
           customers (*),
-          booking_items (id, size, quantity, daily_rate, subtotal, condition_before, item:items(id, name, sku, category)),
+          booking_items (id, size, quantity, price, subtotal, condition_before, item:items(id, name, sku, category)),
           booking_payments (id, type, amount, method, is_voided),
           booking_accessories (id, accessory_type, given_at_pickup, returned_at_return)
         `)

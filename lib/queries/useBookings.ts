@@ -102,7 +102,7 @@ interface FullBookingDraft {
     name: string
     sku: string
     category: string
-    daily_rate: number
+    price: number
     sizes: Record<string, number>
   }>
   pickup_date: string
@@ -186,8 +186,8 @@ export function useCreateFullBooking() {
               item_id: item.id,
               size,
               quantity: qty,
-              daily_rate: item.daily_rate,
-              subtotal: item.daily_rate * qty * draft.total_days,
+              price: item.price,
+              subtotal: item.price * qty * draft.total_days,
             })
           }
         }

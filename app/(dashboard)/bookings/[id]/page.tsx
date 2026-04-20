@@ -58,16 +58,17 @@ export default function BookingDetailPage() {
         .from('bookings')
         .select(`
           *,
-          customers (*),
-          booking_items (
-            id, size, quantity, daily_rate, subtotal,
-            condition_before, condition_after,
-            item:items (id, name, sku, category, condition_grade)
+          customers (name, phone),
+          branches (
+            name, address, phone, gst_number,
+            businesses (name, logo_url)
           ),
-          booking_payments (id, type, amount, method, void_reason, is_voided, timestamp),
-          booking_accessories (id, accessory_type, given_at_pickup, returned_at_return),
-          booking_timeline (id, event_type, description, staff_name, timestamp),
-          booking_notes (id, content, is_pinned, created_at)
+          booking_items (
+            id, item_name, item_sku, size, quantity, daily_rate, subtotal,
+            condition_on_return
+          ),
+          booking_payments (id, type, amount, method, void_reason, is_voided, created_at),
+          booking_timeline (id, event_type, event_description, performed_by_name, created_at)
         `)
         .eq('id', id)
         .single()
@@ -88,11 +89,11 @@ export default function BookingDetailPage() {
 
   const status = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.draft
   const StatusIcon = status.icon
-  const balanceDue = booking.total_amount - booking.advance_paid
+  const balanceDue = booking.balance_due || (booking.total_amount - (booking.advance_amount || 0))
   const allPayments = booking.booking_payments ?? []
   const activePayments = allPayments.filter((p: any) => !p.is_voided)
   const timelineEvents = (booking.booking_timeline ?? []).sort(
-    (a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
 
   const canPickup = booking.status === 'confirmed'
@@ -156,9 +157,9 @@ export default function BookingDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Total Amount', value: `₹${booking.total_amount?.toLocaleString('en-IN') ?? 0}` },
-          { label: 'Advance Paid', value: `₹${booking.advance_paid?.toLocaleString('en-IN') ?? 0}`, highlight: false },
+          { label: 'Advance Paid', value: `₹${booking.advance_amount?.toLocaleString('en-IN') ?? 0}`, highlight: false },
           { label: 'Balance Due',  value: `₹${balanceDue?.toLocaleString('en-IN') ?? 0}`, highlight: balanceDue > 0 },
-          { label: 'Deposit Held', value: `₹${booking.deposit_collected?.toLocaleString('en-IN') ?? 0}` },
+          { label: 'Deposit Held', value: `₹${booking.deposit_amount?.toLocaleString('en-IN') ?? 0}` },
         ].map((card) => (
           <div key={card.label} className={`p-4 rounded-xl border ${card.highlight ? 'bg-red-50 border-red-200 dark:bg-red-900/20' : 'bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800'}`}>
             <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">{card.label}</p>
@@ -250,17 +251,15 @@ export default function BookingDetailPage() {
               (booking.booking_items as any[]).map((bi) => (
                 <div key={bi.id} className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900">
                   <div>
-                    <p className="font-semibold">{bi.item?.name}</p>
-                    <p className="text-sm text-zinc-500">
-                      SKU: {bi.item?.sku} · Size: {bi.size ?? '—'} · Qty: {bi.quantity}
-                    </p>
-                    {bi.condition_after && (
-                      <Badge variant="outline" className="mt-1 text-xs capitalize">{bi.condition_after}</Badge>
-                    )}
+                    <p className="font-semibold">{bi.item_name}</p>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant="outline" className="text-[10px] h-5">{bi.item_sku}</Badge>
+                      <Badge variant="outline" className="text-[10px] h-5">Size: {bi.size}</Badge>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono font-bold">₹{bi.subtotal?.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-zinc-400">₹{bi.daily_rate}/day</p>
+                    <p className="font-medium">₹{bi.subtotal}</p>
+                    <p className="text-xs text-zinc-500">{bi.quantity} x ₹{bi.daily_rate}/day</p>
                   </div>
                 </div>
               ))

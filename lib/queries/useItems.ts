@@ -12,7 +12,7 @@ export interface InventoryItem {
   status: string
   price: number
   deposit_pct: number
-  purchase_cost: number | null
+  purchase_price: number | null
   purchase_date: string | null
   description: string | null
   cover_photo_url: string | null
@@ -29,6 +29,8 @@ export interface InventoryVariant {
   size: string
   colour: string | null
   available_count: number
+  reserved_count: number
+  total_stock: number
   status: string
   created_at: string
 }

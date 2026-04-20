@@ -17,7 +17,7 @@ export interface Item {
   name: string
   sku: string
   category: string
-  daily_rate: number
+  price: number
   photo_url?: string
 }
 

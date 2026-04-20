@@ -392,7 +392,7 @@ function ItemsStep() {
       sku: (item.sku as string) ?? '',
       name: item.name as string,
       category: (item.category as string) ?? '',
-      daily_rate: (item.daily_rate as number) ?? (item.price as number) ?? 0,
+      price: (item.price as number) ?? 0,
       cover_photo: item.cover_photo_url as string | undefined,
       sizes: {},
     }
@@ -461,7 +461,7 @@ function ItemsStep() {
                     <div>
                       <p className="font-medium text-sm">{item.name as string}</p>
                       <p className="text-xs text-zinc-500">
-                        {item.sku as string} · ₹{(item.daily_rate ?? item.price) as number}/day
+                        {item.sku as string} · ₹{item.price as number}/day
                       </p>
                     </div>
                   </div>
@@ -507,7 +507,7 @@ function ItemsStep() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-xs text-zinc-500">₹{item.daily_rate}/day · Select sizes & qty:</p>
+                <p className="text-xs text-zinc-500">₹{item.price}/day · Select sizes & qty:</p>
                 <div className="flex flex-wrap gap-2">
                   {SIZES.map(size => {
                     const qty = item.sizes[size] ?? 0
@@ -645,7 +645,7 @@ function PricingStep() {
   const days = store.dates?.total_days ?? 1
   const subtotal = store.items.reduce((sum, item) => {
     const totalQty = Object.values(item.sizes).reduce((a, b) => a + b, 0)
-    return sum + item.daily_rate * totalQty * days
+    return sum + item.price * totalQty * days
   }, 0)
 
   const [useOverride, setUseOverride] = useState(!!store.pricing?.override_price)
@@ -684,7 +684,7 @@ function PricingStep() {
               <span className="text-zinc-600 dark:text-zinc-300">
                 {item.name} <span className="text-xs text-zinc-400">({sizeLabel})</span>
               </span>
-              <span className="font-mono font-medium">₹{(item.daily_rate * totalQty * days).toLocaleString('en-IN')}</span>
+              <span className="font-mono font-medium">₹{(item.price * totalQty * days).toLocaleString('en-IN')}</span>
             </div>
           )
         })}
@@ -904,8 +904,8 @@ function ConfirmStep() {
       name: item.name,
       size: Object.entries(item.sizes).filter(([, q]) => q > 0).map(([s, q]) => `${s}×${q}`).join(', '),
       quantity: Object.values(item.sizes).reduce((a, b) => a + b, 0),
-      daily_rate: item.daily_rate,
-      item: { name: item.name, daily_rate: item.daily_rate },
+      price: item.price,
+      item: { name: item.name, price: item.price },
     })),
     pricing: {
       total: pricing?.total_amount ?? 0,

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useUserStore } from '@/lib/stores/useUserStore'
+import { writeAuditLog } from '@/lib/audit'
 
 export type WashingStage = 'queue' | 'washing' | 'drying' | 'ironing' | 'qc' | 'ready'
 export type WashingPriority = 'urgent' | 'high' | 'normal' | 'low'
@@ -249,6 +250,16 @@ export function useLogWashingExpense() {
         .single()
 
       if (error) throw error
+
+      await writeAuditLog({
+        action: 'CREATE',
+        tableName: 'expenses',
+        recordId: data.id,
+        newValue: data,
+        branchId: activeBranchId,
+        businessId: data.business_id
+      })
+
       return data
     },
     onSuccess: () => {
