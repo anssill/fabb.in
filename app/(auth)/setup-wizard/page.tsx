@@ -1,323 +1,204 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  Building2, 
-  MapPin, 
-  Phone, 
-  Settings2, 
-  CheckCircle2, 
-  ArrowRight, 
-  Loader2,
-  Sparkles,
-  Target,
-  Layout
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-
-type Step = 'branch' | 'preferences' | 'success'
+import { Zap, Building2, Store, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 
 export default function SetupWizard() {
   const router = useRouter()
   const supabase = createClient()
-  const [step, setStep] = useState<Step>('branch')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [step, setStep] = useState(1)
   
-  // State for Wizard
-  const [branchName, setBranchName] = useState('')
-  const [branchAddress, setBranchAddress] = useState('')
-  const [branchPhone, setBranchPhone] = useState('')
-  const [revenueTarget, setRevenueTarget] = useState('100000')
-  const [advancePct, setAdvancePct] = useState('30')
+  const [formData, setFormData] = useState({
+    businessName: '',
+    branchName: 'Main Branch',
+    subdomain: ''
+  })
 
-  const [staff, setStaff] = useState<any>(null)
-  const [business, setBusiness] = useState<any>(null)
-
-  useEffect(() => {
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('*, businesses(*)')
-        .eq('id', user.id)
-        .single()
-
-      if (staffData) {
-        setStaff(staffData)
-        setBusiness(staffData.businesses)
-        setBranchName(`${staffData.businesses.name} — Main`)
-      }
-    }
-    loadData()
-  }, [])
+  const updateSubdomain = (name: string) => {
+    const sub = name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+    setFormData(prev => ({ ...prev, businessName: name, subdomain: sub }))
+  }
 
   const handleCompleteSetup = async () => {
     setLoading(true)
-    setError(null)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !business) return
+      if (!user) throw new Error('No user found')
 
-      // 1. Create the branch
-      const { data: branch, error: branchErr } = await supabase
-        .from('branches')
+      // 1. Create Business
+      const { data: business, error: bError } = await supabase
+        .from('businesses')
         .insert({
-          business_id: business.id,
-          name: branchName,
-          address: branchAddress,
-          contact_phone: branchPhone, // Matches schema field name contact_phone
-          created_at: new Date().toISOString(),
+          name: formData.businessName,
+          subdomain: formData.subdomain,
+          owner_id: user.id,
+          status: 'active'
         })
         .select()
         .single()
 
-      if (branchErr) throw branchErr
+      if (bError) throw bError
 
-      // 2. Update staff with branch_id and setup_completed = true
-      const { error: staffUpdateErr } = await supabase
+      // 2. Create Initial Branch
+      const { data: branch, error: brError } = await supabase
+        .from('branches')
+        .insert({
+          business_id: business.id,
+          name: formData.branchName,
+        })
+        .select()
+        .single()
+
+      if (brError) throw brError
+
+      // 3. Update Staff Record (User who created it becomes owner)
+      const { error: sError } = await supabase
         .from('staff')
         .update({
+          business_id: business.id,
           branch_id: branch.id,
           role: 'owner',
           status: 'approved'
         })
         .eq('id', user.id)
 
-      if (staffUpdateErr) throw staffUpdateErr
+      if (sError) throw sError
 
-      setStep('success')
-    } catch (err: any) {
-      setError(err.message || 'Failed to complete setup.')
+      setStep(3) // Success
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+
+    } catch (err) {
+      console.error('Setup error:', err)
+      alert('Failed to complete setup. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (!business) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
-        <Loader2 className="w-10 h-10 text-[#CCFF00] animate-spin" />
-        <p className="mt-4 text-zinc-500 font-medium">Preparing your workspace...</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-[#CCFF00] selection:text-black flex flex-col items-center justify-center p-4">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#CCFF00]/5 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#CCFF00]/5 blur-[120px] rounded-full animate-pulse delay-700" />
-      </div>
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#CCFF00] opacity-[0.05] blur-[100px] rounded-full animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 opacity-[0.05] blur-[100px] rounded-full animate-pulse delay-700" />
 
-      <div className="relative z-10 max-w-lg w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="mx-auto w-14 h-14 bg-[#CCFF00] rounded-2xl flex items-center justify-center mb-5">
-            <Sparkles className="w-8 h-8 text-black" />
+      <div className="w-full max-w-xl relative z-10">
+        <div className="text-center mb-8 space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-[#CCFF00] rounded-xl mb-4">
+            <Zap className="w-6 h-6 text-black" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-2">
-            Finish setting up <span className="text-[#CCFF00]">{business.name}</span>
-          </h1>
-          <p className="text-zinc-400 text-sm font-medium">
-            Let's get your first branch ready in just two steps
-          </p>
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase italic">Finalizing your Setup</h1>
+          <p className="text-zinc-500">Just a few details to get your rental network online.</p>
         </div>
 
-        {/* Wizard Progress */}
-        <div className="flex gap-2 mb-6 px-1">
-          {(['branch', 'preferences', 'success'] as Step[]).map((s, i) => (
-            <div 
-              key={s}
-              className={`h-1 flex-1 rounded-full transition-all duration-700 ${
-                i <= ['branch', 'preferences', 'success'].indexOf(step) 
-                ? 'bg-[#CCFF00] shadow-[0_0_10px_rgba(204,255,0,0.5)]' 
-                : 'bg-zinc-800'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Steps Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl overflow-hidden min-h-[460px] flex flex-col">
-          {step === 'branch' && (
-            <div className="space-y-6 flex-1 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
-               <div className="space-y-1">
-                  <h2 className="text-lg font-bold">Store Details</h2>
-                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Step 1 of 2</p>
-               </div>
-
-              <div className="space-y-4 flex-1">
+        <Card className="bg-zinc-900/50 backdrop-blur-2xl border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+          
+          {step === 1 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="branchName" className="text-zinc-300 text-sm font-medium">Branch Name *</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3.5 top-3 w-5 h-5 text-zinc-500" />
-                    <Input
-                      id="branchName"
-                      placeholder="e.g. Bandra Flagship Store"
-                      value={branchName}
-                      onChange={(e) => setBranchName(e.target.value)}
-                      className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl pl-11 focus:ring-[#CCFF00] focus:border-[#CCFF00]"
+                  <Label className="text-zinc-400 ml-1">Business Name</Label>
+                  <div className="relative group">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-[#CCFF00] transition-colors" />
+                    <Input 
+                      placeholder="e.g. Urban Ridings"
+                      className="h-14 pl-12 bg-zinc-950 border-zinc-800 rounded-2xl text-white focus-visible:ring-[#CCFF00] focus-visible:ring-offset-0"
+                      value={formData.businessName}
+                      onChange={(e) => updateSubdomain(e.target.value)}
                     />
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="branchAddress" className="text-zinc-300 text-sm font-medium">Full Address *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3 w-5 h-5 text-zinc-500" />
-                    <Input
-                      id="branchAddress"
-                      placeholder="Street, City, Pin Code"
-                      value={branchAddress}
-                      onChange={(e) => setBranchAddress(e.target.value)}
-                      className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl pl-11 focus:ring-[#CCFF00] focus:border-[#CCFF00]"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="branchPhone" className="text-zinc-300 text-sm font-medium">Contact Number *</Label>
-                  <div className="relative flex">
-                    <span className="inline-flex items-center px-3 h-11 text-sm text-zinc-400 bg-zinc-800 border border-r-0 border-zinc-700 rounded-l-xl font-medium">
-                      +91
-                    </span>
-                    <Input
-                      id="branchPhone"
-                      placeholder="9876543210"
-                      value={branchPhone}
-                      onChange={(e) => setBranchPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="h-11 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 rounded-l-none rounded-r-xl w-full"
-                      maxLength={10}
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-zinc-600 uppercase tracking-widest ml-1">Proposed Subdomain</p>
+                  <p className="text-sm font-mono text-zinc-400 bg-zinc-950/50 p-3 rounded-xl border border-zinc-900 italic">
+                    {formData.subdomain || 'your-business'}.echo.app
+                  </p>
                 </div>
               </div>
 
-              <Button
-                onClick={() => setStep('preferences')}
-                disabled={!branchName || !branchAddress || !branchPhone}
-                className="w-full bg-[#CCFF00] hover:bg-[#b8e600] text-black font-bold h-12 rounded-xl transition-all active:scale-[0.98] mt-4"
+              <Button 
+                size="lg"
+                disabled={!formData.businessName}
+                onClick={() => setStep(2)}
+                className="w-full h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black font-bold rounded-2xl transition-all"
               >
-                Continue to Preferences <ArrowRight className="ml-2 w-5 h-5" />
+                Next Step <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </div>
           )}
 
-          {step === 'preferences' && (
-            <div className="space-y-6 flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
-               <div className="space-y-1">
-                  <h2 className="text-lg font-bold">Business Settings</h2>
-                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Step 2 of 2</p>
-               </div>
-
-              <div className="space-y-4 flex-1">
-                <div className="p-5 bg-zinc-800/50 border border-zinc-700/50 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#CCFF00]/10 flex items-center justify-center border border-[#CCFF00]/20">
-                      <Target className="w-5 h-5 text-[#CCFF00]" />
-                    </div>
-                    <div>
-                      <Label className="text-zinc-300 font-semibold">Monthly Revenue Target</Label>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">Budget Goal (₹)</p>
-                    </div>
-                  </div>
-                  <Input 
-                    type="number"
-                    value={revenueTarget}
-                    onChange={(e) => setRevenueTarget(e.target.value)}
-                    className="bg-zinc-900 border-zinc-700 h-11 text-white font-bold rounded-xl"
-                  />
-                </div>
-
-                <div className="p-5 bg-zinc-800/50 border border-zinc-700/50 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#CCFF00]/10 flex items-center justify-center border border-[#CCFF00]/20">
-                      <Layout className="w-5 h-5 text-[#CCFF00]" />
-                    </div>
-                    <div>
-                      <Label className="text-zinc-300 font-semibold">Min Advance Deposit</Label>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">Booking Security (%)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                     <Input 
-                        type="number"
-                        value={advancePct}
-                        onChange={(e) => setAdvancePct(e.target.value)}
-                        className="bg-zinc-900 border-zinc-700 h-11 text-white font-bold rounded-xl"
-                     />
-                     <span className="text-lg font-bold text-zinc-600">%</span>
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-zinc-400 ml-1">First Branch Name</Label>
+                  <div className="relative group">
+                    <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-[#CCFF00] transition-colors" />
+                    <Input 
+                      placeholder="e.g. Bangalore Central"
+                      className="h-14 pl-12 bg-zinc-950 border-zinc-800 rounded-2xl text-white focus-visible:ring-[#CCFF00] focus-visible:ring-offset-0"
+                      value={formData.branchName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, branchName: e.target.value }))}
+                    />
                   </div>
                 </div>
-              </div>
-
-              {error && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex gap-3 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('branch')}
-                  className="flex-1 border-zinc-800 hover:bg-zinc-800 hover:text-white text-zinc-400 h-12 rounded-xl"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleCompleteSetup}
-                  disabled={loading}
-                  className="flex-[2] bg-[#CCFF00] hover:bg-[#b8e600] text-black font-bold h-12 rounded-xl transition-all shadow-[0_0_20px_rgba(204,255,0,0.2)]"
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>Complete Setup <Sparkles className="ml-2 w-5 h-5" /></>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === 'success' && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-in zoom-in-95 duration-700">
-              <div className="w-20 h-20 bg-[#CCFF00] rounded-3xl flex items-center justify-center rotate-3 shadow-[0_0_50px_rgba(204,255,0,0.3)]">
-                <CheckCircle2 className="w-12 h-12 text-black" />
-              </div>
-              
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold tracking-tight text-white">Workspace Ready! 🚀</h2>
-                <p className="text-zinc-400 font-medium max-w-[240px] mx-auto">
-                   Welcome to the futuristic era of booking management.
+                <p className="text-xs text-zinc-500 leading-relaxed px-1">
+                  You can add more branches later in the dashboard settings.
                 </p>
               </div>
 
-              <Button
-                onClick={() => router.push('/')}
-                className="w-full bg-[#CCFF00] hover:bg-[#b8e600] text-black font-bold h-14 text-lg rounded-2xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(204,255,0,0.2)] mt-4"
-              >
-                Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <div className="flex gap-4">
+                <Button 
+                  variant="ghost"
+                  onClick={() => setStep(1)}
+                  className="h-14 px-6 border-zinc-800 text-zinc-400 hover:text-white rounded-2xl"
+                >
+                  Back
+                </Button>
+                <Button 
+                  size="lg"
+                  disabled={!formData.branchName || loading}
+                  onClick={handleCompleteSetup}
+                  className="flex-1 h-14 bg-[#CCFF00] hover:bg-[#b8e600] text-black font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(204,255,0,0.2)]"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Setup"}
+                </Button>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center">
-           <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest">Powered by Echo Unified Systems</p>
-        </div>
+          {step === 3 && (
+            <div className="text-center py-12 space-y-6 animate-in zoom-in-95 duration-500">
+              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-white tracking-tight">Everything Ready!</h2>
+                <p className="text-zinc-400">Taking you to your brand new dashboard...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Progress Indicator */}
+          {step < 3 && (
+            <div className="mt-8 flex justify-center gap-2">
+              <div className={`h-1 w-8 rounded-full transition-colors ${step === 1 ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+              <div className={`h-1 w-8 rounded-full transition-colors ${step === 2 ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+            </div>
+          )}
+        </Card>
+
+        <p className="text-center text-[10px] text-zinc-600 uppercase tracking-widest mt-8 italic">
+          Echo Enterprise OS • v1.0.4 • Scale without Limits
+        </p>
       </div>
     </div>
   )

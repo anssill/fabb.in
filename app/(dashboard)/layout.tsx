@@ -14,24 +14,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const setActiveBranchId = useUserStore((s) => s.setActiveBranchId)
   const activeBranchId = useUserStore((s) => s.activeBranchId)
 
-      const defaultStaff: Staff = {
-        id: '5e1fc1d9-6ae9-4e31-8146-d5cf770a3ec8',
-        business_id: '76ee3388-c22e-4fbd-841a-ae4afc9a0164',
-        branch_id: '1dde65d8-6892-4709-b204-44b1bae32442',
-        email: 'jasilav65@gmail.com',
-        name: 'Ansil',
-        role: 'owner',
-        status: 'approved',
-        custom_permissions: {},
-        google_id: null,
-        pin_code: '1234',
-        created_at: new Date().toISOString(),
-        last_login: new Date().toISOString(),
-      }
-
-      setProfile(defaultStaff)
-      if (!activeBranchId) setActiveBranchId(defaultStaff.branch_id!)
-
+  // Hydrate user profile + active branch from Supabase on mount
+  useEffect(() => {
+    const supabase = createClient()
+    ;(async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -41,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .from('staff')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (staffData) {
         setProfile(staffData as Staff)

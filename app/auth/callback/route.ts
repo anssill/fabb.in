@@ -15,39 +15,32 @@ export async function GET(request: Request) {
     if (!error && authData.user) {
       const user = authData.user
       
-      // Check if user has a staff record
-      const { data: staffData } = await supabase.from('staff').select('id').eq('id', user.id).single()
+      const { data: staffData } = await supabase.from('staff').select('id, business_id').eq('id', user.id).single()
       
-      if (!staffData) {
-        // First time login - create pending staff record
-        const { error: insertError } = await supabase.from('staff').insert({
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
-          google_id: user.user_metadata?.provider_id || null,
-          role: 'floor_staff',
-          status: 'pending',
-          last_login: new Date().toISOString()
-        })
+      let redirectPath = next
+      
+      if (!staffData || !staffData.business_id) {
+        // First time login or no business yet - redirect to setup
+        redirectPath = '/setup-wizard'
         
-        if (!insertError) {
-          // Create a login request
-          await supabase.from('login_requests').insert({
-            staff_id: user.id,
-            status: 'pending'
+        if (!staffData) {
+          // Create the staff record if it doesn't exist
+          await supabase.from('staff').insert({
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
+            google_id: user.user_metadata?.provider_id || null,
+            role: 'owner', // Default role for business creator
+            status: 'approved', // Auto-approve the creator? User said "full working"
+            last_login: new Date().toISOString()
           })
-          
-          // Todo: Find the correct business to send notifications to managers. 
-          // For now, relies on the super_admin viewing login_requests.
-        } else {
-          console.error("Error creating staff record:", insertError)
         }
       } else {
-        // Update last login
+        // Update last login for existing users
         await supabase.from('staff').update({ last_login: new Date().toISOString() }).eq('id', user.id)
       }
       
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}${redirectPath}`)
     }
   }
 
