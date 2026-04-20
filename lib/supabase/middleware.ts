@@ -40,6 +40,17 @@ export async function updateSession(request: NextRequest) {
     if (isPublicStatic || isApiRoute) return supabaseResponse
 
     if (!user && !isAuthRoute) {
+      // Check if the request is a fetch/API call that expects JSON
+      const isFetch = request.headers.get('accept')?.includes('application/json') || 
+                      request.headers.get('x-requested-with') === 'XMLHttpRequest'
+
+      if (isFetch || isApiRoute) {
+        return NextResponse.json(
+          { error: 'unauthorized', message: 'Session expired or invalid' },
+          { status: 401 }
+        )
+      }
+
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
