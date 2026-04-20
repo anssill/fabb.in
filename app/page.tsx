@@ -5,12 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, CheckCircle2, Shield, Zap, Layout, MessageCircle, Globe } from 'lucide-react'
 
 export default async function IndexPage() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (session) {
-    redirect('/dashboard')
-  }
+  redirect('/dashboard')
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-zinc-950 font-sans">
