@@ -28,24 +28,11 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const { signUpAction } = await import('@/lib/auth/actions');
+      const result = await signUpAction(formData);
 
-      let data: any = {};
-      const text = await response.text();
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          console.error("Failed to parse JSON response:", text);
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || `Failed to sign up (Status: ${response.status})`);
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
       toast.success('Account created! Please login.');
