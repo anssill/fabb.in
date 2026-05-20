@@ -58,19 +58,41 @@ export default function NewCustomerPage() {
 
       toast.loading('Saving customer data...', { id: 'validation' })
       const supabase = createClient()
-      const { data, error } = await supabase.from('customers').insert({
-        business_id: staff.business_id,
-        name: form.name, phone: form.phone, email: form.email || null,
-        address: form.address || null, id_type: form.id_type || null,
-        id_number: form.id_number || null, notes: form.notes || null,
-      }).select('id').single()
+
+      const { data: existing } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', form.phone)
+        .eq('business_id', staff.business_id)
+        .eq('branch_id', activeBranch?.id || staff.branch_id)
+        .maybeSingle()
+
+      let customerId;
+
+      if (existing) {
+        const { error } = await supabase.from('customers').update({
+          name: form.name, email: form.email || null,
+          address: form.address || null, id_type: form.id_type || null,
+          id_number: form.id_number || null, notes: form.notes || null,
+        }).eq('id', existing.id)
+        if (error) throw error
+        customerId = existing.id
+      } else {
+        const { data, error } = await supabase.from('customers').insert({
+          business_id: staff.business_id,
+          branch_id: activeBranch?.id || staff.branch_id,
+          name: form.name, phone: form.phone, email: form.email || null,
+          address: form.address || null, id_type: form.id_type || null,
+          id_number: form.id_number || null, notes: form.notes || null,
+        }).select('id').single()
+        if (error) throw error
+        customerId = data.id
+      }
       
-      if (error) throw error
-      
-      toast.success('Customer added successfully!', { id: 'validation' })
-      router.push(`/customers/${data.id}`)
+      toast.success('Customer saved successfully!', { id: 'validation' })
+      router.push(`/customers/${customerId}`)
     } catch (error: any) { 
-      toast.error(error.message || 'Failed to add customer', { id: 'validation' }) 
+      toast.error(error.message || 'Failed to save customer', { id: 'validation' }) 
     } finally { 
       setSaving(false) 
     }

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Plus, Search, CalendarArrowUp, CalendarArrowDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { differenceInDays } from 'date-fns'
+import { useAppStore } from '@/lib/store'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -30,6 +31,7 @@ const STATUS_BAR: Record<string, string> = {
 type StatusFilter = 'all' | 'booked' | 'out' | 'returned' | 'pending' | 'closed' | 'cancelled'
 
 export default function BookingsPage() {
+  const { activeBranch } = useAppStore()
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -57,6 +59,7 @@ export default function BookingsPage() {
           booking_items(item_name, size, quantity)
         `)
         .eq('business_id', staff.business_id)
+        .eq('branch_id', staff.branch_id)
         .order('created_at', { ascending: false })
         .limit(200)
 
@@ -64,7 +67,7 @@ export default function BookingsPage() {
       setLoading(false)
     }
     fetchBookings()
-  }, [])
+  }, [activeBranch?.id])
 
   // Count per status
   const counts = useMemo(() => {

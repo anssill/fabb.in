@@ -87,40 +87,40 @@ export default async function DashboardPage() {
     { data: weeklyRevenueData },
   ] = await Promise.all([
     supabase.from('bookings').select('*', { count: 'exact', head: true })
-      .eq('business_id', staff.business_id).in('status', ['booked', 'out']),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).in('status', ['booked', 'out']),
     supabase.from('bookings').select('*', { count: 'exact', head: true })
-      .eq('business_id', staff.business_id).eq('status', 'out'),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out'),
     supabase.from('bookings').select('*', { count: 'exact', head: true })
-      .eq('business_id', staff.business_id).eq('status', 'out').lt('return_date', today),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out').lt('return_date', today),
     supabase.from('items').select('*', { count: 'exact', head: true })
-      .eq('business_id', staff.business_id).eq('is_active', true),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('is_active', true),
     supabase.from('customers').select('*', { count: 'exact', head: true })
-      .eq('business_id', staff.business_id),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id),
     supabase.from('booking_payments').select('amount')
-      .eq('business_id', staff.business_id)
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .gte('created_at', today + 'T00:00:00')
       .lte('created_at', today + 'T23:59:59'),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date')
-      .eq('business_id', staff.business_id).eq('pickup_date', today).limit(8),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('pickup_date', today).limit(8),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, return_date')
-      .eq('business_id', staff.business_id).eq('return_date', today).limit(8),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('return_date', today).limit(8),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), return_date')
-      .eq('business_id', staff.business_id).eq('status', 'out').lt('return_date', today).limit(5),
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out').lt('return_date', today).limit(5),
     getRevenueStats('7d'),
     supabase.from('audit_log').select('id, action, entity_type, staff_name, created_at')
-      .eq('business_id', staff.business_id)
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .order('created_at', { ascending: false })
       .limit(15),
     supabase.from('washing_queue').select('id, stage, created_at, item:items(name)')
-      .eq('business_id', staff.business_id)
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .order('created_at', { ascending: false })
       .limit(5),
     supabase.from('bookings').select('id, booking_number, total_amount, status, created_at, customer:customers(name)')
-      .eq('business_id', staff.business_id)
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .order('created_at', { ascending: false })
       .limit(6),
     supabase.from('booking_payments').select('amount, created_at, method')
-      .eq('business_id', staff.business_id)
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .gte('created_at', sevenDaysAgo)
       .eq('is_voided', false),
   ])

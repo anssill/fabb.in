@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/select'
 import { useAppStore } from '@/lib/store'
 import { Building2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { switchActiveBranch } from './branch-actions'
 
 interface Branch {
   id: string
@@ -44,12 +46,18 @@ export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) 
     )
   }
 
-  const handleSwitch = (branchId: string) => {
-    // In a real app, this might update a cookie or a database setting
-    // For now, we update the client-side store and refresh
-    const branch = storeBranches.find(b => b.id === branchId)
-    if (branch) setActiveBranch(branch)
-    router.refresh()
+  const handleSwitch = async (branchId: string) => {
+    try {
+      const branch = storeBranches.find(b => b.id === branchId)
+      if (branch) setActiveBranch(branch)
+      
+      // Update the database so server components see the new branch
+      await switchActiveBranch(branchId)
+      
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to switch branch')
+    }
   }
 
   return (

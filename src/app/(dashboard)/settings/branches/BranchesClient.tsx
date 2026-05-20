@@ -98,6 +98,7 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
         email: formData.email || null,
         prefix: formData.prefix.toUpperCase() || formData.name.substring(0, 3).toUpperCase(),
         is_default: formData.is_default,
+        status: 'active',
         settings: {
           ...(editingBranch?.settings || {}),
           manager_id: formData.manager_id || null,
@@ -272,12 +273,12 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
 
               <div className="col-span-2 space-y-2">
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch Manager</Label>
-                <Select value={formData.manager_id} onValueChange={v => setFormData(p => ({...p, manager_id: v}))}>
+                <Select value={formData.manager_id || 'none'} onValueChange={v => setFormData(p => ({...p, manager_id: v === 'none' ? '' : v}))}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-slate-200 shadow-none">
                     <SelectValue placeholder="Assign a manager" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="">No manager assigned</SelectItem>
+                    <SelectItem value="none">No manager assigned</SelectItem>
                     {initialStaff.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name || s.email}</SelectItem>
                     ))}

@@ -39,15 +39,28 @@ export async function createNewBookingFlow(data: BookingData) {
         .select('id')
         .eq('phone', data.customer.phone)
         .eq('business_id', data.businessId)
+        .eq('branch_id', data.branchId)
         .maybeSingle()
 
       if (existingCustomer) {
         customerId = existingCustomer.id
+        
+        // Update the existing customer with any new details they provided
+        await supabase.from('customers').update({
+          name: data.customer.name,
+          email: data.customer.email || undefined,
+          address: data.customer.address || undefined,
+          id_type: data.customer.id_type || undefined,
+          id_number: data.customer.id_number || undefined,
+          id_proof_url: data.customer.id_proof_url || undefined,
+        }).eq('id', customerId)
+        
       } else {
         const { data: newCustomer, error: custErr } = await supabase
           .from('customers')
           .insert({
             business_id: data.businessId,
+            branch_id: data.branchId,
             name: data.customer.name,
             phone: data.customer.phone,
             email: data.customer.email || null,

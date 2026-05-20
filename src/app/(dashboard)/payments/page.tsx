@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { Search, CreditCard, ClipboardList, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAppStore } from '@/lib/store'
 
 const METHOD_ICONS: Record<string, string> = {
   cash: '💵',
@@ -40,6 +41,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 export default function PaymentsPage() {
+  const { activeBranch } = useAppStore()
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -62,7 +64,7 @@ export default function PaymentsPage() {
 
       const { data: staff } = await supabase
         .from('staff')
-        .select('business_id, role')
+        .select('business_id, branch_id, role')
         .eq('id', user.id)
         .single()
       if (!staff) return
@@ -76,6 +78,7 @@ export default function PaymentsPage() {
           staff:staff!booking_payments_collected_by_fkey(name)
         `)
         .eq('business_id', staff.business_id)
+        .eq('branch_id', activeBranch?.id || staff.branch_id)
         .order('created_at', { ascending: false })
         .limit(200)
 
@@ -83,7 +86,7 @@ export default function PaymentsPage() {
       setLoading(false)
     }
     fetchPayments()
-  }, [])
+  }, [activeBranch?.id])
 
   const today = new Date().toISOString().split('T')[0]
 

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, UserCog, Search, Mail, Phone, MapPin, MoreVertical, Pencil, UserMinus, Shield } from 'lucide-react'
+import { Plus, UserCog, Search, Mail, Phone, MapPin, MoreVertical, Pencil, UserMinus, Shield, Check, X as XIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { safeJsonParse } from '@/lib/api-utils'
+import { PERMISSIONS, getDefaultPermissions, type PermissionKey } from '@/lib/permissions'
 
 const ROLE_COLORS: Record<string, string> = {
   owner: 'bg-purple-100 text-purple-700 border-purple-200',
@@ -32,6 +33,7 @@ interface StaffMember {
   branch_id: string | null
   branch?: { name: string } | any
   last_login: string | null
+  permissions?: Record<string, boolean> | null
 }
 
 interface Branch {
@@ -71,7 +73,9 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
     role: '',
     branchId: '',
     status: '',
+    permissions: getDefaultPermissions() as Record<string, boolean>,
   })
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false)
 
   const filteredStaff = staff.filter(m => 
     m.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -114,14 +118,32 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
 
   function openEdit(member: StaffMember) {
     setSelectedStaff(member)
+    const memberPerms = (member.permissions && Object.keys(member.permissions).length > 0)
+      ? member.permissions
+      : getDefaultPermissions()
     setEditData({
       name: member.name || '',
       phone: member.phone || '',
       role: member.role,
       branchId: member.branch_id || '',
       status: member.status,
+      permissions: { ...memberPerms },
     })
+    setIsPermissionsOpen(false)
     setIsEditOpen(true)
+  }
+
+  function openPermissions(member: StaffMember) {
+    setSelectedStaff(member)
+    const memberPerms = (member.permissions && Object.keys(member.permissions).length > 0)
+      ? member.permissions
+      : getDefaultPermissions()
+    setEditData(prev => ({
+      ...prev,
+      name: member.name || '',
+      permissions: { ...memberPerms },
+    }))
+    setIsPermissionsOpen(true)
   }
 
   async function handleUpdate() {
@@ -136,6 +158,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
           role: editData.role,
           branch_id: editData.branchId,
           status: editData.status,
+          permissions: editData.permissions,
         })
         .eq('id', selectedStaff.id)
 
@@ -207,6 +230,9 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                       <DropdownMenuContent align="end" className="w-48 p-1 rounded-xl">
                         <DropdownMenuItem onClick={() => openEdit(member)} className="text-sm rounded-lg cursor-pointer">
                           <Pencil className="w-4 h-4 mr-2 text-slate-500" /> Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openPermissions(member)} className="text-sm rounded-lg cursor-pointer">
+                          <Shield className="w-4 h-4 mr-2 text-slate-500" /> Manage Permissions
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-sm rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
@@ -401,6 +427,87 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-1 sm:flex-none"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Modal */}
+      <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Manage Permissions
+            </DialogTitle>
+            <DialogDescription>
+              Toggle access to individual modules for {selectedStaff?.name || selectedStaff?.email}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-1 max-h-[400px] overflow-y-auto">
+            {PERMISSIONS.map((perm) => {
+              const isEnabled = editData.permissions[perm.key] !== false
+              return (
+                <button
+                  key={perm.key}
+                  type="button"
+                  onClick={() => setEditData(prev => ({
+                    ...prev,
+                    permissions: {
+                      ...prev.permissions,
+                      [perm.key]: !isEnabled,
+                    },
+                  }))}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 ${
+                    isEnabled
+                      ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100 opacity-60'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className={`text-sm font-semibold ${
+                      isEnabled ? 'text-blue-900' : 'text-slate-500'
+                    }`}>
+                      {perm.label}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">{perm.description}</p>
+                  </div>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                    isEnabled
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 text-slate-400'
+                  }`}>
+                    {isEnabled ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsPermissionsOpen(false)} className="rounded-xl flex-1 sm:flex-none">Cancel</Button>
+            <Button
+              onClick={async () => {
+                if (!selectedStaff) return
+                setIsSubmitting(true)
+                try {
+                  const { error } = await supabase
+                    .from('staff')
+                    .update({ permissions: editData.permissions })
+                    .eq('id', selectedStaff.id)
+                  if (error) throw error
+                  toast.success('Permissions updated successfully')
+                  setIsPermissionsOpen(false)
+                  router.refresh()
+                } catch (error: any) {
+                  toast.error(error.message)
+                } finally {
+                  setIsSubmitting(false)
+                }
+              }}
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-1 sm:flex-none"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Permissions'}
             </Button>
           </DialogFooter>
         </DialogContent>

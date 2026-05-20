@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Plus, Search, Users, Phone, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
+import { useAppStore } from '@/lib/store'
 
 export default function CustomersPage() {
+  const { activeBranch } = useAppStore()
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -22,7 +24,7 @@ export default function CustomersPage() {
 
       const { data: staff } = await supabase
         .from('staff')
-        .select('business_id')
+        .select('business_id, branch_id')
         .eq('id', user.id)
         .single()
       if (!staff) return
@@ -31,6 +33,7 @@ export default function CustomersPage() {
         .from('customers')
         .select('id, name, phone, email, total_bookings, total_spent, outstanding_balance, blacklisted, created_at')
         .eq('business_id', staff.business_id)
+        .eq('branch_id', activeBranch?.id || staff.branch_id)
         .order('created_at', { ascending: false })
         .limit(200)
 
@@ -38,7 +41,7 @@ export default function CustomersPage() {
       setLoading(false)
     }
     fetchCustomers()
-  }, [])
+  }, [activeBranch?.id])
 
   // Filter by name or phone client-side
   const filtered = useMemo(() => {

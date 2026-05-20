@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function CustomerStep({ customer, setCustomer }: Props) {
-  const { staff } = useAppStore()
+  const { staff, activeBranch } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<BookingCustomer[]>([])
   const [recentCustomers, setRecentCustomers] = useState<BookingCustomer[]>([])
@@ -35,6 +35,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           .from('customers')
           .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
+          .eq('branch_id', activeBranch?.id || staff.branch_id)
           .order('created_at', { ascending: false })
           .limit(5)
         setRecentCustomers(data || [])
@@ -45,7 +46,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       }
     }
     fetchRecentCustomers()
-  }, [staff?.business_id])
+  }, [staff?.business_id, activeBranch?.id])
 
   // Live search debounced query
   useEffect(() => {
@@ -62,6 +63,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           .from('customers')
           .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
+          .eq('branch_id', activeBranch?.id || staff.branch_id)
           .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`)
           .limit(5)
         setSearchResults(data || [])
@@ -73,7 +75,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     }, 300)
 
     return () => clearTimeout(delayDebounce)
-  }, [searchQuery, staff?.business_id])
+  }, [searchQuery, staff?.business_id, activeBranch?.id])
 
   const handleSearch = async () => {
     if (!searchQuery || searchQuery.length < 3 || !staff?.business_id) return
@@ -84,6 +86,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         .from('customers')
         .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
         .eq('business_id', staff.business_id)
+        .eq('branch_id', activeBranch?.id || staff.branch_id)
         .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`)
         .limit(5)
 

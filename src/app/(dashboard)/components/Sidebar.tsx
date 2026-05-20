@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { BranchSwitcher } from './BranchSwitcher'
+import { hasPermission, ROUTE_PERMISSION_MAP, type PermissionKey } from '@/lib/permissions'
 
 interface NavItem {
   label: string
@@ -74,8 +75,21 @@ function NavContent({
   initials: string
 }) {
   const isVisible = (item: NavItem) => {
-    if (!item.roles) return true
-    return item.roles.includes(role)
+    if (!item.roles) {
+      // Check individual permissions
+      const permKey = ROUTE_PERMISSION_MAP[item.href]
+      if (permKey) {
+        return hasPermission(role, staff?.permissions, permKey)
+      }
+      return true
+    }
+    if (!item.roles.includes(role)) return false
+    // Also check individual permissions for role-gated items
+    const permKey = ROUTE_PERMISSION_MAP[item.href]
+    if (permKey) {
+      return hasPermission(role, staff?.permissions, permKey)
+    }
+    return true
   }
 
   return (
@@ -215,6 +229,7 @@ interface Props {
     role: string
     profile_photo_url: string | null
     branch_id: string | null
+    permissions?: Record<string, boolean> | null
     business?: { name: string; logo_url: string | null }
     branch?: { name: string }
   }

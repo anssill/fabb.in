@@ -33,7 +33,7 @@ export default async function ExpensesPage() {
   const { data: thisMonthExpenses } = await supabase
     .from('expenses')
     .select('category, amount')
-    .eq('business_id', staff.business_id)
+    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
     .gte('expense_date', monthStart)
     .lte('expense_date', monthEnd)
 
@@ -43,7 +43,7 @@ export default async function ExpensesPage() {
   const { data: lastMonthExpenses } = await supabase
     .from('expenses')
     .select('amount')
-    .eq('business_id', staff.business_id)
+    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
     .gte('expense_date', lastMonthStart)
     .lte('expense_date', lastMonthEnd)
 
@@ -51,7 +51,7 @@ export default async function ExpensesPage() {
   const { data: thisMonthPayments } = await supabase
     .from('booking_payments')
     .select('amount, type')
-    .eq('business_id', staff.business_id)
+    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
     .gte('created_at', monthStart)
     .lte('created_at', monthEnd + 'T23:59:59')
     .eq('is_voided', false)
@@ -60,7 +60,7 @@ export default async function ExpensesPage() {
   const { data: allExpenses, count } = await supabase
     .from('expenses')
     .select('id, description, amount, category, expense_date, receipt_url, created_at', { count: 'exact' })
-    .eq('business_id', staff.business_id)
+    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
     .order('expense_date', { ascending: false })
     .limit(100)
 

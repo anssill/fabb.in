@@ -13,13 +13,14 @@ export default async function BlacklistPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: staff } = await supabase.from('staff').select('business_id').eq('id', user.id).single()
+  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
   if (!staff) return null
 
   const { data: blacklisted, count } = await supabase
     .from('customers')
     .select('id, name, phone, email, total_bookings, total_spent, outstanding_balance, blacklisted_reason, blacklisted_at, created_at', { count: 'exact' })
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .eq('blacklisted', true)
     .order('blacklisted_at', { ascending: false })
 

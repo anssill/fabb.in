@@ -19,7 +19,7 @@ export default async function StaffPage() {
   // Fetch all staff members
   const { data: staffMembers } = await supabase
     .from('staff')
-    .select('id, name, email, phone, role, status, profile_photo_url, last_login, branch_id')
+    .select('id, name, email, phone, role, status, profile_photo_url, last_login, branch_id, permissions')
     .eq('business_id', currentStaff.business_id)
     .order('created_at')
 

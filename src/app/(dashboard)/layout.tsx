@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: staff } = await supabase
     .from('staff')
-    .select('*, business:businesses(*), branch:branches(*)')
+    .select('*, permissions')
     .eq('id', user.id)
     .single()
 
