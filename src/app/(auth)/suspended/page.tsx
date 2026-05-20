@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Button } from '@heroui/react'
+import { Button } from '@/components/ui/button'
 import { Ban, MessageCircle, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -68,7 +68,7 @@ export default function SuspendedPage() {
             <Button
               variant="ghost"
               className="w-full text-slate-400 hover:text-white h-10 rounded-xl flex items-center justify-center gap-2"
-              onPress={handleSignOut}
+              onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4" />
               Sign Out

@@ -46,6 +46,34 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning={true}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                try {
+                  var t = 'dark';
+                  var prefs = localStorage.getItem('fabb_display_prefs');
+                  if (prefs) {
+                    var parsed = JSON.parse(prefs);
+                    if (parsed.theme) t = parsed.theme;
+                  } else {
+                    t = localStorage.getItem('theme') || 'dark';
+                  }
+                  if (t === 'system') {
+                    t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  }
+                  if (t === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch(e){}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
         <Providers>{children}</Providers>
       </body>

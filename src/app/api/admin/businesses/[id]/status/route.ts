@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { safeJsonParse } from '@/lib/api-utils'
+import { safeJsonParse, isValidUuid } from '@/lib/api-utils'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -9,6 +9,11 @@ export async function PATCH(
 ) {
   try {
     const { id: businessId } = await params
+    
+    if (!isValidUuid(businessId)) {
+      return NextResponse.json({ error: 'Invalid business ID format' }, { status: 400 })
+    }
+
     const { status } = await safeJsonParse(req)
 
     if (!status) {

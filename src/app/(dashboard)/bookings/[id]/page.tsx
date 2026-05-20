@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { isValidUuid } from '@/lib/api-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +32,12 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  if (!isValidUuid(id)) {
+    notFound()
+  }
+
   const supabase = await createClient()
+
 
   // Get current authenticated user id for staff actions
   const { data: { user } } = await supabase.auth.getUser()

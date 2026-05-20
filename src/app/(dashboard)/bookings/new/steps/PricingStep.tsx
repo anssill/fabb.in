@@ -41,24 +41,24 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
     <>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-blue-600" />
+          <Calculator className="w-5 h-5 text-primary" />
           Pricing Summary
         </CardTitle>
         <CardDescription>Review and adjust pricing for this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Item breakdown */}
-        <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-          <p className="text-xs font-medium text-slate-500 uppercase">Item Breakdown ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
+        <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item Breakdown ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
           {items.map((item) => (
             <div key={item.variant_id} className="flex justify-between text-sm">
-              <span className="text-slate-700">
+              <span className="text-foreground">
                 {item.name} ({item.size}) × {item.quantity} × {rentalDays}d
               </span>
-              <span className="font-medium">₹{(item.price * item.quantity * rentalDays).toLocaleString('en-IN')}</span>
+              <span className="font-semibold text-foreground">₹{(item.price * item.quantity * rentalDays).toLocaleString('en-IN')}</span>
             </div>
           ))}
-          <div className="border-t pt-2 flex justify-between text-sm font-medium">
+          <div className="border-t border-border pt-2 flex justify-between text-sm font-bold text-foreground">
             <span>Subtotal</span>
             <span>₹{subtotal.toLocaleString('en-IN')}</span>
           </div>
@@ -104,24 +104,24 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
         </div>
 
         {/* Total */}
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-2">
+        <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Subtotal</span>
-            <span>₹{subtotal.toLocaleString('en-IN')}</span>
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="font-semibold text-foreground">₹{subtotal.toLocaleString('en-IN')}</span>
           </div>
           {pricing.discount_amount > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
+            <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-medium">
               <span>Discount</span>
               <span>-₹{pricing.discount_amount.toLocaleString('en-IN')}</span>
             </div>
           )}
           {pricing.delivery_fee > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Delivery</span>
-              <span>+₹{pricing.delivery_fee.toLocaleString('en-IN')}</span>
+              <span className="text-muted-foreground">Delivery</span>
+              <span className="font-semibold text-foreground">+₹{pricing.delivery_fee.toLocaleString('en-IN')}</span>
             </div>
           )}
-          <div className="border-t pt-2 flex justify-between text-lg font-semibold text-blue-900">
+          <div className="border-t border-border pt-2 flex justify-between text-lg font-bold text-foreground">
             <span>Total</span>
             <span>₹{pricing.total_amount.toLocaleString('en-IN')}</span>
           </div>

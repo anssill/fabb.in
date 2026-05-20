@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { safeJsonParse } from '@/lib/api-utils'
+import { safeJsonParse, isValidUuid } from '@/lib/api-utils'
 import { MediaUpload } from '@/components/shared/MediaUpload'
 
 const PAYMENT_METHODS = [
@@ -84,6 +84,10 @@ export default function PickupPage() {
 
   useEffect(() => {
     async function load() {
+      if (!isValidUuid(id)) {
+        setLoading(false)
+        return
+      }
       const supabase = createClient()
       const { data } = await supabase
         .from('bookings')

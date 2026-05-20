@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { safeJsonParse } from '@/lib/api-utils'
+import { safeJsonParse, isValidUuid } from '@/lib/api-utils'
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
@@ -25,6 +25,11 @@ export async function PATCH(
     const supabaseAdmin = getAdmin()
     const { status, itemConditions, itemNotes } = await safeJsonParse(req)
     const { id: bookingId } = await params
+    
+    if (!isValidUuid(bookingId)) {
+      return NextResponse.json({ error: 'Invalid booking ID format' }, { status: 400 })
+    }
+
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
 

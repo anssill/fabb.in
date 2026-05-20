@@ -1,40 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Monitor, Moon, Sun } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
 type Theme = 'light' | 'dark' | 'system'
 type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'DD-MMM-YYYY'
 type CurrencyFormat = 'indian' | 'international'
 
 export function DisplayPreferencesClient() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'light'
+  const { theme: nextTheme, setTheme: setNextTheme } = useTheme()
+  const [theme, setTheme] = useState<Theme>('light')
+  const [dateFormat, setDateFormat] = useState<DateFormat>('DD/MM/YYYY')
+  const [currencyFormat, setCurrencyFormat] = useState<CurrencyFormat>('indian')
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem('fabb_display_prefs')
-      if (saved) return (JSON.parse(saved).theme ?? 'light') as Theme
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed.theme) {
+          setTheme(parsed.theme as Theme)
+          // Ensure next-themes is in sync with our saved preference
+          if (nextTheme !== parsed.theme) {
+            setNextTheme(parsed.theme as Theme)
+          }
+        }
+        if (parsed.dateFormat) setDateFormat(parsed.dateFormat as DateFormat)
+        if (parsed.currencyFormat) setCurrencyFormat(parsed.currencyFormat as CurrencyFormat)
+      } else if (nextTheme) {
+        setTheme(nextTheme as Theme)
+      }
     } catch {}
-    return 'light'
-  })
-  const [dateFormat, setDateFormat] = useState<DateFormat>(() => {
-    if (typeof window === 'undefined') return 'DD/MM/YYYY'
-    try {
-      const saved = localStorage.getItem('fabb_display_prefs')
-      if (saved) return (JSON.parse(saved).dateFormat ?? 'DD/MM/YYYY') as DateFormat
-    } catch {}
-    return 'DD/MM/YYYY'
-  })
-  const [currencyFormat, setCurrencyFormat] = useState<CurrencyFormat>(() => {
-    if (typeof window === 'undefined') return 'indian'
-    try {
-      const saved = localStorage.getItem('fabb_display_prefs')
-      if (saved) return (JSON.parse(saved).currencyFormat ?? 'indian') as CurrencyFormat
-    } catch {}
-    return 'indian'
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function savePrefs(updates: Partial<{ theme: Theme; dateFormat: DateFormat; currencyFormat: CurrencyFormat }>) {
     const current = {
@@ -43,14 +45,9 @@ export function DisplayPreferencesClient() {
     }
     localStorage.setItem('fabb_display_prefs', JSON.stringify(current))
 
-    // Apply theme immediately
-    const t = current.theme
-    const root = document.documentElement
-    if (t === 'dark') root.classList.add('dark')
-    else if (t === 'light') root.classList.remove('dark')
-    else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) root.classList.add('dark')
-      else root.classList.remove('dark')
+    // Apply theme immediately via next-themes
+    if (updates.theme) {
+      setNextTheme(updates.theme)
     }
   }
 

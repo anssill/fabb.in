@@ -4,12 +4,9 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { 
-  Button, 
-  TextField,
-  Label,
-  Input 
-} from '@heroui/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -92,34 +89,27 @@ function LoginForm() {
 
           <form onSubmit={handleLogin} className="space-y-8">
             <div className="space-y-6">
-              <TextField
-                type="email"
-                value={email}
-                onChange={setEmail}
-                isRequired
-                className="space-y-3"
-              >
-                <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Command Email</Label>
+              <div className="space-y-3">
+                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Command Email</Label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
                     <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
                   </div>
                   <Input 
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     placeholder="operator@fabb.in"
                     className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
                   />
                 </div>
-              </TextField>
+              </div>
 
-              <TextField
-                type="password"
-                value={password}
-                onChange={setPassword}
-                isRequired
-                className="space-y-3"
-              >
+              <div className="space-y-3">
                 <div className="flex items-center justify-between ml-1">
-                  <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Security Key</Label>
+                  <Label htmlFor="password" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Security Key</Label>
                   <Link href="/reset-password" title="Recover Access" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-white transition-colors">
                     Recover Key
                   </Link>
@@ -129,18 +119,23 @@ function LoginForm() {
                     <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
                   </div>
                   <Input 
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                     placeholder="••••••••"
                     className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
                   />
                 </div>
-              </TextField>
+              </div>
             </div>
 
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/30 h-16 text-lg font-black rounded-2xl group relative overflow-hidden active:scale-[0.98] transition-transform"
               size="lg"
-              isDisabled={loading}
+              disabled={loading}
             >
               {loading ? (
                 <Loader2 className="h-6 w-6 animate-spin" />

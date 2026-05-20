@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { isValidUuid } from '@/lib/api-utils'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -7,6 +8,10 @@ import { EditItemForm } from './EditItemForm'
 
 export default async function EditInventoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  if (!isValidUuid(id)) {
+    notFound()
+  }
+
   const supabase = await createClient()
 
   const { data: item } = await supabase

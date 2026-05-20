@@ -1,11 +1,17 @@
 'use client'
 
+import { useState } from 'react'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Calendar as CalendarIcon } from 'lucide-react'
 import type { BookingDates } from '../page'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface Props {
   dates: BookingDates
@@ -13,7 +19,56 @@ interface Props {
 }
 
 export function DatesStep({ dates, setDates }: Props) {
-  const today = new Date().toISOString().split('T')[0]
+  const [isEventOpen, setIsEventOpen] = useState(false)
+  const [isFittingOpen, setIsFittingOpen] = useState(false)
+  const [isPickupOpen, setIsPickupOpen] = useState(false)
+  const [isReturnOpen, setIsReturnOpen] = useState(false)
+
+  // Local timezone-safe parsing to prevent day shifting
+  const parseLocalDate = (dateStr: string | undefined | null): Date | undefined => {
+    if (!dateStr) return undefined
+    const [year, month, day] = dateStr.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+
+  // Local timezone-safe formatting to YYYY-MM-DD
+  const formatLocalDate = (date: Date | undefined): string => {
+    if (!date) return ''
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  const todayDate = new Date()
+  todayDate.setHours(0, 0, 0, 0)
+
+  const isEventDisabled = (date: Date) => {
+    return date < todayDate
+  }
+
+  const isFittingDisabled = (date: Date) => {
+    if (date < todayDate) return true
+    if (dates.pickup_date) {
+      const pickup = parseLocalDate(dates.pickup_date)
+      if (pickup && date > pickup) return true
+    }
+    return false
+  }
+
+  const isPickupDisabled = (date: Date) => {
+    if (date < todayDate) return true
+    if (dates.event_date) {
+      const event = parseLocalDate(dates.event_date)
+      if (event && date > event) return true
+    }
+    return false
+  }
+
+  const isReturnDisabled = (date: Date) => {
+    const minDate = dates.pickup_date ? parseLocalDate(dates.pickup_date) : todayDate
+    return !minDate || date < minDate
+  }
 
   const rentalDays = dates.pickup_date && dates.return_date
     ? Math.max(1, Math.ceil((new Date(dates.return_date).getTime() - new Date(dates.pickup_date).getTime()) / (1000 * 60 * 60 * 24)))
@@ -23,71 +78,187 @@ export function DatesStep({ dates, setDates }: Props) {
     <>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CalendarDays className="w-5 h-5 text-blue-600" />
+          <CalendarDays className="w-5 h-5 text-primary" />
           Schedule Dates
         </CardTitle>
         <CardDescription>Set event, pickup, and return dates for this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Event date *</Label>
-            <Input
-              type="date"
-              value={dates.event_date}
-              onChange={(e) => setDates({ ...dates, event_date: e.target.value })}
-              min={today}
-            />
-            <p className="text-xs text-slate-400">The day of the event / function</p>
+          <div className="space-y-2 flex flex-col">
+            <Label className="mb-1">Event date *</Label>
+            <Popover open={isEventOpen} onOpenChange={setIsEventOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal border-input focus:ring-1 focus:ring-ring focus:border-ring rounded-lg h-10 px-3",
+                    !dates.event_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {dates.event_date ? (
+                    format(parseLocalDate(dates.event_date)!, "PPP")
+                  ) : (
+                    <span>Pick event date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseLocalDate(dates.event_date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      const eventStr = formatLocalDate(date)
+                      const nextDates = { ...dates, event_date: eventStr }
+                      if (dates.pickup_date && new Date(dates.pickup_date) > date) {
+                        nextDates.pickup_date = ''
+                        nextDates.return_date = ''
+                      }
+                      setDates(nextDates)
+                      setIsEventOpen(false)
+                    }
+                  }}
+                  disabled={isEventDisabled}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">The day of the event / function</p>
           </div>
-          <div className="space-y-2">
-            <Label>Fitting date <span className="text-slate-400">(optional)</span></Label>
-            <Input
-              type="date"
-              value={dates.fitting_date || ''}
-              onChange={(e) => setDates({ ...dates, fitting_date: e.target.value })}
-              min={today}
-              max={dates.pickup_date || undefined}
-            />
-            <p className="text-xs text-slate-400">If customer wants a trial fit</p>
+
+          <div className="space-y-2 flex flex-col">
+            <Label className="mb-1">Fitting date <span className="text-muted-foreground">(optional)</span></Label>
+            <Popover open={isFittingOpen} onOpenChange={setIsFittingOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal border-input focus:ring-1 focus:ring-ring focus:border-ring rounded-lg h-10 px-3",
+                    !dates.fitting_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {dates.fitting_date ? (
+                    format(parseLocalDate(dates.fitting_date)!, "PPP")
+                  ) : (
+                    <span>Pick fitting date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseLocalDate(dates.fitting_date)}
+                  onSelect={(date) => {
+                    setDates({ ...dates, fitting_date: date ? formatLocalDate(date) : '' })
+                    setIsFittingOpen(false)
+                  }}
+                  disabled={isFittingDisabled}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">If customer wants a trial fit</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Pickup date *</Label>
-            <Input
-              type="date"
-              value={dates.pickup_date}
-              onChange={(e) => setDates({ ...dates, pickup_date: e.target.value })}
-              min={today}
-              max={dates.event_date || undefined}
-            />
-            <p className="text-xs text-slate-400">When the customer collects the items</p>
+          <div className="space-y-2 flex flex-col">
+            <Label className="mb-1">Pickup date *</Label>
+            <Popover open={isPickupOpen} onOpenChange={setIsPickupOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal border-input focus:ring-1 focus:ring-ring focus:border-ring rounded-lg h-10 px-3",
+                    !dates.pickup_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {dates.pickup_date ? (
+                    format(parseLocalDate(dates.pickup_date)!, "PPP")
+                  ) : (
+                    <span>Pick pickup date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseLocalDate(dates.pickup_date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      const pickupStr = formatLocalDate(date)
+                      const nextDates = { ...dates, pickup_date: pickupStr }
+                      if (dates.return_date && new Date(dates.return_date) < date) {
+                        nextDates.return_date = ''
+                      }
+                      if (dates.fitting_date && new Date(dates.fitting_date) > date) {
+                        nextDates.fitting_date = ''
+                      }
+                      setDates(nextDates)
+                      setIsPickupOpen(false)
+                    }
+                  }}
+                  disabled={isPickupDisabled}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">When the customer collects the items</p>
           </div>
-          <div className="space-y-2">
-            <Label>Return date *</Label>
-            <Input
-              type="date"
-              value={dates.return_date}
-              onChange={(e) => setDates({ ...dates, return_date: e.target.value })}
-              min={dates.pickup_date || today}
-            />
-            <p className="text-xs text-slate-400">When items should be returned</p>
+
+          <div className="space-y-2 flex flex-col">
+            <Label className="mb-1">Return date *</Label>
+            <Popover open={isReturnOpen} onOpenChange={setIsReturnOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal border-input focus:ring-1 focus:ring-ring focus:border-ring rounded-lg h-10 px-3",
+                    !dates.return_date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {dates.return_date ? (
+                    format(parseLocalDate(dates.return_date)!, "PPP")
+                  ) : (
+                    <span>Pick return date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseLocalDate(dates.return_date)}
+                  onSelect={(date) => {
+                    if (date) {
+                      setDates({ ...dates, return_date: formatLocalDate(date) })
+                      setIsReturnOpen(false)
+                    }
+                  }}
+                  disabled={isReturnDisabled}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">When items should be returned</p>
           </div>
         </div>
 
         {rentalDays > 0 && (
-          <div className="p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-900">
-              <span className="font-semibold">{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span> rental period
+          <div className="p-3 bg-muted border border-border text-foreground rounded-lg">
+            <p className="text-sm font-medium">
+              <span className="font-semibold text-primary">{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span> rental period
             </p>
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Occasion <span className="text-slate-400">(optional)</span></Label>
+            <Label>Occasion <span className="text-muted-foreground">(optional)</span></Label>
             <Input
               value={dates.occasion || ''}
               onChange={(e) => setDates({ ...dates, occasion: e.target.value })}
@@ -113,9 +284,9 @@ export function DatesStep({ dates, setDates }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label>Notes <span className="text-slate-400">(optional)</span></Label>
+          <Label>Notes <span className="text-muted-foreground">(optional)</span></Label>
           <textarea
-            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
             value={dates.notes || ''}
             onChange={(e) => setDates({ ...dates, notes: e.target.value })}
             placeholder="Any special instructions, delivery details, etc."
@@ -125,3 +296,4 @@ export function DatesStep({ dates, setDates }: Props) {
     </>
   )
 }
+

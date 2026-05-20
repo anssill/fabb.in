@@ -62,26 +62,26 @@ export function AttendanceWidget() {
   }
 
   if (loading) return (
-    <Card className="bg-white/50 backdrop-blur-sm border-slate-200">
+    <Card className="bg-card border-border">
       <CardContent className="p-4 flex items-center justify-center h-20">
-        <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </CardContent>
     </Card>
   )
 
   return (
     <>
-      <Card className={`border-none shadow-sm transition-all duration-300 ${attendance ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-white dark:bg-slate-900'}`}>
+      <Card className={`border border-border shadow-sm transition-all duration-300 ${attendance ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-card text-card-foreground'}`}>
         <CardContent className="p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${attendance ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${attendance ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'}`}>
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-900 dark:text-white">
+              <p className="text-sm font-bold text-foreground">
                 {attendance ? 'You are On Duty' : 'Shift Not Started'}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {attendance ? `Clocked in at ${new Date(attendance.clock_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Ready to start today?'}
               </p>
             </div>
@@ -92,7 +92,7 @@ export function AttendanceWidget() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-9 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                className="h-9 border-emerald-500/20 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400"
                 onClick={handleClockOut}
                 disabled={loading}
               >
@@ -101,7 +101,7 @@ export function AttendanceWidget() {
               </Button>
             ) : (
               <Button 
-                className="bg-blue-600 hover:bg-blue-700 h-9" 
+                className="bg-primary hover:bg-primary/95 text-primary-foreground h-9" 
                 onClick={() => setModalOpen(true)}
               >
                 <Navigation className="w-4 h-4 mr-2" />

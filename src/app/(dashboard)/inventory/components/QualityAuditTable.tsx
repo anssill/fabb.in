@@ -30,8 +30,8 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
   )
 
   const CONDITION_COLORS: Record<string, string> = {
-    fair: 'bg-amber-100 text-amber-700 border-amber-200',
-    poor: 'bg-red-100 text-red-700 border-red-200',
+    fair: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+    poor: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20',
   }
 
   async function handleSendToMaintenance(itemId: string) {
@@ -62,12 +62,12 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
 
   if (auditItems.length === 0) {
     return (
-      <Card className="border-dashed border-2 shadow-none bg-slate-50">
-        <CardContent className="flex flex-col items-center justify-center py-16 text-slate-500">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
-            <AlertCircle className="w-8 h-8 text-emerald-500" />
+      <Card className="border-dashed border-2 border-border shadow-none bg-muted/40">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <div className="w-16 h-16 bg-card border border-border rounded-full flex items-center justify-center mb-4 shadow-sm">
+            <AlertCircle className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <p className="text-lg font-medium text-slate-900">All Clear!</p>
+          <p className="text-lg font-medium text-foreground">All Clear!</p>
           <p className="text-sm">There are currently no items flagged for quality issues.</p>
         </CardContent>
       </Card>
@@ -76,13 +76,13 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="border bg-card text-card-foreground">
         <CardContent className="p-4">
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search flagged items..." 
-              className="pl-10 h-9 bg-slate-50"
+              className="pl-10 h-9 bg-muted border-input"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -90,9 +90,9 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border bg-card text-card-foreground">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-[80px]">Image</TableHead>
               <TableHead>Item Details</TableHead>
@@ -107,23 +107,23 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
               <TableRow key={item.id} className={loadingId === item.id ? 'opacity-50 pointer-events-none' : ''}>
                 <TableCell>
                   {item.cover_image_url ? (
-                    <img src={item.cover_image_url} alt={item.name} className="w-12 h-12 rounded object-cover border" />
+                    <img src={item.cover_image_url} alt={item.name} className="w-12 h-12 rounded object-cover border border-border" />
                   ) : (
-                    <div className="w-12 h-12 rounded bg-slate-100 flex items-center justify-center border">
-                      <ImageIcon className="w-5 h-5 text-slate-400" />
+                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center border border-border">
+                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
                     </div>
                   )}
                 </TableCell>
                 <TableCell>
-                  <p className="font-medium text-slate-900">{item.name}</p>
-                  <p className="text-xs text-slate-500">SKU: {item.sku || 'N/A'}</p>
+                  <p className="font-medium text-foreground">{item.name}</p>
+                  <p className="text-xs text-muted-foreground">SKU: {item.sku || 'N/A'}</p>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className={`${CONDITION_COLORS[item.condition]} font-bold uppercase`}>
                     {item.condition}
                   </Badge>
                   {item.condition_notes && (
-                    <p className="text-xs text-slate-500 mt-1 max-w-[200px] truncate" title={item.condition_notes}>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[200px] truncate" title={item.condition_notes}>
                       {item.condition_notes}
                     </p>
                   )}
@@ -146,7 +146,7 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
                         Send to Maintenance
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                        className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                         onClick={() => handleRetireItem(item.id)}
                       >
                         Retire Item

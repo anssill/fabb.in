@@ -46,8 +46,8 @@ function SizePicker({ value, onChange }: { value: string; onChange: (v: string) 
                 onClick={() => onChange(s)}
                 className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
                   value === s
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card text-muted-foreground border-input hover:border-primary hover:text-primary'
                 }`}
               >
                 {s}
@@ -68,6 +68,8 @@ export default function NewItemPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [bulkSizes, setBulkSizes] = useState<string[]>([])
   const [showBulk, setShowBulk] = useState(false)
+  const [bulkQty, setBulkQty] = useState(1)
+  const [bulkColour, setBulkColour] = useState('')
 
   const [form, setForm] = useState({
     name: '',
@@ -111,12 +113,14 @@ export default function NewItemPage() {
     const existingSizes = new Set(existing.map((v) => v.size))
     const newVariants = bulkSizes
       .filter((s) => !existingSizes.has(s))
-      .map((s) => ({ size: s, colour: '', total_stock: 1, price_override: null }))
+      .map((s) => ({ size: s, colour: bulkColour, total_stock: bulkQty, price_override: null }))
     const base = variants.filter((v) => v.size.trim() || variants.length === 1)
     setVariants([...base.filter((v) => v.size.trim()), ...newVariants])
     setBulkSizes([])
+    setBulkQty(1)
+    setBulkColour('')
     setShowBulk(false)
-    toast.success(`Added ${newVariants.length} size variant${newVariants.length !== 1 ? 's' : ''}`)
+    toast.success(`Added ${newVariants.length} size variant${newVariants.length !== 1 ? 's' : ''} with Qty ${bulkQty}`)
   }
 
   const handleSubmit = async () => {
@@ -155,7 +159,7 @@ export default function NewItemPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/inventory"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
         </Button>
-        <h1 className="text-xl font-semibold text-slate-900">Add New Item</h1>
+        <h1 className="text-xl font-semibold text-foreground">Add New Item</h1>
       </div>
 
       {/* Basic Info */}
@@ -170,7 +174,7 @@ export default function NewItemPage() {
               <Input value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="e.g. Red Silk Kurtha Set" />
             </div>
             <div className="space-y-2">
-              <Label>SKU <span className="text-slate-400">(auto-generated if empty)</span></Label>
+              <Label>SKU <span className="text-muted-foreground">(auto-generated if empty)</span></Label>
               <Input value={form.sku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder="KUR-001" />
             </div>
             <div className="space-y-2">
@@ -185,9 +189,9 @@ export default function NewItemPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Description <span className="text-slate-400">(optional)</span></Label>
+            <Label>Description <span className="text-muted-foreground">(optional)</span></Label>
             <textarea
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
               value={form.description}
               onChange={(e) => updateForm('description', e.target.value)}
               placeholder="Fabric type, design details, care instructions..."
@@ -195,7 +199,7 @@ export default function NewItemPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Storage Location <span className="text-slate-400">(optional)</span></Label>
+            <Label>Storage Location <span className="text-muted-foreground">(optional)</span></Label>
             <Input
               value={form.storage_location}
               onChange={(e) => updateForm('storage_location', e.target.value)}
@@ -228,19 +232,19 @@ export default function NewItemPage() {
             <div className="space-y-2">
               <Label>Rental rate (₹) *</Label>
               <Input type="number" value={form.price || ''} onChange={(e) => updateForm('price', Number(e.target.value))} placeholder="500" min={0} />
-              <p className="text-xs text-slate-400">Amount charged per booking</p>
+              <p className="text-xs text-muted-foreground">Amount charged per booking</p>
             </div>
             <div className="space-y-2">
-              <Label>Security deposit (₹) <span className="text-slate-400">(optional)</span></Label>
+              <Label>Security deposit (₹) <span className="text-muted-foreground">(optional)</span></Label>
               <Input type="number" value={form.deposit_amount || ''} onChange={(e) => updateForm('deposit_amount', Number(e.target.value))} placeholder="1000" min={0} />
-              <p className="text-xs text-slate-400">Refundable deposit collected at pickup</p>
+              <p className="text-xs text-muted-foreground">Refundable deposit collected at pickup</p>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-border">
             <div className="space-y-2">
-              <Label className="text-slate-500">Purchase / cost price (₹) <span className="text-slate-400">(internal, optional)</span></Label>
+              <Label className="text-muted-foreground">Purchase / cost price (₹) <span className="text-muted-foreground">(internal, optional)</span></Label>
               <Input type="number" value={form.purchase_price || ''} onChange={(e) => updateForm('purchase_price', Number(e.target.value))} placeholder="5000" min={0} className="max-w-xs" />
-              <p className="text-xs text-slate-400">For your internal records only — not shown to customers</p>
+              <p className="text-xs text-muted-foreground">For your internal records only — not shown to customers</p>
             </div>
           </div>
         </CardContent>
@@ -259,8 +263,8 @@ export default function NewItemPage() {
                 onClick={() => updateForm('condition', c)}
                 className={`px-4 py-2 rounded-lg text-sm capitalize border transition-colors ${
                   form.condition === c
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'border-input text-muted-foreground bg-transparent hover:bg-muted'
                 }`}
               >
                 {c}
@@ -291,11 +295,15 @@ export default function NewItemPage() {
         <CardContent className="space-y-4">
           {/* Bulk size picker */}
           {showBulk && (
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select sizes to add</p>
+            <div className="bg-muted/50 rounded-xl p-4 border border-border space-y-4">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select sizes to add</p>
+                <p className="text-[11px] text-muted-foreground">Select multiple sizes, choose their default quantity and color, then add them all together.</p>
+              </div>
+              
               {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
-                <div key={group}>
-                  <p className="text-[11px] text-slate-400 mb-1.5 font-medium">{group}</p>
+                <div key={group} className="space-y-1">
+                  <p className="text-[11px] text-muted-foreground/80 font-medium">{group}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {sizes.map((s) => {
                       const isSelected = bulkSizes.includes(s)
@@ -308,10 +316,10 @@ export default function NewItemPage() {
                           onClick={() => toggleBulkSize(s)}
                           className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
                             alreadyExists
-                              ? 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
+                              ? 'bg-muted text-muted-foreground/45 border-border cursor-not-allowed'
                               : isSelected
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                              : 'bg-background text-foreground border-input hover:border-primary hover:text-primary'
                           }`}
                         >
                           {s}{alreadyExists && ' ✓'}
@@ -321,16 +329,39 @@ export default function NewItemPage() {
                   </div>
                 </div>
               ))}
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bulk Quantity per size</Label>
+                  <Input
+                    type="number"
+                    value={bulkQty}
+                    onChange={(e) => setBulkQty(Math.max(1, Number(e.target.value)))}
+                    min={1}
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bulk Colour (optional)</Label>
+                  <Input
+                    value={bulkColour}
+                    onChange={(e) => setBulkColour(e.target.value)}
+                    placeholder="e.g. Red"
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={applyBulkSizes}
                   disabled={bulkSizes.length === 0}
                 >
                   Add {bulkSizes.length > 0 ? bulkSizes.length : ''} size{bulkSizes.length !== 1 ? 's' : ''} →
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setShowBulk(false) }}>
+                <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setBulkQty(1); setBulkColour(''); setShowBulk(false) }}>
                   Cancel
                 </Button>
               </div>
@@ -339,12 +370,12 @@ export default function NewItemPage() {
 
           {/* Variant rows */}
           {variants.map((v, i) => (
-            <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+            <div key={i} className="p-3 bg-muted/20 rounded-xl border border-border space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <SizePicker value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
                 </div>
-                <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 p-1 h-8 w-8 mt-5" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
+                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 p-1 h-8 w-8 mt-5 hover:bg-red-500/10" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -365,8 +396,8 @@ export default function NewItemPage() {
             </div>
           ))}
 
-          <p className="text-xs text-slate-400">
-            Total stock: <span className="font-semibold text-slate-600">{variants.reduce((s, v) => s + v.total_stock, 0)}</span> units across <span className="font-semibold text-slate-600">{variants.length}</span> variant{variants.length !== 1 ? 's' : ''}
+          <p className="text-xs text-muted-foreground">
+            Total stock: <span className="font-semibold text-foreground">{variants.reduce((s, v) => s + v.total_stock, 0)}</span> units across <span className="font-semibold text-foreground">{variants.length}</span> variant{variants.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
       </Card>
@@ -374,7 +405,7 @@ export default function NewItemPage() {
       {/* Submit */}
       <div className="flex justify-end gap-3 pb-8">
         <Button variant="outline" asChild><Link href="/inventory">Cancel</Link></Button>
-        <Button className="bg-blue-600 hover:bg-blue-700 min-w-[140px]" onClick={handleSubmit} disabled={saving}>
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]" onClick={handleSubmit} disabled={saving}>
           {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Add Item →'}
         </Button>
       </div>

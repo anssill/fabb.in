@@ -1,6 +1,7 @@
 import { CustomerDocumentSection } from './components/CustomerDocumentSection'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { isValidUuid } from '@/lib/api-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,10 @@ import { CustomerSmsButton } from './components/CustomerSmsButton'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  if (!isValidUuid(id)) {
+    notFound()
+  }
+
   const supabase = await createClient()
   const { data: customer } = await supabase.from('customers').select('*').eq('id', id).single()
   if (!customer) notFound()

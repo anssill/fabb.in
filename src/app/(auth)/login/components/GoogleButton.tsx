@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@heroui/react'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -28,8 +28,8 @@ export function GoogleButton() {
     <Button
       variant="outline"
       className="w-full h-14 rounded-xl text-white font-semibold border-white/10 hover:bg-white/5 transition-all flex items-center justify-center gap-3 group relative overflow-hidden"
-      onPress={handleGoogleLogin}
-      isDisabled={loading}
+      onClick={handleGoogleLogin}
+      disabled={loading}
     >
       {loading ? (
         <Loader2 className="w-5 h-5 animate-spin mx-auto text-white" />

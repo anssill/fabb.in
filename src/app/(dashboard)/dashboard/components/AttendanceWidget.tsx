@@ -84,9 +84,9 @@ export function AttendanceWidget() {
 
   if (loading) {
     return (
-      <Card className="h-full">
+      <Card className="h-full bg-card border-border">
         <CardContent className="p-6 flex items-center justify-center h-full">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
@@ -96,20 +96,17 @@ export function AttendanceWidget() {
   const isClockedOut = record && record.clock_out_at
 
   return (
-    <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md relative overflow-hidden">
-      {/* Decorative background circle */}
-      <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
-      
+    <Card className="bg-card text-card-foreground border border-border shadow-sm relative overflow-hidden">
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4 relative z-10">
           <div>
-            <h2 className="font-semibold opacity-90">Time & Attendance</h2>
-            <div className="text-3xl font-bold mt-1 tracking-tight">
+            <h2 className="text-sm font-semibold text-muted-foreground">Time & Attendance</h2>
+            <div className="text-3xl font-bold mt-1 tracking-tight text-foreground">
               {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
           {record?.is_valid_location === false && (
-             <Badge variant="destructive" className="bg-red-500/20 text-red-50 hover:bg-red-500/30 border-none">
+             <Badge variant="destructive" className="border-none">
               Invalid GPS
             </Badge>
           )}
@@ -120,7 +117,7 @@ export function AttendanceWidget() {
             <Button 
               onClick={handleClockIn} 
               disabled={actionLoading}
-              className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-semibold"
+              className="w-full bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
             >
               {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
               Clock In (GPS)
@@ -129,15 +126,15 @@ export function AttendanceWidget() {
 
           {isClockedIn && (
             <div className="space-y-3">
-              <div className="flex items-center text-sm bg-white/10 rounded-lg p-3">
-                <Clock className="w-4 h-4 mr-2 opacity-70" />
+              <div className="flex items-center text-sm bg-muted border border-border rounded-lg p-3 text-muted-foreground">
+                <Clock className="w-4 h-4 mr-2 text-primary" />
                 <span>Clocked in at {new Date(record.clock_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <Button 
                 onClick={handleClockOut} 
                 disabled={actionLoading}
                 variant="destructive"
-                className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold backdrop-blur-sm"
+                className="w-full font-semibold"
               >
                 {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogOut className="w-4 h-4 mr-2" />}
                 Clock Out
@@ -147,13 +144,13 @@ export function AttendanceWidget() {
 
           {isClockedOut && (
             <div className="flex space-x-2">
-               <div className="flex-1 flex flex-col items-center justify-center bg-white/10 rounded-lg p-3">
-                  <span className="text-xs opacity-80 uppercase tracking-wide">Shift Ended</span>
-                  <span className="font-semibold mt-1">{new Date(record.clock_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+               <div className="flex-1 flex flex-col items-center justify-center bg-muted border border-border rounded-lg p-3">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Shift Ended</span>
+                  <span className="font-semibold mt-1 text-foreground">{new Date(record.clock_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                </div>
-               <div className="flex-1 flex flex-col items-center justify-center bg-white/10 rounded-lg p-3">
-                  <span className="text-xs opacity-80 uppercase tracking-wide">Hours</span>
-                  <span className="font-semibold mt-1">{record.hours_worked}</span>
+               <div className="flex-1 flex flex-col items-center justify-center bg-muted border border-border rounded-lg p-3">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Hours</span>
+                  <span className="font-semibold mt-1 text-foreground">{record.hours_worked}</span>
                </div>
             </div>
           )}

@@ -73,8 +73,8 @@ export interface BookingPayment {
 
 const STEPS = [
   { label: 'Customer', icon: Users },
-  { label: 'Items', icon: Package },
   { label: 'Dates', icon: CalendarDays },
+  { label: 'Items', icon: Package },
   { label: 'Pricing', icon: Calculator },
   { label: 'Payment', icon: CreditCard },
   { label: 'Receipt', icon: Receipt },
@@ -113,8 +113,8 @@ export default function NewBookingPage() {
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
       case 0: return !!customer.name && !!customer.phone && customer.phone.length >= 10
-      case 1: return items.length > 0
-      case 2: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
+      case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
+      case 2: return items.length > 0
       case 3: return pricing.total_amount > 0
       case 4: return payment.advance_amount > 0
       default: return true
@@ -191,7 +191,7 @@ export default function NewBookingPage() {
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back
           </Button>
-          <h1 className="text-xl font-semibold text-slate-900">New Booking</h1>
+          <h1 className="text-xl font-semibold text-foreground">New Booking</h1>
         </div>
         <Button variant="ghost" size="sm" onClick={() => router.push('/bookings')}>
           <X className="w-4 h-4" />
@@ -199,8 +199,8 @@ export default function NewBookingPage() {
       </div>
 
       {/* Progress bar */}
-      <div className="w-full bg-slate-200 rounded-full h-1.5">
-        <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+      <div className="w-full bg-muted rounded-full h-1.5">
+        <div className="bg-primary h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
 
       {/* Step indicators */}
@@ -212,11 +212,11 @@ export default function NewBookingPage() {
           return (
             <div key={step.label} className="flex flex-col items-center gap-1">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors ${
-                isDone ? 'bg-blue-600 text-white' : isActive ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-slate-200 text-slate-400'
+                isDone ? 'bg-primary text-primary-foreground' : isActive ? 'bg-primary text-primary-foreground ring-4 ring-primary/20' : 'bg-muted text-muted-foreground'
               }`}>
                 {isDone ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
               </div>
-              <span className={`text-xs hidden sm:block ${isActive ? 'text-blue-600 font-medium' : 'text-slate-400'}`}>
+              <span className={`text-xs hidden sm:block ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
                 {step.label}
               </span>
             </div>
@@ -225,10 +225,10 @@ export default function NewBookingPage() {
       </div>
 
       {/* Step Content */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm border-border">
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
-        {currentStep === 1 && <ItemsStep items={items} setItems={setItems} />}
-        {currentStep === 2 && <DatesStep dates={dates} setDates={setDates} />}
+        {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
+        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} />}
         {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} dates={dates} />}
         {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}
@@ -242,12 +242,12 @@ export default function NewBookingPage() {
             Back
           </Button>
           {currentStep < 4 ? (
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleNext} disabled={!canProceed()}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNext} disabled={!canProceed()}>
               Next
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button className="bg-blue-600 hover:bg-blue-700 min-w-[160px]" onClick={handleSubmit} disabled={!canProceed() || saving}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[160px]" onClick={handleSubmit} disabled={!canProceed() || saving}>
               {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Confirm & Create →'}
             </Button>
           )}

@@ -667,6 +667,7 @@ export type Database = {
           email: string | null
           id: string
           id_number: string | null
+          id_proof_url: string | null
           id_type: string | null
           name: string
           notes: string | null
@@ -689,6 +690,7 @@ export type Database = {
           email?: string | null
           id?: string
           id_number?: string | null
+          id_proof_url?: string | null
           id_type?: string | null
           name: string
           notes?: string | null
@@ -711,6 +713,7 @@ export type Database = {
           email?: string | null
           id?: string
           id_number?: string | null
+          id_proof_url?: string | null
           id_type?: string | null
           name?: string
           notes?: string | null

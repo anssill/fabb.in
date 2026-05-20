@@ -26,8 +26,8 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
     <>
       <CardHeader className="text-center border-b">
         <div className="flex justify-center mb-3">
-          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-7 h-7 text-green-600" />
+          <div className="w-14 h-14 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full flex items-center justify-center">
+            <CheckCircle className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
         <CardTitle className="text-xl">Booking Confirmed! 🎉</CardTitle>
@@ -35,39 +35,39 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {/* Receipt / Summary */}
-        <div className="border rounded-lg p-4 space-y-4 bg-white">
+        <div className="border rounded-lg p-4 space-y-4 bg-muted/40">
           {/* Header */}
           <div className="text-center pb-3 border-b border-dashed">
-            <p className="font-bold text-lg text-slate-900">Fabb.booking</p>
-            <p className="text-xs text-slate-400">Booking Receipt</p>
+            <p className="font-bold text-lg text-foreground">Fabb.booking</p>
+            <p className="text-xs text-muted-foreground">Booking Receipt</p>
           </div>
 
           {/* Customer info */}
           <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-500 uppercase">Customer</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Customer</p>
             <p className="text-sm font-medium">{customer.name}</p>
-            <p className="text-xs text-slate-500">{customer.phone}</p>
+            <p className="text-xs text-muted-foreground">{customer.phone}</p>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-0.5">
-              <p className="text-xs text-slate-500">Event</p>
+              <p className="text-xs text-muted-foreground">Event</p>
               <p className="text-sm font-medium">{dates.event_date ? new Date(dates.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs text-slate-500">Pickup</p>
+              <p className="text-xs text-muted-foreground">Pickup</p>
               <p className="text-sm font-medium">{dates.pickup_date ? new Date(dates.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '-'}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs text-slate-500">Return</p>
+              <p className="text-xs text-muted-foreground">Return</p>
               <p className="text-sm font-medium">{dates.return_date ? new Date(dates.return_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '-'}</p>
             </div>
           </div>
 
           {/* Items */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 uppercase">Items ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Items ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
             {items.map((item) => (
               <div key={item.variant_id} className="flex justify-between text-sm">
                 <span>{item.name} ({item.size}) ×{item.quantity}</span>
@@ -79,18 +79,18 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
           {/* Totals */}
           <div className="border-t pt-3 space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Subtotal</span>
+              <span className="text-muted-foreground">Subtotal</span>
               <span>₹{pricing.subtotal.toLocaleString('en-IN')}</span>
             </div>
             {pricing.discount_amount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
+              <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
                 <span>Discount</span>
                 <span>-₹{pricing.discount_amount.toLocaleString('en-IN')}</span>
               </div>
             )}
             {pricing.delivery_fee > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Delivery</span>
+                <span className="text-muted-foreground">Delivery</span>
                 <span>+₹{pricing.delivery_fee.toLocaleString('en-IN')}</span>
               </div>
             )}
@@ -103,11 +103,11 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
           {/* Payment */}
           <div className="border-t pt-3 space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Advance Paid</span>
-              <span className="text-green-600 font-medium">₹{payment.advance_amount.toLocaleString('en-IN')}</span>
+              <span className="text-muted-foreground">Advance Paid</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">₹{payment.advance_amount.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Method</span>
+              <span className="text-muted-foreground">Method</span>
               <span className="capitalize">{payment.method}</span>
             </div>
             <div className="flex justify-between text-sm font-semibold">
@@ -141,7 +141,7 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
             </Button>
           </div>
           {bookingId && (
-            <Button className="bg-blue-600 hover:bg-blue-700 w-full" asChild>
+            <Button className="w-full" asChild>
               <Link href={`/bookings/${bookingId}`}>
                 View Booking
                 <ArrowRight className="w-4 h-4 ml-2" />

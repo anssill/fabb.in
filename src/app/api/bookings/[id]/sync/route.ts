@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
+import { isValidUuid } from '@/lib/api-utils'
 
 function getAdmin() {
   return createSupabaseAdminClient(
@@ -18,6 +19,11 @@ export async function POST(
   try {
     const supabaseAdmin = getAdmin()
     const { id: bookingId } = await params
+
+    if (!isValidUuid(bookingId)) {
+      return NextResponse.json({ error: 'Invalid booking ID format' }, { status: 400 })
+    }
+
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
 

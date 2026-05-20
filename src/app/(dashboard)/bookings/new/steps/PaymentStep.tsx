@@ -27,16 +27,16 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
     <>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-blue-600" />
+          <CreditCard className="w-5 h-5 text-primary" />
           Payment
         </CardTitle>
         <CardDescription>Record the advance payment for this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Total due */}
-        <div className="p-4 bg-slate-50 rounded-lg flex justify-between items-center">
-          <span className="text-sm text-slate-600">Total Amount</span>
-          <span className="text-lg font-semibold text-slate-900">₹{totalAmount.toLocaleString('en-IN')}</span>
+        <div className="p-4 bg-muted/50 border border-border rounded-lg flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">Total Amount</span>
+          <span className="text-lg font-semibold text-foreground">₹{totalAmount.toLocaleString('en-IN')}</span>
         </div>
 
         {/* Advance amount */}
@@ -57,8 +57,8 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
                 onClick={() => setPayment({ ...payment, advance_amount: preset.value })}
                 className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                   payment.advance_amount === preset.value
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'border-input text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {preset.label} (₹{preset.value.toLocaleString('en-IN')})
@@ -87,7 +87,7 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
         {/* Reference */}
         {payment.method !== 'cash' && (
           <div className="space-y-2">
-            <Label>Transaction reference <span className="text-slate-400">(optional)</span></Label>
+            <Label>Transaction reference <span className="text-muted-foreground">(optional)</span></Label>
             <Input
               value={payment.reference || ''}
               onChange={(e) => setPayment({ ...payment, reference: e.target.value })}
@@ -98,7 +98,7 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
 
         {/* Security deposit */}
         <div className="space-y-2">
-          <Label>Security deposit <span className="text-slate-400">(optional)</span></Label>
+          <Label>Security deposit <span className="text-muted-foreground">(optional)</span></Label>
           <Input
             type="number"
             value={payment.deposit_amount || ''}
@@ -106,12 +106,12 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
             placeholder="0"
             min={0}
           />
-          <p className="text-xs text-slate-400">Refundable deposit collected at pickup</p>
+          <p className="text-xs text-muted-foreground">Refundable deposit collected at pickup</p>
         </div>
 
         {/* Notes */}
         <div className="space-y-2">
-          <Label>Notes <span className="text-slate-400">(optional)</span></Label>
+          <Label>Notes <span className="text-muted-foreground">(optional)</span></Label>
           <Input
             value={payment.notes || ''}
             onChange={(e) => setPayment({ ...payment, notes: e.target.value })}
@@ -120,20 +120,20 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
         </div>
 
         {/* Summary */}
-        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg space-y-2">
+        <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Advance</span>
-            <span className="font-medium text-green-700">₹{payment.advance_amount.toLocaleString('en-IN')}</span>
+            <span className="text-muted-foreground">Advance</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">₹{payment.advance_amount.toLocaleString('en-IN')}</span>
           </div>
           {(payment.deposit_amount ?? 0) > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Security Deposit</span>
-              <span className="font-medium text-blue-600">₹{(payment.deposit_amount ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-muted-foreground">Security Deposit</span>
+              <span className="font-semibold text-primary">₹{(payment.deposit_amount ?? 0).toLocaleString('en-IN')}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Balance due</span>
-            <span className={`font-semibold ${balanceDue > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+            <span className="text-muted-foreground">Balance due</span>
+            <span className={`font-bold ${balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               ₹{Math.max(0, balanceDue).toLocaleString('en-IN')}
             </span>
           </div>

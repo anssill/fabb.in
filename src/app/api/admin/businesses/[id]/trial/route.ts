@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { isValidUuid } from '@/lib/api-utils'
 
 export async function PATCH(
   req: NextRequest,
@@ -8,6 +9,10 @@ export async function PATCH(
 ) {
   try {
     const { id: businessId } = await params
+
+    if (!isValidUuid(businessId)) {
+      return NextResponse.json({ error: 'Invalid business ID format' }, { status: 400 })
+    }
 
     // Verify the caller is a super_admin
     const supabase = await createClient()

@@ -1,12 +1,10 @@
-'use client'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, UserPlus, User } from 'lucide-react'
+import { Search, UserPlus, User, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import { ImageUpload } from '../../../inventory/components/ImageUpload'
@@ -21,8 +19,61 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   const { staff } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<BookingCustomer[]>([])
+  const [recentCustomers, setRecentCustomers] = useState<BookingCustomer[]>([])
   const [isNew, setIsNew] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [loadingRecent, setLoadingRecent] = useState(false)
+
+  // Fetch recent customers on mount / when business ID is ready
+  useEffect(() => {
+    async function fetchRecentCustomers() {
+      if (!staff?.business_id) return
+      setLoadingRecent(true)
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('customers')
+          .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
+          .eq('business_id', staff.business_id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+        setRecentCustomers(data || [])
+      } catch (err) {
+        console.error('Failed to fetch recent customers:', err)
+      } finally {
+        setLoadingRecent(false)
+      }
+    }
+    fetchRecentCustomers()
+  }, [staff?.business_id])
+
+  // Live search debounced query
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 3 || !staff?.business_id) {
+      setSearchResults([])
+      return
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('customers')
+          .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
+          .eq('business_id', staff.business_id)
+          .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`)
+          .limit(5)
+        setSearchResults(data || [])
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(delayDebounce)
+  }, [searchQuery, staff?.business_id])
 
   const handleSearch = async () => {
     if (!searchQuery || searchQuery.length < 3 || !staff?.business_id) return
@@ -60,7 +111,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     <>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="w-5 h-5 text-primary" />
           Customer Details
         </CardTitle>
         <CardDescription>Search for an existing customer or add a new one</CardDescription>
@@ -71,7 +122,11 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           <>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                {searching ? (
+                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                )}
                 <Input
                   placeholder="Search by name or phone number..."
                   className="pl-10"
@@ -88,19 +143,20 @@ export function CustomerStep({ customer, setCustomer }: Props) {
             {/* Search Results */}
             {searchResults.length > 0 && (
               <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search Results</p>
                 {searchResults.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => selectCustomer(c)}
-                    className="w-full flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-blue-50 transition-colors text-left"
+                    className="w-full flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg hover:bg-muted transition-colors text-left animate-in fade-in slide-in-from-top-1 duration-200"
                   >
                     <div>
-                      <p className="text-sm font-medium text-slate-900">{c.name}</p>
-                      <p className="text-xs text-slate-500">{c.phone} {c.email ? `· ${c.email}` : ''}</p>
+                      <p className="text-sm font-medium text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">{c.phone} {c.email ? `· ${c.email}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {(c as unknown as { blacklisted?: boolean }).blacklisted && <Badge variant="destructive" className="text-xs">Blacklisted</Badge>}
-                      <span className="text-xs text-slate-400">{(c as unknown as { total_bookings?: number }).total_bookings || 0} bookings</span>
+                      <span className="text-xs text-muted-foreground">{(c as unknown as { total_bookings?: number }).total_bookings || 0} bookings</span>
                     </div>
                   </button>
                 ))}
@@ -109,7 +165,39 @@ export function CustomerStep({ customer, setCustomer }: Props) {
 
             {searchResults.length === 0 && searchQuery.length >= 3 && !searching && (
               <div className="text-center py-6">
-                <p className="text-sm text-slate-500">No customers found</p>
+                <p className="text-sm text-muted-foreground">No customers found</p>
+              </div>
+            )}
+
+            {/* Recent Customers List */}
+            {searchQuery.length < 3 && recentCustomers.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Customers</p>
+                <div className="space-y-2">
+                  {recentCustomers.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectCustomer(c)}
+                      className="w-full flex items-center justify-between p-3 bg-muted/30 border border-border rounded-lg hover:bg-muted/60 transition-colors text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">{c.phone} {c.email ? `· ${c.email}` : ''}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(c as unknown as { blacklisted?: boolean }).blacklisted && <Badge variant="destructive" className="text-xs">Blacklisted</Badge>}
+                        <span className="text-xs text-muted-foreground">{(c as unknown as { total_bookings?: number }).total_bookings || 0} bookings</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchQuery.length < 3 && loadingRecent && (
+              <div className="flex items-center justify-center py-6 gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading recent customers...
               </div>
             )}
 
@@ -124,12 +212,12 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         {(customer.id || isNew) && (
           <div className="space-y-4">
             {customer.id && (
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/40 border border-border text-foreground rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-blue-900">{customer.name}</p>
-                  <p className="text-xs text-blue-600">{customer.phone}</p>
+                  <p className="text-sm font-semibold">{customer.name}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{customer.phone}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => { setCustomer({ name: '', phone: '' }); setIsNew(false) }}>
+                <Button variant="ghost" size="sm" className="hover:bg-muted text-primary" onClick={() => { setCustomer({ name: '', phone: '' }); setIsNew(false) }}>
                   Change
                 </Button>
               </div>
@@ -157,7 +245,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Email <span className="text-slate-400">(optional)</span></Label>
+                    <Label>Email <span className="text-muted-foreground">(optional)</span></Label>
                     <Input
                       value={customer.email || ''}
                       onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
@@ -166,7 +254,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>ID type <span className="text-slate-400">(optional)</span></Label>
+                    <Label>ID type <span className="text-muted-foreground">(optional)</span></Label>
                     <Input
                       value={customer.id_type || ''}
                       onChange={(e) => setCustomer({ ...customer, id_type: e.target.value })}
@@ -176,14 +264,14 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>ID number <span className="text-slate-400">(optional)</span></Label>
+                    <Label>ID number <span className="text-muted-foreground">(optional)</span></Label>
                     <Input
                       value={customer.id_number || ''}
                       onChange={(e) => setCustomer({ ...customer, id_number: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Address <span className="text-slate-400">(optional)</span></Label>
+                    <Label>Address <span className="text-muted-foreground">(optional)</span></Label>
                     <Input
                       value={customer.address || ''}
                       onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
@@ -192,7 +280,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>ID Proof Image <span className="text-slate-400">(optional)</span></Label>
+                  <Label>ID Proof Image <span className="text-muted-foreground">(optional)</span></Label>
                   <ImageUpload
                     value={customer.id_proof_url || (customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null)}
                     onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}
@@ -202,8 +290,8 @@ export function CustomerStep({ customer, setCustomer }: Props) {
             )}
             
             {customer.id && !customer.id_proof_url && (
-              <div className="space-y-2 pt-4 border-t border-slate-100">
-                <Label>ID Proof Image <span className="text-slate-400">(optional)</span></Label>
+              <div className="space-y-2 pt-4 border-t border-border">
+                <Label>ID Proof Image <span className="text-muted-foreground">(optional)</span></Label>
                 <ImageUpload
                   value={customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null}
                   onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}

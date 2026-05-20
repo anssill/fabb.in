@@ -21,25 +21,17 @@ import {
   Lock,
   BadgeCheck,
   Briefcase,
-  Star
+  Star,
+  Mail,
+  Phone
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  Button, 
-  Card, 
-  TextField,
-  Label,
-  Input,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectIndicator,
-  SelectPopover,
-  ListBox,
-  ListBoxItem,
-  Badge,
-} from '@heroui/react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+
 
 const STEPS = [
   { label: 'Business', icon: Building2, description: 'Core Profile', sub: 'Define your identity' },
@@ -322,36 +314,111 @@ export default function SetupPage() {
                 <div className="min-h-[300px]">
                   {currentStep === 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                       <TextField value={business.name} onChange={(v) => setBusiness({...business, name: v})} className="col-span-full">
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">Business Identity</Label>
-                         <Input placeholder="Acme Luxury Collections" className="h-16 px-6 bg-slate-950/50 border-white/5 text-xl font-bold rounded-[1.5rem] focus:border-primary transition-all shadow-inner" />
-                       </TextField>
-                       <TextField value={business.email} onChange={(v) => setBusiness({...business, email: v})}>
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">Support Email</Label>
-                         <Input placeholder="hello@acme.com" className="h-14 px-6 bg-slate-950/20 border-white/5 rounded-2xl" />
-                       </TextField>
-                       <TextField value={business.phone} onChange={(v) => setBusiness({...business, phone: v})}>
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">Primary Phone</Label>
-                         <Input placeholder="+91 00000 00000" className="h-14 px-6 bg-slate-950/20 border-white/5 rounded-2xl" />
-                       </TextField>
-                       <TextField value={business.address} onChange={(v) => setBusiness({...business, address: v})} className="col-span-full">
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">HQ Address</Label>
-                         <Input placeholder="Main St, Floor 4, Suite 2" className="h-14 px-6 bg-slate-950/20 border-white/5 rounded-2xl" />
-                       </TextField>
+                      {/* Business Identity */}
+                      {/* Business Identity */}
+                      <div className="col-span-full space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Business Identity</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <Building2 className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            value={business.name}
+                            onChange={(e) => setBusiness({...business, name: e.target.value})}
+                            placeholder="Acme Luxury Collections" 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Support Email */}
+                      <div className="space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Support Email</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            type="email"
+                            value={business.email}
+                            onChange={(e) => setBusiness({...business, email: e.target.value})}
+                            placeholder="hello@acme.com" 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Primary Phone */}
+                      <div className="space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Primary Phone</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <Phone className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            type="tel"
+                            value={business.phone}
+                            onChange={(e) => setBusiness({...business, phone: e.target.value})}
+                            placeholder="+91 00000 00000" 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* HQ Address */}
+                      <div className="col-span-full space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">HQ Address</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <MapPin className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            value={business.address}
+                            onChange={(e) => setBusiness({...business, address: e.target.value})}
+                            placeholder="Main St, Floor 4, Suite 2" 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {currentStep === 1 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                       <TextField value={branch.name} onChange={(v) => setBranch({...branch, name: v})} className="col-span-full">
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">Branch Name</Label>
-                         <Input placeholder="Main Flagship" className="h-16 px-6 bg-slate-950/50 border-white/5 text-xl font-bold rounded-[1.5rem] focus:border-primary shadow-inner" />
-                       </TextField>
-                       <TextField value={branch.prefix} onChange={(v) => setBranch({...branch, prefix: v})} className="col-span-full">
-                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 block ml-1">Invoice Prefix</Label>
-                         <Input placeholder="ABC" maxLength={3} className="h-14 px-6 bg-slate-950/20 border-white/5 rounded-2xl" />
-                         <p className="mt-2 text-[10px] text-slate-600 italic">Example ID: {branch.prefix || 'ABC'}-001</p>
-                       </TextField>
+                      {/* Branch Name */}
+                      {/* Branch Name */}
+                      <div className="col-span-full space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Branch Name</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <MapPin className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            value={branch.name}
+                            onChange={(e) => setBranch({...branch, name: e.target.value})}
+                            placeholder="Main Flagship" 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Invoice Prefix */}
+                      <div className="col-span-full space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Invoice Prefix</Label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
+                            <Briefcase className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
+                          </div>
+                          <Input 
+                            value={branch.prefix}
+                            onChange={(e) => setBranch({...branch, prefix: e.target.value})}
+                            placeholder="ABC" 
+                            maxLength={3} 
+                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
+                          />
+                        </div>
+                        <p className="mt-2 text-[10px] font-bold text-slate-500 tracking-wider uppercase ml-1">Example ID: {branch.prefix || 'ABC'}-001</p>
+                      </div>
                     </div>
                   )}
 
@@ -359,7 +426,7 @@ export default function SetupPage() {
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                       <Users className="w-16 h-16 text-slate-700 mb-6" />
                       <p className="text-slate-400 max-w-sm mb-8">You can invite team members later from the Settings dashboard. Ready to skip?</p>
-                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onPress={() => setCurrentStep(3)}>Skip Team Setup</Button>
+                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onClick={() => setCurrentStep(3)}>Skip Team Setup</Button>
                     </div>
                   )}
 
@@ -367,7 +434,7 @@ export default function SetupPage() {
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                       <Package className="w-16 h-16 text-slate-700 mb-6" />
                       <p className="text-slate-400 max-w-sm mb-8">Let's populate your inventory once we're in the dashboard for a better experience.</p>
-                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onPress={() => setCurrentStep(4)}>Skip Inventory</Button>
+                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onClick={() => setCurrentStep(4)}>Skip Inventory</Button>
                     </div>
                   )}
 
@@ -383,8 +450,8 @@ export default function SetupPage() {
                       <Button 
                         size="lg"
                         className="h-20 px-16 bg-primary text-white text-xl font-black rounded-[2rem] shadow-2xl shadow-primary/40 group hover:scale-105 transition-all"
-                        onPress={handleFinish}
-                        isDisabled={loading}
+                        onClick={handleFinish}
+                        disabled={loading}
                       >
                         {loading ? <Loader2 className="animate-spin" /> : "ENTER DASHBOARD"}
                       </Button>
@@ -398,18 +465,18 @@ export default function SetupPage() {
                     <Button 
                       variant="ghost" 
                       className="h-14 px-8 rounded-2xl hover:bg-white/5 text-slate-400 font-bold"
-                      onPress={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                      isDisabled={currentStep === 0 || loading}
+                      onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                      disabled={currentStep === 0 || loading}
                     >
                       <ChevronLeft className="mr-2 h-5 w-5" /> Back
                     </Button>
                     
                     <Button 
-                      className="h-16 px-12 bg-white text-slate-950 font-black rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center gap-3"
-                      onPress={handleNext}
-                      isDisabled={loading}
+                      className="h-16 px-12 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-2xl shadow-primary/30 active:scale-[0.98] transition-all flex items-center gap-3"
+                      onClick={handleNext}
+                      disabled={loading}
                     >
-                      {loading ? <Loader2 className="animate-spin w-5 h-5" /> : (
+                      {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : (
                         <>
                           NEXT PHASE <ChevronRight className="w-5 h-5" />
                         </>

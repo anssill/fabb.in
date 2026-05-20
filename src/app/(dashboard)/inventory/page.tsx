@@ -44,13 +44,13 @@ export default async function InventoryPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Inventory</h1>
-          <p className="text-sm text-slate-500">Manage your rental assets</p>
+          <h1 className="text-xl font-semibold text-foreground">Inventory</h1>
+          <p className="text-sm text-muted-foreground">Manage your rental assets</p>
         </div>
         <div className="flex items-center gap-2">
           <SyncInventoryButton />
           <CsvImportDialog />
-          <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+          <Button asChild>
             <Link href="/inventory/new">
               <Plus className="w-4 h-4 mr-2" />
               Add Item
@@ -63,18 +63,18 @@ export default async function InventoryPage() {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Items', value: totalItems, icon: Package, color: 'text-blue-600 bg-blue-50' },
-          { label: 'Available', value: availableItems, icon: Layers, color: 'text-green-600 bg-green-50' },
-          { label: 'On Rent', value: onRentItems, icon: PackageSearch, color: 'text-violet-600 bg-violet-50' },
-          { label: 'In Washing', value: inWashingItems, icon: Waves, color: 'text-amber-600 bg-amber-50' },
+          { label: 'Total Items', value: totalItems, icon: Package, color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20' },
+          { label: 'Available', value: availableItems, icon: Layers, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20' },
+          { label: 'On Rent', value: onRentItems, icon: PackageSearch, color: 'text-violet-600 dark:text-violet-400 bg-violet-500/10 dark:bg-violet-500/20' },
+          { label: 'In Washing', value: inWashingItems, icon: Waves, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white border border-slate-200 rounded-lg p-4 flex items-center gap-3">
+          <div key={label} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3">
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
               <Icon className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+              <p className="text-2xl font-bold text-foreground">{value}</p>
+              <p className="text-xs text-muted-foreground">{label}</p>
             </div>
           </div>
         ))}
@@ -82,12 +82,12 @@ export default async function InventoryPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="bg-white border border-slate-200">
-          <TabsTrigger value="all" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+        <TabsList className="bg-muted border border-border">
+          <TabsTrigger value="all" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
             <PackageSearch className="w-4 h-4 mr-2" />
             All Items ({totalItems})
           </TabsTrigger>
-          <TabsTrigger value="audit" className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700">
+          <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-sm">
             <ShieldAlert className="w-4 h-4 mr-2" />
             Quality Audit ({auditItems.length})
           </TabsTrigger>

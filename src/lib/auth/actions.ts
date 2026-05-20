@@ -15,7 +15,7 @@ const signupSchema = z.object({
 export async function signUpAction(formData: any) {
   const validated = signupSchema.safeParse(formData);
   if (!validated.success) {
-    return { error: validated.error.errors[0].message };
+    return { error: validated.error.issues[0].message };
   }
 
   const { businessName, fullName, email, password } = validated.data;
