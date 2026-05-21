@@ -57,6 +57,33 @@ export class StorageService {
     return publicUrlData.publicUrl
   }
 
+  static async uploadCompanyLogo(businessId: string, file: File): Promise<string> {
+    const supabase = createClient()
+    
+    // Generate a unique file path: images/{business_id}/logos/{timestamp}_{filename}
+    const timestamp = Date.now()
+    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`
+    const filePath = `${businessId}/logos/${fileName}`
+
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    if (error) {
+      console.error('Logo Upload Error:', error)
+      throw new Error(`Failed to upload logo: ${error.message}`)
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('images')
+      .getPublicUrl(data.path)
+
+    return publicUrlData.publicUrl
+  }
+
   static async deleteImage(imageUrl: string): Promise<void> {
     if (!imageUrl) return
 

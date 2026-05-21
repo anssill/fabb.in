@@ -85,8 +85,8 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
   const canManage = ['owner', 'manager'].includes(currentUserRole)
 
   async function handleInvite() {
-    if (!inviteData.email || !inviteData.name || !inviteData.branchId) {
-      toast.error('Please fill in all required fields')
+    if (!inviteData.email || !inviteData.name || !inviteData.branchId || !inviteData.phone) {
+      toast.error('Please fill in all required fields (including Phone)')
       return
     }
 
@@ -262,7 +262,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
 
                 <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium tracking-wider">
                   <span>Status: {member.status}</span>
-                  <span>{member.last_login ? `Last login: ${new Date(member.last_login).toLocaleDateString()}` : 'Never logged in'}</span>
+                  <span suppressHydrationWarning>{member.last_login ? `Last login: ${new Date(member.last_login).toLocaleDateString()}` : 'Never logged in'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -306,6 +306,17 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                 placeholder="john@example.com" 
                 value={inviteData.email}
                 onChange={e => setInviteData(p => ({...p, email: e.target.value}))}
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-phone">Phone Number (Required for OTP Login)</Label>
+              <Input 
+                id="invite-phone" 
+                type="tel" 
+                placeholder="9876543210" 
+                value={inviteData.phone}
+                onChange={e => setInviteData(p => ({...p, phone: e.target.value}))}
                 className="rounded-xl border-slate-200"
               />
             </div>

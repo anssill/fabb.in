@@ -17,6 +17,7 @@ export const PERMISSION_KEYS = [
   'manage_analytics',
   'manage_expenses',
   'manage_staff',
+  'phone_login',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -37,6 +38,7 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'manage_analytics', label: 'Analytics', description: 'Access reports and analytics' },
   { key: 'manage_expenses', label: 'Expenses', description: 'Record and view business expenses' },
   { key: 'manage_staff', label: 'Staff Management', description: 'View and manage team members' },
+  { key: 'phone_login', label: 'Phone Login (OTP)', description: 'Allow login via phone number and OTP' },
 ]
 
 /** Maps a sidebar href to the permission key required */

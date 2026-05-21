@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import bcrypt from 'bcryptjs'
+import { sendSMS } from '@/lib/sms/msg91'
 import { z } from 'zod'
 
 const inviteSchema = z.object({
@@ -9,7 +9,7 @@ const inviteSchema = z.object({
   name: z.string().min(2),
   role: z.enum(['manager', 'staff']),
   branchId: z.string().uuid(),
-  phone: z.string().optional(),
+  phone: z.string().min(10),
 })
 
 export async function POST(req: NextRequest) {
@@ -34,37 +34,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Staff member already exists with this email' }, { status: 400 })
     }
 
-    // 2. Get business_id from the session (the person inviting must be authorized)
-    // For now, let's assume the client passes the businessId or we get it from the session
-    // In a real app, you'd verify the requester's permissions.
-    // For this implementation, we'll try to get it from the requester's staff record.
-    
-    // We expect the businessId to be passed or derived. Let's look for a custom header or session
-    // Since this is called from a client component, we should check auth
-    // But since we use admin client, we are bypassing RLS.
-    // Let's expect businessId to be provided for now, but in production this must be secure.
+    // 2. Get business_id from headers
     const bizId = req.headers.get('x-business-id')
     if (!bizId) {
       return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
     }
 
-    // 3. Create Auth User
-    const tempPassword = Math.random().toString(36).slice(-10) + '!'
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email.toLowerCase(),
-      email_confirm: true,
-      password: tempPassword,
-      user_metadata: { name, business_id: bizId },
-    })
+    // 3. Lookup business name to personalize messages
+    const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('name')
+      .eq('id', bizId)
+      .single()
+    const businessName = business?.name || 'our company'
+
+    // 4. Invite Auth User
+    // We use the Supabase Admin API to trigger a native invite email
+    const redirectTo = `${req.nextUrl.origin}/login`
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      email.toLowerCase(),
+      {
+        redirectTo,
+        data: { name, business_id: bizId },
+      }
+    )
 
     if (authError || !authUser.user) {
-      return NextResponse.json({ error: authError?.message || 'Failed to create auth user' }, { status: 500 })
+      return NextResponse.json({ error: authError?.message || 'Failed to create auth invite' }, { status: 500 })
     }
 
-    // 4. Hash initial password for the staff table (as per schema)
-    const passwordHash = await bcrypt.hash(tempPassword, 12)
-
-    // 5. Create Staff Record
+    // 5. Create Staff Record with status 'invited'
     const { error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUser.user.id,
       business_id: bizId,
@@ -74,7 +73,6 @@ export async function POST(req: NextRequest) {
       phone,
       role,
       status: 'invited',
-      password_hash: passwordHash,
       setup_completed: true, // They are invited, not setting up a new business
     })
 
@@ -84,10 +82,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: staffError.message }, { status: 500 })
     }
 
+    // 6. Look up SMS settings for this business's branches to get their MSG91 credentials
+    const { data: branches } = await supabaseAdmin
+      .from('branches')
+      .select('settings')
+      .eq('business_id', bizId)
+
+    const branchWithSms = branches?.find((b: any) => b.settings?.sms?.enabled)
+    const smsSettings = branchWithSms?.settings?.sms
+
+    // 7. Dispatch welcoming SMS via MSG91
+    const loginUrl = `${req.nextUrl.origin}/login`
+    const smsMessage = `Hello ${name}, you have been invited to join ${businessName} on Fabb.booking! You can now log in using your phone number via OTP at: ${loginUrl}`
+
+    // We check if sms settings are enabled, or fallback to the platform default MSG91 key
+    const smsResult = await sendSMS({
+      phone,
+      message: smsMessage,
+      authKey: smsSettings?.api_key,
+      senderId: smsSettings?.sender_id,
+    })
+
+    if (!smsResult.success) {
+      console.warn('SMS delivery failed, but invite email was sent:', smsResult.error)
+    }
+
     return NextResponse.json({ 
       success: true, 
-      tempPassword, 
-      message: 'Staff invited successfully. Provide them the temporary password to login.' 
+      message: 'Staff invited successfully. An invitation email and welcome SMS have been sent.' 
     })
 
   } catch (error) {

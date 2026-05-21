@@ -27,6 +27,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/setup')
   }
 
+  // Fetch business data
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('id', staff.business_id)
+    .single()
+
   // Get all branches for this business
   const { data: branches } = await supabase
     .from('branches')
@@ -36,7 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <StoreInitializer staff={staff} business={staff.business} branches={branches || []} />
+      <StoreInitializer staff={staff} business={business} branches={branches || []} />
       <SidebarWrapper staff={staff} branches={branches || []} />
       <NotificationRealtime />
       <DataRealtime />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -33,6 +33,57 @@ export function CompanySettingsClient() {
   const { business, setBusiness } = useAppStore()
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !business) return
+
+    setIsUploading(true)
+    try {
+      const { StorageService } = await import('@/lib/storage-service')
+      const logoUrl = await StorageService.uploadCompanyLogo(business.id, file)
+
+      const { error } = await supabase
+        .from('businesses')
+        .update({ logo_url: logoUrl })
+        .eq('id', business.id)
+
+      if (error) throw error
+
+      setBusiness({ ...business, logo_url: logoUrl })
+      toast.success('Logo uploaded successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload logo')
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleRemoveLogo() {
+    if (!business?.logo_url) return
+    setIsUploading(true)
+    try {
+      const { StorageService } = await import('@/lib/storage-service')
+      await StorageService.deleteImage(business.logo_url)
+      
+      const { error } = await supabase
+        .from('businesses')
+        .update({ logo_url: null })
+        .eq('id', business.id)
+        
+      if (error) throw error
+      
+      setBusiness({ ...business, logo_url: null })
+      toast.success('Logo removed successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to remove logo')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -116,14 +167,31 @@ export function CompanySettingsClient() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
-                <Building2 className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden relative">
+                {business.logo_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={business.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Building2 className="w-8 h-8 text-slate-400" />
+                )}
+                {isUploading && (
+                  <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-900 mb-1">Company Logo</p>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" size="sm" className="h-8 text-xs">Upload New Logo</Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50">Remove</Button>
+                <div className="flex gap-2 items-center">
+                  <input type="file" className="hidden" accept="image/*" ref={fileInputRef} onChange={handleFileUpload} />
+                  <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? 'Uploading...' : 'Upload New Logo'}
+                  </Button>
+                  {business.logo_url && (
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleRemoveLogo} disabled={isUploading}>
+                      Remove
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
