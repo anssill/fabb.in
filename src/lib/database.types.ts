@@ -81,6 +81,41 @@ export type Database = {
           },
         ]
       }
+      otp_verifications: {
+        Row: {
+          business_id: string | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          business_id?: string | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          phone: string
+        }
+        Update: {
+          business_id?: string | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "otp_verifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_drafts: {
         Row: {
           branch_id: string

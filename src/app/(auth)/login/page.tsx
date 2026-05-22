@@ -13,7 +13,9 @@ import { toast } from 'sonner';
 import { LogIn, Mail, Lock, Loader2, ArrowRight, Phone, KeyRound } from 'lucide-react';
 
 function LoginForm() {
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>(searchParams.get('method') === 'phone' ? 'phone' : 'email');
   
   // Email states
   const [email, setEmail] = useState('');
@@ -25,8 +27,6 @@ function LoginForm() {
   const [showOtp, setShowOtp] = useState(false);
   
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -127,20 +127,22 @@ function LoginForm() {
           {/* Login Method Toggle */}
           {!showOtp && (
             <div className="flex bg-slate-950/50 p-1 rounded-2xl mb-8 border border-white/5">
-              <button
-                type="button"
+              <Link
+                href="/login?method=email"
+                aria-pressed={loginMethod === 'email'}
                 onClick={() => setLoginMethod('email')}
                 className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all ${loginMethod === 'email' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 Email
-              </button>
-              <button
-                type="button"
+              </Link>
+              <Link
+                href="/login?method=phone"
+                aria-pressed={loginMethod === 'phone'}
                 onClick={() => setLoginMethod('phone')}
                 className={`flex-1 py-3 text-sm font-bold uppercase tracking-wider rounded-xl transition-all ${loginMethod === 'phone' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 Phone
-              </button>
+              </Link>
             </div>
           )}
 

@@ -107,8 +107,8 @@ export async function sendSMS({
         .select('business_id, branch_id')
         .eq('id', sentBy)
         .single()
-      resolvedBusinessId = staff?.business_id
-      resolvedBranchId = resolvedBranchId ?? staff?.branch_id
+      resolvedBusinessId = staff?.business_id ?? undefined
+      resolvedBranchId = resolvedBranchId ?? staff?.branch_id ?? undefined
     }
 
     if (resolvedBusinessId) {

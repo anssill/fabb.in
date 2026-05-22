@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/msg91'
+import type { Json } from '@/lib/database.types'
 import { z } from 'zod'
 
 const inviteSchema = z.object({
@@ -11,6 +12,23 @@ const inviteSchema = z.object({
   branchId: z.string().uuid(),
   phone: z.string().min(10),
 })
+
+type JsonObject = { [key: string]: Json | undefined }
+
+function isJsonObject(value: Json | null | undefined): value is JsonObject {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function getSmsSettings(settings: Json | null | undefined) {
+  if (!isJsonObject(settings) || !isJsonObject(settings.sms) || settings.sms.enabled !== true) {
+    return undefined
+  }
+
+  return {
+    api_key: typeof settings.sms.api_key === 'string' ? settings.sms.api_key : undefined,
+    sender_id: typeof settings.sms.sender_id === 'string' ? settings.sms.sender_id : undefined,
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -88,8 +106,9 @@ export async function POST(req: NextRequest) {
       .select('settings')
       .eq('business_id', bizId)
 
-    const branchWithSms = branches?.find((b: any) => b.settings?.sms?.enabled)
-    const smsSettings = branchWithSms?.settings?.sms
+    const smsSettings = branches
+      ?.map((branch) => getSmsSettings(branch.settings))
+      .find(Boolean)
 
     // 7. Dispatch welcoming SMS via MSG91
     const loginUrl = `${req.nextUrl.origin}/login`

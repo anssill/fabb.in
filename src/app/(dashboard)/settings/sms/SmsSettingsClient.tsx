@@ -17,6 +17,12 @@ import { testSMSConnection } from './sms-actions'
 
 const SMS_TEMPLATES = [
   {
+    key: 'login_otp',
+    label: 'Login OTP',
+    default: 'Your Fabb.booking login OTP is {otp}. Valid for 5 minutes. Do not share this code.',
+    variables: ['{otp}'],
+  },
+  {
     key: 'booking_confirmed',
     label: 'Booking Confirmed',
     default: 'Dear {name}, your booking {booking_id} is confirmed. Pickup: {pickup_date}. - {business_name}',

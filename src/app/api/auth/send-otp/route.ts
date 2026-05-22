@@ -1,6 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { sendSMS } from '@/lib/sms/msg91'
+import type { Json } from '@/lib/database.types'
+
+type JsonObject = { [key: string]: Json | undefined }
+type SmsSettings = {
+  enabled?: boolean
+  api_key?: string
+  sender_id?: string
+  templates?: {
+    login_otp?: {
+      body?: string
+      templateId?: string
+    }
+  }
+}
+
+function isJsonObject(value: Json | null | undefined): value is JsonObject {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isPhoneLoginDisabled(permissions: Json | null | undefined) {
+  return isJsonObject(permissions) && permissions.phone_login === false
+}
+
+function getSmsSettings(settings: Json | null | undefined): SmsSettings | undefined {
+  if (!isJsonObject(settings) || !isJsonObject(settings.sms)) return undefined
+
+  const sms = settings.sms
+  const templates = isJsonObject(sms.templates) ? sms.templates : undefined
+  const loginOtp = templates && isJsonObject(templates.login_otp) ? templates.login_otp : undefined
+
+  return {
+    enabled: sms.enabled === true,
+    api_key: typeof sms.api_key === 'string' ? sms.api_key : undefined,
+    sender_id: typeof sms.sender_id === 'string' ? sms.sender_id : undefined,
+    templates: loginOtp
+      ? {
+          login_otp: {
+            body: typeof loginOtp.body === 'string' ? loginOtp.body : undefined,
+            templateId: typeof loginOtp.templateId === 'string' ? loginOtp.templateId : undefined,
+          },
+        }
+      : undefined,
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,8 +74,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Your account has been suspended. Contact your admin.' }, { status: 403 })
     }
 
+    if (!staff.business_id) {
+      return NextResponse.json({ error: 'Staff account is not linked to a business. Contact your admin.' }, { status: 400 })
+    }
+
+    if (!staff.phone) {
+      return NextResponse.json({ error: 'Staff account does not have a phone number. Contact your admin.' }, { status: 400 })
+    }
+
     // Check permissions — if phone_login is explicitly set to false, block
-    if (staff.permissions && staff.permissions.phone_login === false) {
+    if (isPhoneLoginDisabled(staff.permissions)) {
       return NextResponse.json({ error: 'Phone login is disabled for your account. Use email login.' }, { status: 403 })
     }
 
@@ -41,8 +93,9 @@ export async function POST(req: NextRequest) {
       .select('settings')
       .eq('business_id', staff.business_id)
 
-    const branchWithSms = branches?.find((b: any) => b.settings?.sms?.enabled)
-    const smsSettings = branchWithSms?.settings?.sms
+    const smsSettings = branches
+      ?.map((branch) => getSmsSettings(branch.settings))
+      .find((settings) => settings?.enabled)
 
     // Generate OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString()
@@ -70,7 +123,7 @@ export async function POST(req: NextRequest) {
     let message = `Your Fabb.booking login OTP is ${code}. Valid for 5 minutes. Do not share this code.`
     let templateId: string | undefined = undefined
 
-    if (smsSettings?.templates?.login_otp) {
+    if (smsSettings?.templates?.login_otp?.body) {
       message = smsSettings.templates.login_otp.body.replace('{otp}', code)
       templateId = smsSettings.templates.login_otp.templateId
     }
@@ -98,6 +151,7 @@ export async function POST(req: NextRequest) {
       phone: staff.phone,
       message,
       templateId,
+      placeholders: { otp: code, code: code, OTP: code, CODE: code },
       authKey: smsSettings?.api_key,
       senderId: smsSettings?.sender_id,
       businessId: staff.business_id,
