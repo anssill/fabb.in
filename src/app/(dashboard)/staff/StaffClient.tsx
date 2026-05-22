@@ -174,6 +174,25 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
     }
   }
 
+  async function handleDelete(id: string) {
+    if (!window.confirm('Are you sure you want to delete this staff member? This action cannot be undone.')) return
+    
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete staff')
+      
+      toast.success('Staff deleted successfully')
+      setStaff(prev => prev.filter(m => m.id !== id))
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -235,8 +254,8 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                           <Shield className="w-4 h-4 mr-2 text-slate-500" /> Manage Permissions
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-sm rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
-                          <UserMinus className="w-4 h-4 mr-2" /> Deactivate
+                        <DropdownMenuItem onClick={() => handleDelete(member.id)} className="text-sm rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
+                          <UserMinus className="w-4 h-4 mr-2" /> Delete Staff
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
