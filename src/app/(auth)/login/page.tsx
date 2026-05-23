@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck, Loader2, Mail, ShieldCheck, UserPlus } from 'lucide-react'
+import { ArrowRight, CalendarCheck, Loader2, LockKeyhole, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,8 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
+  const [password, setPassword] = useState('')
+  const [loginMode, setLoginMode] = useState<'otp' | 'password'>('otp')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -31,6 +33,24 @@ function LoginForm() {
     try {
       const supabase = createClient()
       const cleanEmail = email.trim().toLowerCase()
+
+      if (loginMode === 'password') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        })
+
+        if (error) throw error
+
+        const complete = await fetch('/api/auth/complete-login', { method: 'POST' })
+        const result = await complete.json().catch(() => ({}))
+        if (!complete.ok) throw new Error(result.error || 'Unable to complete login')
+
+        toast.success('Logged in successfully.')
+        router.push(result.next || searchParams.get('next') || '/dashboard')
+        router.refresh()
+        return
+      }
 
       if (!otpSent) {
         const { error } = await supabase.auth.signInWithOtp({
@@ -64,7 +84,12 @@ function LoginForm() {
       router.push(result.next || searchParams.get('next') || '/dashboard')
       router.refresh()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Authentication failed')
+      const message = error instanceof Error ? error.message : 'Authentication failed'
+      if (message.toLowerCase().includes('rate limit')) {
+        toast.error('Email OTP limit reached. Please wait before requesting another OTP, or use password login.')
+      } else {
+        toast.error(message)
+      }
     } finally {
       setLoading(false)
     }
@@ -159,10 +184,41 @@ function LoginForm() {
                 </div>
               )}
 
+              {loginMode === 'password' && (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                  <div className="relative">
+                    <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                      className="h-12 rounded-2xl border-slate-100 bg-slate-50 pl-11 text-sm shadow-none focus-visible:ring-[#4f46e5]"
+                    />
+                  </div>
+                </div>
+              )}
+
               <Button type="submit" disabled={loading} className="h-12 w-full rounded-full bg-[#4f46e5] text-white shadow-sm hover:bg-[#4338ca]">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{otpSent ? 'Verify OTP' : 'Send Email OTP'} <ArrowRight className="ml-2 h-4 w-4" /></>}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>{loginMode === 'password' ? 'Log in' : otpSent ? 'Verify OTP' : 'Send Email OTP'} <ArrowRight className="ml-2 h-4 w-4" /></>}
               </Button>
             </form>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLoginMode((mode) => mode === 'otp' ? 'password' : 'otp')
+                setOtpSent(false)
+                setOtp('')
+              }}
+              className="mt-4 w-full text-center text-sm font-semibold text-[#4f46e5] hover:underline"
+            >
+              {loginMode === 'otp' ? 'Use password login instead' : 'Use email OTP instead'}
+            </button>
 
             <p className="mt-6 text-center text-sm text-slate-500">
               New to Fabb.booking?{' '}
