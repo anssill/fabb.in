@@ -28,9 +28,11 @@ const CONDITION_COLORS: Record<string, string> = {
 
 interface InventoryListProps {
   initialItems: any[]
+  businessId: string
+  branchId: string
 }
 
-export function InventoryList({ initialItems }: InventoryListProps) {
+export function InventoryList({ initialItems, businessId, branchId }: InventoryListProps) {
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isScannerOpen, setIsScannerOpen] = useState(false)
@@ -66,6 +68,8 @@ export function InventoryList({ initialItems }: InventoryListProps) {
           item_id,
           bookings!inner(pickup_date, return_date, status)
         `)
+        .eq('bookings.business_id', businessId)
+        .eq('bookings.branch_id', branchId)
         .neq('bookings.status', 'cancelled')
         .lte('bookings.pickup_date', toStr)
         // Note: we use return_date < fromStr for overlap if no buffer
@@ -86,7 +90,7 @@ export function InventoryList({ initialItems }: InventoryListProps) {
     }
 
     fetchRelevantBookings()
-  }, [dateRange])
+  }, [businessId, branchId, dateRange])
 
   // Dynamic Item Stats Calculation
   const itemsWithAvailability = useMemo(() => {

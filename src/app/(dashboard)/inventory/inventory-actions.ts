@@ -115,12 +115,14 @@ export async function createItem(formData: any, variants: any[]) {
 export async function updateItem(itemId: string, formData: any, variants: any[]) {
   const staff = await getCurrentStaffContext()
   const supabase = getSupabaseAdmin()
+  if (!staff.branch_id) throw new Error('Staff branch is not assigned.')
 
   const { data: existingItem, error: existingError } = await supabase
     .from('items')
     .select('id')
     .eq('id', itemId)
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .single()
 
   if (existingError || !existingItem) throw new Error(existingError?.message || 'Inventory item not found')
@@ -142,6 +144,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
     })
     .eq('id', itemId)
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
 
   if (itemErr) throw formatSupabaseError(itemErr)
 
@@ -205,6 +208,8 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
     .from('items')
     .select('notion_page_id, sku')
     .eq('id', itemId)
+    .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .single()
 
   const stockSummary = variants.map(v => `${v.size}: ${v.total_stock}`).join(', ')
@@ -248,12 +253,14 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
 export async function updateItemStatus(itemId: string, status: string) {
   const staff = await getCurrentStaffContext()
   const supabase = getSupabaseAdmin()
+  if (!staff.branch_id) throw new Error('Staff branch is not assigned.')
 
   const { error } = await supabase
     .from('items')
     .update({ status })
     .eq('id', itemId)
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
 
   if (error) throw formatSupabaseError(error)
 

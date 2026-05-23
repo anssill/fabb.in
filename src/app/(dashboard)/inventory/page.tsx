@@ -15,7 +15,7 @@ export default async function InventoryPage() {
   if (!user) return null
 
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) return null
+  if (!staff?.branch_id) return null
 
   const { data: items, count } = await supabase
     .from('items')
@@ -26,6 +26,7 @@ export default async function InventoryPage() {
       item_variants(id, size, colour, total_stock, available_stock, reserved_stock)
     `, { count: 'exact' })
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
@@ -93,7 +94,7 @@ export default async function InventoryPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <InventoryList initialItems={allItems} />
+          <InventoryList initialItems={allItems} businessId={staff.business_id} branchId={staff.branch_id} />
         </TabsContent>
         <TabsContent value="audit">
           <QualityAuditTable auditItems={auditItems} />

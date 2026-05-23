@@ -14,6 +14,7 @@ export default async function EditInventoryPage({ params }: { params: Promise<{ 
   }
 
   const staff = await getCurrentStaffContext()
+  if (!staff.branch_id) notFound()
   const supabase = getSupabaseAdmin()
 
   const { data: item } = await supabase
@@ -24,6 +25,7 @@ export default async function EditInventoryPage({ params }: { params: Promise<{ 
     `)
     .eq('id', id)
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .maybeSingle()
 
   if (!item) notFound()

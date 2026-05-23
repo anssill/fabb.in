@@ -27,6 +27,7 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
   }
 
   const staff = await getCurrentStaffContext()
+  if (!staff.branch_id) notFound()
   const supabase = getSupabaseAdmin()
 
   const { data: item } = await supabase
@@ -38,6 +39,7 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
     `)
     .eq('id', id)
     .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
     .maybeSingle()
 
   if (!item) notFound()
@@ -50,8 +52,9 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
   // Recent bookings for this item
   const { data: recentBookings } = await supabase
     .from('booking_items')
-    .select('booking:bookings(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
+    .select('booking:bookings!inner(id, booking_number, status, pickup_date, return_date, branch_id, customer:customers(name))')
     .eq('item_id', id)
+    .eq('booking.branch_id', staff.branch_id)
     .order('created_at', { ascending: false })
     .limit(5)
 
@@ -60,8 +63,9 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const { data: calendarBookings } = await supabase
     .from('booking_items')
-    .select('item_variant_id, quantity, booking:bookings!inner(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
+    .select('item_variant_id, quantity, booking:bookings!inner(id, booking_number, status, pickup_date, return_date, branch_id, customer:customers(name))')
     .eq('item_id', id)
+    .eq('booking.branch_id', staff.branch_id)
     .gte('booking.return_date', thirtyDaysAgo.toISOString().split('T')[0])
     .order('booking(pickup_date)', { ascending: true })
     .limit(100)
