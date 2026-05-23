@@ -15,7 +15,7 @@ import { ImageUpload } from '../../components/ImageUpload'
 import { StorageService } from '@/lib/storage-service'
 import { useAppStore } from '@/lib/store'
 
-const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
+const CATEGORIES = ['Kurtha', 'Pants', 'Pant Set', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
 const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
 
 const SIZE_PRESETS = {

@@ -75,12 +75,13 @@ export function useBookingDraft(state: DraftState, options: UseBookingDraftOptio
 
   // Load existing draft
   const loadDraft = useCallback(async (): Promise<DraftState | null> => {
-    if (!businessId || !staffId) return null
+    if (!businessId || !branchId || !staffId) return null
     try {
       const { data } = await supabase
         .from('booking_drafts')
         .select('id, draft_data')
         .eq('business_id', businessId)
+        .eq('branch_id', branchId)
         .eq('staff_id', staffId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -94,7 +95,7 @@ export function useBookingDraft(state: DraftState, options: UseBookingDraftOptio
       // No draft found
     }
     return null
-  }, [businessId, staffId, supabase])
+  }, [businessId, branchId, staffId, supabase])
 
   return { saveDraft, clearDraft, loadDraft }
 }

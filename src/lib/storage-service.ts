@@ -30,31 +30,21 @@ export class StorageService {
   }
 
   static async uploadCustomerID(businessId: string, file: File): Promise<string> {
-    const supabase = createClient()
-    
-    // Generate a unique file path: images/{business_id}/customers/id_proofs/{timestamp}_{filename}
-    const timestamp = Date.now()
-    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`
-    const filePath = `${businessId}/customers/id_proofs/${fileName}`
+    const formData = new FormData()
+    formData.append('businessId', businessId)
+    formData.append('file', file)
 
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      })
+    const response = await fetch('/api/uploads/customer-id', {
+      method: 'POST',
+      body: formData,
+    })
 
-    if (error) {
-      console.error('Customer ID Upload Error:', error)
-      throw new Error(`Failed to upload ID proof: ${error.message}`)
+    const data = await response.json().catch(() => null)
+    if (!response.ok) {
+      throw new Error(data?.error || 'Failed to upload ID proof')
     }
 
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('images')
-      .getPublicUrl(data.path)
-
-    return publicUrlData.publicUrl
+    return data.publicUrl
   }
 
   static async uploadCompanyLogo(businessId: string, file: File): Promise<string> {

@@ -87,22 +87,15 @@ export async function markAsReady(
 
   if (queueError) throw queueError
 
-  // 2. Update item status back to available and update its condition
-  const updatePayload: any = { status: 'available' }
+  // 2. Update item condition/status. The item only becomes available when no units remain in the cycle.
+  const updatePayload: any = {}
   if (condition && condition !== 'damaged') {
     updatePayload.condition = condition
   }
   
   if (condition === 'damaged') {
-      updatePayload.status = 'maintenance'
+    updatePayload.status = 'maintenance'
   }
-
-  const { error: itemError } = await supabase
-    .from('items')
-    .update(updatePayload)
-    .eq('id', itemId)
-
-  if (itemError) throw itemError
 
   // 3. Increment available stock for the variant (if it's not damaged)
   if (queueEntry?.item_variant_id && condition !== 'damaged') {
@@ -111,6 +104,27 @@ export async function markAsReady(
       p_quantity: 1
     })
     if (stockErr) throw stockErr
+  }
+
+  const { count: activeQueueCount, error: activeQueueError } = await supabase
+    .from('washing_queue')
+    .select('id', { count: 'exact', head: true })
+    .eq('item_id', itemId)
+    .neq('stage', 'ready')
+
+  if (activeQueueError) throw activeQueueError
+  if (condition !== 'damaged' && (activeQueueCount ?? 0) === 0) {
+    updatePayload.status = 'available'
+  }
+
+  if (Object.keys(updatePayload).length > 0) {
+    const { error: itemError } = await supabase
+      .from('items')
+      .update(updatePayload)
+      .eq('id', itemId)
+      .eq('branch_id', branchId)
+
+    if (itemError) throw itemError
   }
 
   // 4. Create a notification for ready status
@@ -153,4 +167,3 @@ export async function updateQueueStage(
 
   return { success: true }
 }
-

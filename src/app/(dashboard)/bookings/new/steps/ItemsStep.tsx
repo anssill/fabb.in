@@ -31,11 +31,13 @@ interface SearchResult {
     colour: string | null
     total_stock: number
     available_stock: number
+    price_override: number | null
   }[]
 }
 
 export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStockLimit = false }: Props) {
-  const { staff } = useAppStore()
+  const { staff, activeBranch } = useAppStore()
+  const branchId = activeBranch?.id || staff?.branch_id
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -47,7 +49,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
 
   // Fetch overlapping booking quantities for selected dates
   const fetchAvailability = async () => {
-    if (!staff?.business_id || !dates.pickup_date || !dates.return_date) return
+    if (!staff?.business_id || !branchId || !dates.pickup_date || !dates.return_date) return
     setCheckingAvailability(true)
     try {
       const supabase = createClient()
@@ -61,6 +63,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
         .from('booking_items')
         .select('item_variant_id, quantity, booking:bookings!inner(status, pickup_date, return_date)')
         .eq('booking.business_id', staff.business_id)
+        .eq('booking.branch_id', branchId)
         .not('booking.status', 'in', '("cancelled","closed")')
         .lte('booking.pickup_date', dates.return_date)
         .gte('booking.return_date', pickupMinus1)
@@ -99,7 +102,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
 
   useEffect(() => {
     fetchAvailability()
-    }, [dates.pickup_date, dates.return_date, staff?.business_id, bufferDays])
+    }, [dates.pickup_date, dates.return_date, staff?.business_id, branchId, bufferDays])
 
   // Synchronize variantTotalStocks when results change
   useEffect(() => {
@@ -152,15 +155,16 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
   }, [items, variantTotalStocks])
 
   const handleSearch = async (rawQuery?: string) => {
-    if (!staff?.business_id) return
+    if (!staff?.business_id || !branchId) return
     const query = (rawQuery ?? searchQuery).trim()
     setSearching(true)
     try {
       const supabase = createClient()
       let dbQuery = supabase
         .from('items')
-        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, colour, total_stock, available_stock)')
+        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, colour, total_stock, available_stock, price_override)')
         .eq('business_id', staff.business_id)
+        .eq('branch_id', branchId)
         .eq('is_active', true)
         .limit(10)
 
@@ -189,13 +193,13 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
   }
 
   useEffect(() => {
-    if (!staff?.business_id) return
+    if (!staff?.business_id || !branchId) return
     handleSearch('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff?.business_id])
+  }, [staff?.business_id, branchId])
 
   useEffect(() => {
-    if (!staff?.business_id) return
+    if (!staff?.business_id || !branchId) return
     if (searchQuery.trim().length === 0) return
 
     const delayDebounce = setTimeout(() => {
@@ -204,7 +208,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
 
     return () => clearTimeout(delayDebounce)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, staff?.business_id])
+  }, [searchQuery, staff?.business_id, branchId])
 
   const addItem = (item: SearchResult, variant: SearchResult['item_variants'][0]) => {
     const exists = items.find((i) => i.variant_id === variant.id)
@@ -235,7 +239,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
         sku: item.sku || undefined,
         size: variant.size,
         colour: variant.colour || undefined,
-        price: item.price,
+        price: Number(variant.price_override ?? item.price),
         quantity: 1,
         cover_image_url: item.cover_image_url,
       },

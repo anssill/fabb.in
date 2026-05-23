@@ -32,9 +32,69 @@ export async function createNewBookingFlow(data: BookingData) {
   const supabase = await createClient()
   
   try {
+    const { data: staffContext, error: staffContextErr } = await supabase
+      .from('staff')
+      .select('id, business_id, branch_id, status')
+      .eq('id', data.staffId)
+      .eq('business_id', data.businessId)
+      .single()
+
+    if (staffContextErr || !staffContext || staffContext.status !== 'active') {
+      throw new Error('Could not verify active staff context')
+    }
+
+    if (staffContext.branch_id !== data.branchId) {
+      throw new Error('Active branch changed. Please refresh and create the booking again.')
+    }
+
+    const variantIds = data.items.map((item) => item.variant_id).filter(Boolean)
+    if (variantIds.length > 0) {
+      const { data: branchVariants, error: branchVariantErr } = await supabase
+        .from('item_variants')
+        .select('id, items!inner(branch_id, business_id)')
+        .in('id', variantIds)
+        .eq('items.business_id', data.businessId)
+        .eq('items.branch_id', data.branchId)
+
+      if (branchVariantErr) throw branchVariantErr
+
+      const validVariantIds = new Set((branchVariants || []).map((variant) => variant.id))
+      if (variantIds.some((variantId) => !validVariantIds.has(variantId))) {
+        throw new Error('One or more selected items are not in the active branch.')
+      }
+    }
+
     // 1. Upsert customer
     let customerId = data.customer.id
-    if (!customerId) {
+    if (customerId) {
+      const { data: existingCustomer, error: existingCustomerErr } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('id', customerId)
+        .eq('business_id', data.businessId)
+        .eq('branch_id', data.branchId)
+        .single()
+
+      if (existingCustomerErr || !existingCustomer) {
+        throw new Error('Selected customer is not in the active branch.')
+      }
+
+      const customerUpdates = {
+        name: data.customer.name,
+        email: data.customer.email || undefined,
+        address: data.customer.address || undefined,
+        id_type: data.customer.id_type || undefined,
+        id_number: data.customer.id_number || undefined,
+        id_proof_url: data.customer.id_proof_url || undefined,
+      }
+
+      await supabase
+        .from('customers')
+        .update(customerUpdates)
+        .eq('id', customerId)
+        .eq('business_id', data.businessId)
+        .eq('branch_id', data.branchId)
+    } else {
       const { data: existingCustomer } = await supabase
         .from('customers')
         .select('id')
@@ -91,6 +151,13 @@ export async function createNewBookingFlow(data: BookingData) {
 
     // 3. Create booking
     const rentalDays = calculateBillableRentalDays(data.dates.pickup_date, data.dates.return_date)
+    const customerRequests = Array.isArray(data.dates.customer_requests)
+      ? data.dates.customer_requests.map((request: string) => request.trim()).filter(Boolean)
+      : []
+    const bookingNotes = [
+      customerRequests.length > 0 ? `Customer requests: ${customerRequests.join(', ')}` : null,
+      data.dates.notes?.trim() || null,
+    ].filter(Boolean).join('\n\n') || null
 
     const { data: booking, error: bookingErr } = await supabase
       .from('bookings')
@@ -115,7 +182,7 @@ export async function createNewBookingFlow(data: BookingData) {
         balance_due: Math.max(0, data.pricing.total_amount - data.payment.advance_amount - (data.payment.deposit_amount ?? 0)),
         occasion: data.dates.occasion || null,
         booking_source: data.dates.booking_source || 'walk_in',
-        notes: data.dates.notes || null,
+        notes: bookingNotes,
         physical_bill_number: data.payment.physical_bill_number?.trim() || null,
       })
       .select('id')
@@ -140,10 +207,11 @@ export async function createNewBookingFlow(data: BookingData) {
     // 4.1 Update Stock and Sync to Notion
     for (const item of data.items) {
       // Atomic stock reservation
-      await supabase.rpc('lock_item_stock', {
+      const { error: lockErr } = await supabase.rpc('lock_item_stock', {
         p_variant_id: item.variant_id,
         p_quantity: item.quantity,
       })
+      if (lockErr) throw lockErr
 
       // Fetch all variants for this item to generate updated Notion summary
       const { data: variants } = await supabase

@@ -39,11 +39,11 @@ export async function PATCH(
 
     const { data: staff } = await supabaseAdmin
       .from('staff')
-      .select('id, business_id, status')
+      .select('id, business_id, branch_id, status')
       .eq('id', user.id)
       .single()
 
-    if (!staff || staff.status !== 'active') {
+    if (!staff || staff.status !== 'active' || !staff.branch_id) {
       return NextResponse.json({ error: 'Unauthorized staff' }, { status: 403 })
     }
 
@@ -55,6 +55,7 @@ export async function PATCH(
       .select('*, customer:customers(name, phone), booking_items(*)')
       .eq('id', bookingId)
       .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
       .single()
 
     if (fetchErr) throw new Error(formatError(fetchErr))
@@ -88,19 +89,21 @@ export async function PATCH(
           queueStage = 'maintenance'
         }
 
-        // D. Add to washing queue
-        await supabaseAdmin.from('washing_queue').insert({
-          business_id: bookingWithItems.business_id,
-          branch_id: bookingWithItems.branch_id,
-          item_id: item.item_id,
-          item_variant_id: item.item_variant_id,
-          booking_id: bookingId,
-          added_by: staffId,
-          stage: queueStage,
-          priority: 'normal',
-          notes: notes.trim() || null,
-          condition_after: condition // Store the return condition as the starting point
-        })
+        // D. Add one washing queue row per physical unit so every ready click restores one unit.
+        const queueRows = Array.from({ length: Math.max(1, Number(item.quantity) || 1) }, () => ({
+            business_id: bookingWithItems.business_id,
+            branch_id: bookingWithItems.branch_id,
+            item_id: item.item_id,
+            item_variant_id: item.item_variant_id,
+            booking_id: bookingId,
+            added_by: staffId,
+            stage: queueStage,
+            priority: 'normal',
+            notes: notes.trim() || null,
+            condition_after: condition
+          }))
+
+        await supabaseAdmin.from('washing_queue').insert(queueRows)
 
         // E. Update item lifecycle status
         await supabaseAdmin.from('items')
@@ -129,6 +132,7 @@ export async function PATCH(
       })
       .eq('id', bookingId)
       .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
       .select('*, customer:customers(name, phone), booking_items(item_name, size)')
       .single()
 

@@ -51,6 +51,7 @@ export interface BookingDates {
   fitting_date?: string
   occasion?: string
   booking_source?: 'walk_in' | 'phone' | 'whatsapp' | 'referral' | 'repeat'
+  customer_requests?: string[]
   notes?: string
 }
 
@@ -264,7 +265,7 @@ export default function NewBookingPage() {
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
         {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
         {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} bufferDays={bufferDays} enforceStockLimit={enforceStockLimit} />}
-        {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} dates={dates} />}
+        {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} setItems={setItems} dates={dates} />}
         {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} minAdvancePct={minAdvancePct} requirePhysicalBill={requirePhysicalBill} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}
       </Card>

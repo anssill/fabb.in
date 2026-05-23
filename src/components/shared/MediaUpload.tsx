@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Upload, X, Loader2, ImageIcon, AlertCircle } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
@@ -41,8 +40,6 @@ export function MediaUpload({
     setError(null)
 
     try {
-      const supabase = createClient()
-      
       // Process files one by one (or in parallel)
       for (const file of acceptedFiles) {
         // 1. Compress image
@@ -61,23 +58,21 @@ export function MediaUpload({
           }
         }
 
-        // 2. Upload to Supabase
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
-        const filePath = `${path}/${fileName}`
+        // 2. Upload through the server so staff uploads are not blocked by storage RLS.
+        const formData = new FormData()
+        formData.append('bucket', bucket)
+        formData.append('path', path)
+        formData.append('file', fileToUpload)
 
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, fileToUpload)
+        const response = await fetch('/api/uploads/media', {
+          method: 'POST',
+          body: formData,
+        })
 
-        if (uploadError) throw uploadError
+        const data = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(data?.error || 'Failed to upload image')
 
-        // 3. Get Public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(filePath)
-
-        onUploadComplete(publicUrl)
+        onUploadComplete(data.publicUrl)
       }
       
       toast.success(acceptedFiles.length > 1 ? 'Images uploaded successfully' : 'Image uploaded successfully')
@@ -185,4 +180,3 @@ export function MediaUpload({
     </div>
   )
 }
-

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CalendarDays, Calendar as CalendarIcon } from 'lucide-react'
+import { CalendarDays, Calendar as CalendarIcon, Plus, X } from 'lucide-react'
 import type { BookingDates } from '../page'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -19,11 +19,52 @@ interface Props {
   setDates: (d: BookingDates) => void
 }
 
+const CUSTOMER_REQUEST_PRESETS = [
+  'No pant needed',
+  'Add pant',
+  'Tight fitting',
+  'Loose fitting',
+  'Alter length',
+  'Extra trial',
+  'Early pickup',
+  'Home delivery',
+  'Matching accessories',
+  'Urgent wash',
+]
+
 export function DatesStep({ dates, setDates }: Props) {
   const [isEventOpen, setIsEventOpen] = useState(false)
   const [isFittingOpen, setIsFittingOpen] = useState(false)
   const [isPickupOpen, setIsPickupOpen] = useState(false)
   const [isReturnOpen, setIsReturnOpen] = useState(false)
+  const [customRequest, setCustomRequest] = useState('')
+
+  const selectedRequests = dates.customer_requests || []
+
+  const toggleRequest = (request: string) => {
+    setDates({
+      ...dates,
+      customer_requests: selectedRequests.includes(request)
+        ? selectedRequests.filter((item) => item !== request)
+        : [...selectedRequests, request],
+    })
+  }
+
+  const addCustomRequest = () => {
+    const request = customRequest.trim()
+    if (!request) return
+    if (!selectedRequests.includes(request)) {
+      setDates({ ...dates, customer_requests: [...selectedRequests, request] })
+    }
+    setCustomRequest('')
+  }
+
+  const removeRequest = (request: string) => {
+    setDates({
+      ...dates,
+      customer_requests: selectedRequests.filter((item) => item !== request),
+    })
+  }
 
   // Local timezone-safe parsing to prevent day shifting
   const parseLocalDate = (dateStr: string | undefined | null): Date | undefined => {
@@ -281,6 +322,62 @@ export function DatesStep({ dates, setDates }: Props) {
                 <SelectItem value="repeat">Repeat Customer</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+          <div className="space-y-1">
+            <Label>Customer requests <span className="text-muted-foreground">(optional)</span></Label>
+            <p className="text-xs text-muted-foreground">Select common requests or add a staff custom request.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {CUSTOMER_REQUEST_PRESETS.map((request) => {
+              const isSelected = selectedRequests.includes(request)
+              return (
+                <button
+                  key={request}
+                  type="button"
+                  onClick={() => toggleRequest(request)}
+                  className={`rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input bg-background text-foreground hover:border-primary hover:text-primary'
+                  }`}
+                >
+                  {request}
+                </button>
+              )
+            })}
+          </div>
+          {selectedRequests.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+              {selectedRequests.map((request) => (
+                <span key={request} className="inline-flex items-center gap-1 rounded-md bg-background px-2 py-1 text-xs font-medium text-foreground ring-1 ring-border">
+                  {request}
+                  <button type="button" onClick={() => removeRequest(request)} className="text-muted-foreground hover:text-destructive">
+                    <X className="h-3 w-3" />
+                    <span className="sr-only">Remove {request}</span>
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={customRequest}
+              onChange={(e) => setCustomRequest(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addCustomRequest()
+                }
+              }}
+              placeholder="Add custom request..."
+            />
+            <Button type="button" variant="outline" onClick={addCustomRequest} disabled={!customRequest.trim()}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
           </div>
         </div>
 
