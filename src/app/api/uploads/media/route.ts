@@ -33,12 +33,16 @@ export async function POST(req: NextRequest) {
     const admin = getSupabaseAdmin()
     const { data: staff, error: staffError } = await admin
       .from('staff')
-      .select('id, status')
+      .select('id, business_id, status')
       .eq('id', user.id)
       .single()
 
     if (staffError || !staff || staff.status !== 'active') {
       return NextResponse.json({ error: 'Unauthorized staff' }, { status: 403 })
+    }
+
+    if (!path.startsWith(`${staff.business_id}/`)) {
+      return NextResponse.json({ error: 'Upload path does not match staff business' }, { status: 403 })
     }
 
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}-${sanitizeFileName(file.name)}`

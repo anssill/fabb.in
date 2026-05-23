@@ -83,6 +83,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
           <CustomerDocumentSection 
             customerId={customer.id} 
+            businessId={staff.business_id}
             initialIdProofUrl={customer.id_proof_url}
             initialProfilePhotoUrl={customer.profile_photo_url}
           />

@@ -587,7 +587,7 @@ export default function PickupPage() {
             
             <MediaUpload
               bucket="images"
-              path={`bookings/${id}/pickup`}
+              path={`${booking.business_id}/bookings/${id}/pickup`}
               value={pickupPhotos}
               onUploadComplete={(url) => setPickupPhotos(prev => [...prev, url])}
               onRemove={(url) => setPickupPhotos(prev => prev.filter(p => p !== url))}

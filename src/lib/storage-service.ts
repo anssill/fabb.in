@@ -1,32 +1,27 @@
 import { createClient } from '@/lib/supabase/client'
 
 export class StorageService {
-  static async uploadItemImage(businessId: string, file: File): Promise<string> {
-    const supabase = createClient()
-    
-    // Generate a unique file path: images/{business_id}/items/{timestamp}_{filename}
-    const timestamp = Date.now()
-    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`
-    const filePath = `${businessId}/items/${fileName}`
+  private static async uploadMedia(bucket: string, path: string, file: File, fallbackMessage: string): Promise<string> {
+    const formData = new FormData()
+    formData.append('bucket', bucket)
+    formData.append('path', path)
+    formData.append('file', file)
 
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      })
+    const response = await fetch('/api/uploads/media', {
+      method: 'POST',
+      body: formData,
+    })
 
-    if (error) {
-      console.error('Upload Error:', error)
-      throw new Error(`Failed to upload image: ${error.message}`)
+    const data = await response.json().catch(() => null)
+    if (!response.ok) {
+      throw new Error(data?.error || fallbackMessage)
     }
 
-    // Get the public URL for the uploaded image
-    const { data: publicUrlData } = supabase.storage
-      .from('images')
-      .getPublicUrl(data.path)
+    return data.publicUrl
+  }
 
-    return publicUrlData.publicUrl
+  static async uploadItemImage(businessId: string, file: File): Promise<string> {
+    return this.uploadMedia('images', `${businessId}/items`, file, 'Failed to upload image')
   }
 
   static async uploadCustomerID(businessId: string, file: File): Promise<string> {
@@ -48,56 +43,11 @@ export class StorageService {
   }
 
   static async uploadCompanyLogo(businessId: string, file: File): Promise<string> {
-    const supabase = createClient()
-    
-    // Generate a unique file path: images/{business_id}/logos/{timestamp}_{filename}
-    const timestamp = Date.now()
-    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`
-    const filePath = `${businessId}/logos/${fileName}`
-
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      })
-
-    if (error) {
-      console.error('Logo Upload Error:', error)
-      throw new Error(`Failed to upload logo: ${error.message}`)
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('images')
-      .getPublicUrl(data.path)
-
-    return publicUrlData.publicUrl
+    return this.uploadMedia('images', `${businessId}/logos`, file, 'Failed to upload logo')
   }
 
   static async uploadStaffPhoto(businessId: string, staffId: string, file: File): Promise<string> {
-    const supabase = createClient()
-
-    const timestamp = Date.now()
-    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')}`
-    const filePath = `${businessId}/staff/${staffId}/${fileName}`
-
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      })
-
-    if (error) {
-      console.error('Staff photo upload error:', error)
-      throw new Error(`Failed to upload photo: ${error.message}`)
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('images')
-      .getPublicUrl(data.path)
-
-    return publicUrlData.publicUrl
+    return this.uploadMedia('images', `${businessId}/staff/${staffId}`, file, 'Failed to upload photo')
   }
 
   static async deleteImage(imageUrl: string): Promise<void> {

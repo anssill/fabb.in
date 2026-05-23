@@ -9,12 +9,14 @@ import { toast } from 'sonner'
 
 interface CustomerDocumentSectionProps {
   customerId: string
+  businessId: string
   initialIdProofUrl?: string
   initialProfilePhotoUrl?: string
 }
 
 export function CustomerDocumentSection({
   customerId,
+  businessId,
   initialIdProofUrl,
   initialProfilePhotoUrl
 }: CustomerDocumentSectionProps) {
@@ -46,7 +48,7 @@ export function CustomerDocumentSection({
         <CardContent>
           <MediaUpload
             bucket="documents"
-            path={`customers/${customerId}/id_proof`}
+            path={`${businessId}/customers/${customerId}/id_proof`}
             value={idProofUrl}
             onUploadComplete={(url) => {
               setIdProofUrl(url)
@@ -70,7 +72,7 @@ export function CustomerDocumentSection({
         <CardContent>
           <MediaUpload
             bucket="images"
-            path={`customers/${customerId}/profile`}
+            path={`${businessId}/customers/${customerId}/profile`}
             value={profilePhotoUrl}
             onUploadComplete={(url) => {
               setProfilePhotoUrl(url)
