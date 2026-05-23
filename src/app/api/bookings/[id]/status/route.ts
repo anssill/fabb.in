@@ -43,7 +43,7 @@ export async function PATCH(
       .eq('id', user.id)
       .single()
 
-    if (!staff || staff.status === 'suspended' || staff.status === 'rejected') {
+    if (!staff || staff.status !== 'active') {
       return NextResponse.json({ error: 'Unauthorized staff' }, { status: 403 })
     }
 
@@ -192,4 +192,3 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
-

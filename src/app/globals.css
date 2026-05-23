@@ -104,3 +104,48 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  body:has([data-thermal-receipt]) * {
+    visibility: hidden;
+  }
+
+  [data-thermal-receipt],
+  [data-thermal-receipt] * {
+    visibility: visible;
+  }
+
+  [data-thermal-receipt] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;
+    max-width: 72mm;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  [data-thermal-receipt] .text-muted-foreground,
+  [data-thermal-receipt] .text-foreground,
+  [data-thermal-receipt] .text-emerald-600,
+  [data-thermal-receipt] .dark\:text-emerald-400 {
+    color: #000 !important;
+  }
+
+  [data-thermal-receipt] .rounded-lg,
+  [data-thermal-receipt] .rounded-md,
+  [data-thermal-receipt] .rounded-full {
+    border-radius: 0 !important;
+  }
+}

@@ -36,7 +36,7 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {/* Receipt / Summary */}
-        <div className="border rounded-lg p-4 space-y-4 bg-muted/40">
+        <div data-thermal-receipt className="border rounded-lg p-4 space-y-4 bg-muted/40">
           {/* Header */}
           <div className="text-center pb-3 border-b border-dashed">
             <p className="font-bold text-lg text-foreground">Fabb.booking</p>

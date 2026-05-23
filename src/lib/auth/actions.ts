@@ -115,7 +115,7 @@ export async function signUpAction(formData: SignUpInput) {
         email,
         name: fullName,
         role: 'owner',
-        status: 'approved',
+        status: 'active',
         setup_completed: false
       });
 
