@@ -174,7 +174,7 @@ function NavContent({
       {/* Bottom Section */}
       <div className="px-3 py-2">
         <ul className="space-y-1">
-          {BOTTOM_ITEMS.map((item) => {
+          {BOTTOM_ITEMS.filter(isVisible).map((item) => {
             const Icon = item.icon
             const isActive = pathname.startsWith(item.href)
             const badgeCount = item.label === 'Notifications' ? unreadNotifications : undefined

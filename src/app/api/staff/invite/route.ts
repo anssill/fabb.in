@@ -6,9 +6,10 @@ import { z } from 'zod'
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
+  password: z.string().min(8),
   role: z.enum(['manager', 'staff']),
-  branchId: z.string().uuid(),
   phone: z.string().optional(),
+  permissions: z.record(z.string(), z.boolean()).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -20,14 +21,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validated.error.flatten().fieldErrors }, { status: 400 })
     }
 
-    const { email, name, role, branchId, phone } = validated.data
+    const { email, name, password, role, phone, permissions } = validated.data
 
     // 1. Check if user already exists in staff table
     const { data: existingStaff } = await supabaseAdmin
       .from('staff')
       .select('id')
       .eq('email', email.toLowerCase())
-      .single()
+      .maybeSingle()
 
     if (existingStaff) {
       return NextResponse.json({ error: 'Staff member already exists with this email' }, { status: 400 })
@@ -39,31 +40,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
     }
 
-    // 3. Invite Auth User
-    // We use the Supabase Admin API to trigger a native invite email
-    const redirectTo = `${req.nextUrl.origin}/login`
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      email.toLowerCase(),
-      {
-        redirectTo,
-        data: { name, business_id: bizId },
-      }
-    )
+    // 3. Create Auth User with the admin-chosen password
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password,
+      email_confirm: true,
+      user_metadata: { name, business_id: bizId },
+    })
 
     if (authError || !authUser.user) {
       return NextResponse.json({ error: authError?.message || 'Failed to create auth invite' }, { status: 500 })
     }
 
-    // 4. Create Staff Record with status 'invited'
+    // 4. Create Staff Record. Staff are not linked to a branch here.
     const { error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUser.user.id,
       business_id: bizId,
-      branch_id: branchId,
+      branch_id: null,
       email: email.toLowerCase(),
       name,
       phone: phone?.trim() || null,
       role,
-      status: 'invited',
+      status: 'active',
+      permissions: permissions || {},
       setup_completed: true, // They are invited, not setting up a new business
     })
 
@@ -75,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Staff invited successfully. They can log in with their email OTP.' 
+      message: 'Staff created successfully. They can log in with their email and password.' 
     })
 
   } catch (error) {

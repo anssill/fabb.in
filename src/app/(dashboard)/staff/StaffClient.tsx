@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, UserCog, Search, Mail, Phone, MapPin, MoreVertical, Pencil, UserMinus, Shield, Check, X as XIcon } from 'lucide-react'
+import { Plus, UserCog, Search, Mail, Phone, MoreVertical, Pencil, UserMinus, Shield, Check, X as XIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -30,26 +30,18 @@ interface StaffMember {
   phone: string | null
   role: string
   status: string
-  branch_id: string | null
-  branch?: { name: string } | any
   last_login: string | null
   permissions?: Record<string, boolean> | null
 }
 
-interface Branch {
-  id: string
-  name: string
-}
-
 interface StaffClientProps {
   initialStaff: StaffMember[]
-  branches: Branch[]
   businessId: string
   currentUserId: string
   currentUserRole: string
 }
 
-export function StaffClient({ initialStaff, branches, businessId, currentUserId, currentUserRole }: StaffClientProps) {
+export function StaffClient({ initialStaff, businessId, currentUserId, currentUserRole }: StaffClientProps) {
   const router = useRouter()
   const supabase = createClient()
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
@@ -62,16 +54,16 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
   const [inviteData, setInviteData] = useState({
     email: '',
     name: '',
+    password: '',
     role: 'staff',
-    branchId: branches[0]?.id || '',
     phone: '',
+    permissions: getDefaultPermissions() as Record<string, boolean>,
   })
 
   const [editData, setEditData] = useState({
     name: '',
     phone: '',
     role: '',
-    branchId: '',
     status: '',
     permissions: getDefaultPermissions() as Record<string, boolean>,
   })
@@ -85,8 +77,12 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
   const canManage = ['owner', 'manager'].includes(currentUserRole)
 
   async function handleInvite() {
-    if (!inviteData.email || !inviteData.name || !inviteData.branchId) {
+    if (!inviteData.email || !inviteData.name || !inviteData.password) {
       toast.error('Please fill in all required fields')
+      return
+    }
+    if (inviteData.password.length < 8) {
+      toast.error('Password must be at least 8 characters')
       return
     }
 
@@ -103,11 +99,11 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
 
       const result = await safeJsonParse(res)
 
-      if (!res.ok) throw new Error(result.error || 'Failed to invite staff')
+      if (!res.ok) throw new Error(result.error || 'Failed to create staff')
 
-      toast.success('Staff invited successfully!')
+      toast.success('Staff created successfully!')
       setIsInviteOpen(false)
-      setInviteData({ email: '', name: '', role: 'staff', branchId: branches[0]?.id || '', phone: '' })
+      setInviteData({ email: '', name: '', password: '', role: 'staff', phone: '', permissions: getDefaultPermissions() as Record<string, boolean> })
       router.refresh()
     } catch (error: any) {
       toast.error(error.message)
@@ -125,7 +121,6 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
       name: member.name || '',
       phone: member.phone || '',
       role: member.role,
-      branchId: member.branch_id || '',
       status: member.status,
       permissions: { ...memberPerms },
     })
@@ -156,7 +151,6 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
           name: editData.name,
           phone: editData.phone,
           role: editData.role,
-          branch_id: editData.branchId,
           status: editData.status,
           permissions: editData.permissions,
         })
@@ -211,7 +205,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
         {canManage && (
           <Button onClick={() => setIsInviteOpen(true)} className="h-10 px-6">
             <Plus className="w-4 h-4 mr-2" />
-            Invite Staff
+            Add Staff
           </Button>
         )}
       </div>
@@ -219,7 +213,6 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStaff.map((member) => {
           const initials = member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
-          const branchName = branches.find(b => b.id === member.branch_id)?.name || 'No branch'
           
           return (
             <Card key={member.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -273,10 +266,6 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                       {member.phone}
                     </div>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <MapPin className="w-4 h-4 text-slate-400" />
-                    {branchName}
-                  </div>
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium tracking-wider">
@@ -301,9 +290,9 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Invite New Staff</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Add Staff</DialogTitle>
             <DialogDescription>
-              Create a new user account for your team member.
+              Create a staff account with email, password, role, and permissions.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 py-4">
@@ -329,6 +318,17 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="invite-password">Password</Label>
+              <Input
+                id="invite-password"
+                type="text"
+                placeholder="Minimum 8 characters"
+                value={inviteData.password}
+                onChange={e => setInviteData(p => ({...p, password: e.target.value}))}
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="invite-phone">Phone Number <span className="text-slate-400">(optional)</span></Label>
               <Input 
                 id="invite-phone" 
@@ -339,31 +339,48 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                 className="rounded-xl border-slate-200"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Select value={inviteData.role} onValueChange={v => setInviteData(p => ({...p, role: v}))}>
-                  <SelectTrigger className="rounded-xl border-slate-200">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Branch</Label>
-                <Select value={inviteData.branchId} onValueChange={v => setInviteData(p => ({...p, branchId: v}))}>
-                  <SelectTrigger className="rounded-xl border-slate-200">
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {branches.map(b => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={inviteData.role} onValueChange={v => setInviteData(p => ({...p, role: v}))}>
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Permissions</Label>
+              <div className="space-y-1 max-h-64 overflow-y-auto rounded-xl border border-slate-100 p-2">
+                {PERMISSIONS.map((perm) => {
+                  const isEnabled = inviteData.permissions[perm.key] !== false
+                  return (
+                    <button
+                      key={perm.key}
+                      type="button"
+                      onClick={() => setInviteData(prev => ({
+                        ...prev,
+                        permissions: {
+                          ...prev.permissions,
+                          [perm.key]: !isEnabled,
+                        },
+                      }))}
+                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
+                        isEnabled ? 'bg-indigo-50 text-indigo-900' : 'bg-slate-50 text-slate-500'
+                      }`}
+                    >
+                      <span>
+                        <span className="block text-sm font-semibold">{perm.label}</span>
+                        <span className="block text-xs text-slate-500">{perm.description}</span>
+                      </span>
+                      <span className={`grid h-6 w-6 place-items-center rounded-full ${isEnabled ? 'bg-[#4f46e5] text-white' : 'bg-slate-200 text-slate-400'}`}>
+                        {isEnabled ? <Check className="h-3.5 w-3.5" /> : <XIcon className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -374,7 +391,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
               disabled={isSubmitting} 
               className="flex-1 sm:flex-none"
             >
-              {isSubmitting ? 'Sending Invite...' : 'Send Invitation'}
+              {isSubmitting ? 'Creating Staff...' : 'Create Staff'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -408,33 +425,18 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                 className="rounded-xl border-slate-200"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Select value={editData.role} onValueChange={v => setEditData(p => ({...p, role: v}))}>
-                  <SelectTrigger className="rounded-xl border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="owner">Owner</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Branch</Label>
-                <Select value={editData.branchId} onValueChange={v => setEditData(p => ({...p, branchId: v}))}>
-                  <SelectTrigger className="rounded-xl border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {branches.map(b => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={editData.role} onValueChange={v => setEditData(p => ({...p, role: v}))}>
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>

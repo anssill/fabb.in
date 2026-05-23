@@ -17,6 +17,7 @@ export const PERMISSION_KEYS = [
   'manage_analytics',
   'manage_expenses',
   'manage_staff',
+  'manage_settings',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -37,6 +38,7 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'manage_analytics', label: 'Analytics', description: 'Access reports and analytics' },
   { key: 'manage_expenses', label: 'Expenses', description: 'Record and view business expenses' },
   { key: 'manage_staff', label: 'Staff Management', description: 'View and manage team members' },
+  { key: 'manage_settings', label: 'Settings', description: 'Access business and app settings' },
 ]
 
 /** Maps a sidebar href to the permission key required */
@@ -50,6 +52,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/analytics': 'manage_analytics',
   '/expenses': 'manage_expenses',
   '/staff': 'manage_staff',
+  '/settings': 'manage_settings',
 }
 
 /**
@@ -93,8 +96,8 @@ export function canAccessRoute(
   // Owners and super_admins can access everything
   if (role === 'owner' || role === 'super_admin') return true
 
-  // Settings and notifications are always accessible
-  if (pathname.startsWith('/settings') || pathname.startsWith('/notifications')) return true
+  // Notifications are always accessible
+  if (pathname.startsWith('/notifications')) return true
 
   // Find the matching route prefix
   const matchedRoute = Object.keys(ROUTE_PERMISSION_MAP).find(
