@@ -11,8 +11,34 @@ export async function switchActiveBranch(branchId: string) {
     throw new Error('Not authenticated')
   }
 
-  // Use admin client to bypass RLS for updating staff branch_id
   const adminClient = getSupabaseAdmin()
+  const { data: staff, error: staffError } = await adminClient
+    .from('staff')
+    .select('business_id, role, accessible_branch_ids')
+    .eq('id', user.id)
+    .single()
+
+  if (staffError || !staff?.business_id) {
+    throw new Error('Could not verify staff branch access')
+  }
+
+  const { data: branch, error: branchError } = await adminClient
+    .from('branches')
+    .select('id, business_id')
+    .eq('id', branchId)
+    .eq('business_id', staff.business_id)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (branchError || !branch) {
+    throw new Error('Branch not found or inactive')
+  }
+
+  const allowedBranchIds = Array.isArray(staff.accessible_branch_ids) ? staff.accessible_branch_ids : []
+  const hasFullBranchAccess = staff.role === 'owner' || staff.role === 'super_admin' || allowedBranchIds.length === 0
+  if (!hasFullBranchAccess && !allowedBranchIds.includes(branchId)) {
+    throw new Error('You do not have access to this branch')
+  }
   
   const { error } = await adminClient
     .from('staff')

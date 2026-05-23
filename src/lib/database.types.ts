@@ -1304,6 +1304,7 @@ export type Database = {
       }
       staff: {
         Row: {
+          accessible_branch_ids: string[] | null
           branch_id: string | null
           business_id: string | null
           created_at: string
@@ -1327,6 +1328,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accessible_branch_ids?: string[] | null
           branch_id?: string | null
           business_id?: string | null
           created_at?: string
@@ -1350,6 +1352,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accessible_branch_ids?: string[] | null
           branch_id?: string | null
           business_id?: string | null
           created_at?: string

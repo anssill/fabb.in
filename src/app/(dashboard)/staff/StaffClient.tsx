@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, UserCog, Search, Mail, Phone, MoreVertical, Pencil, UserMinus, Shield, Check, X as XIcon } from 'lucide-react'
+import { Plus, UserCog, Search, Mail, Phone, MoreVertical, Pencil, UserMinus, Shield, Building2 } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -14,7 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { safeJsonParse } from '@/lib/api-utils'
-import { PERMISSIONS, getDefaultPermissions } from '@/lib/permissions'
+import { getDefaultPermissions } from '@/lib/permissions'
+import { PermissionAccessEditor, type StaffBranchOption } from './PermissionAccessEditor'
 
 const ROLE_COLORS: Record<string, string> = {
   owner: 'bg-indigo-50 text-indigo-700 border-indigo-100',
@@ -29,17 +30,54 @@ interface StaffMember {
   phone: string | null
   role: string
   status: string
+  branch_id: string | null
+  accessible_branch_ids: string[] | null
   last_login: string | null
   permissions?: Record<string, boolean> | null
 }
 
 interface StaffClientProps {
   initialStaff: StaffMember[]
+  branches: StaffBranchOption[]
   currentUserId: string
   currentUserRole: string
 }
 
-export function StaffClient({ initialStaff, currentUserId, currentUserRole }: StaffClientProps) {
+function uniqueBranchIds(ids: string[]) {
+  return Array.from(new Set(ids.filter(Boolean)))
+}
+
+function getDefaultBranchId(branches: StaffBranchOption[]) {
+  return branches.find(branch => branch.is_default)?.id || branches[0]?.id || null
+}
+
+function getInitialBranchAccess(member: Partial<StaffMember>, branches: StaffBranchOption[]) {
+  const validIds = new Set(branches.map(branch => branch.id))
+  const explicitIds = uniqueBranchIds(member.accessible_branch_ids || []).filter(id => validIds.has(id))
+
+  if (explicitIds.length > 0) {
+    return {
+      branchIds: explicitIds,
+      primaryBranchId: member.branch_id && explicitIds.includes(member.branch_id) ? member.branch_id : explicitIds[0],
+    }
+  }
+
+  if ((member.role === 'owner' || member.role === 'super_admin') && branches.length > 0) {
+    const allIds = branches.map(branch => branch.id)
+    return {
+      branchIds: allIds,
+      primaryBranchId: member.branch_id && allIds.includes(member.branch_id) ? member.branch_id : getDefaultBranchId(branches),
+    }
+  }
+
+  const fallbackId = member.branch_id && validIds.has(member.branch_id) ? member.branch_id : getDefaultBranchId(branches)
+  return {
+    branchIds: fallbackId ? [fallbackId] : [],
+    primaryBranchId: fallbackId,
+  }
+}
+
+export function StaffClient({ initialStaff, branches, currentUserId, currentUserRole }: StaffClientProps) {
   const router = useRouter()
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,6 +93,8 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
     role: 'staff',
     phone: '',
     permissions: getDefaultPermissions() as Record<string, boolean>,
+    branch_id: getDefaultBranchId(branches),
+    accessible_branch_ids: getDefaultBranchId(branches) ? [getDefaultBranchId(branches)!] : [] as string[],
   })
 
   const [editData, setEditData] = useState({
@@ -63,6 +103,8 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
     role: '',
     status: '',
     permissions: getDefaultPermissions() as Record<string, boolean>,
+    branch_id: null as string | null,
+    accessible_branch_ids: [] as string[],
   })
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false)
 
@@ -77,6 +119,21 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
 
   const canManage = ['owner', 'manager'].includes(currentUserRole)
 
+  function openInvite() {
+    const branchAccess = getInitialBranchAccess({ role: 'staff' }, branches)
+    setInviteData({
+      email: '',
+      name: '',
+      password: '',
+      role: 'staff',
+      phone: '',
+      permissions: getDefaultPermissions() as Record<string, boolean>,
+      branch_id: branchAccess.primaryBranchId,
+      accessible_branch_ids: branchAccess.branchIds,
+    })
+    setIsInviteOpen(true)
+  }
+
   async function handleInvite() {
     if (!inviteData.email || !inviteData.name || !inviteData.password) {
       toast.error('Please fill in all required fields')
@@ -84,6 +141,10 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
     }
     if (inviteData.password.length < 8) {
       toast.error('Password must be at least 8 characters')
+      return
+    }
+    if (inviteData.accessible_branch_ids.length === 0 || !inviteData.branch_id) {
+      toast.error('Select at least one branch for this staff member')
       return
     }
 
@@ -106,7 +167,17 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
         setStaff(prev => [...prev, result.staff])
       }
       setIsInviteOpen(false)
-      setInviteData({ email: '', name: '', password: '', role: 'staff', phone: '', permissions: getDefaultPermissions() as Record<string, boolean> })
+      const branchAccess = getInitialBranchAccess({ role: 'staff' }, branches)
+      setInviteData({
+        email: '',
+        name: '',
+        password: '',
+        role: 'staff',
+        phone: '',
+        permissions: getDefaultPermissions() as Record<string, boolean>,
+        branch_id: branchAccess.primaryBranchId,
+        accessible_branch_ids: branchAccess.branchIds,
+      })
       router.refresh()
     } catch (error: any) {
       toast.error(error.message)
@@ -120,12 +191,15 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
     const memberPerms = (member.permissions && Object.keys(member.permissions).length > 0)
       ? member.permissions
       : getDefaultPermissions()
+    const branchAccess = getInitialBranchAccess(member, branches)
     setEditData({
       name: member.name || '',
       phone: member.phone || '',
       role: member.role,
       status: member.status,
       permissions: { ...memberPerms },
+      branch_id: branchAccess.primaryBranchId,
+      accessible_branch_ids: branchAccess.branchIds,
     })
     setIsPermissionsOpen(false)
     setIsEditOpen(true)
@@ -136,16 +210,23 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
     const memberPerms = (member.permissions && Object.keys(member.permissions).length > 0)
       ? member.permissions
       : getDefaultPermissions()
+    const branchAccess = getInitialBranchAccess(member, branches)
     setEditData(prev => ({
       ...prev,
       name: member.name || '',
       permissions: { ...memberPerms },
+      branch_id: branchAccess.primaryBranchId,
+      accessible_branch_ids: branchAccess.branchIds,
     }))
     setIsPermissionsOpen(true)
   }
 
   async function handleUpdate() {
     if (!selectedStaff) return
+    if (editData.accessible_branch_ids.length === 0 || !editData.branch_id) {
+      toast.error('Select at least one branch for this staff member')
+      return
+    }
     setIsSubmitting(true)
     try {
       const res = await fetch(`/api/staff/${selectedStaff.id}`, {
@@ -157,6 +238,8 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
           role: editData.role,
           status: editData.status,
           permissions: editData.permissions,
+          branch_id: editData.branch_id,
+          accessible_branch_ids: editData.accessible_branch_ids,
         }),
       })
       const result = await safeJsonParse(res)
@@ -211,7 +294,7 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
         </div>
         
         {canManage && (
-          <Button onClick={() => setIsInviteOpen(true)} className="h-10 px-6">
+          <Button onClick={openInvite} className="h-10 px-6">
             <Plus className="w-4 h-4 mr-2" />
             Add Staff
           </Button>
@@ -221,6 +304,8 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStaff.map((member) => {
           const initials = member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
+          const branchAccess = getInitialBranchAccess(member, branches)
+          const primaryBranch = branches.find(branch => branch.id === branchAccess.primaryBranchId)
           
           return (
             <Card key={member.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -274,6 +359,12 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
                       {member.phone}
                     </div>
                   )}
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Building2 className="w-4 h-4 text-slate-400" />
+                    <span className="truncate">
+                      {primaryBranch?.name || 'No branch'} - {branchAccess.branchIds.length} accessible
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium tracking-wider">
@@ -296,7 +387,7 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
 
       {/* Invite Modal */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Add Staff</DialogTitle>
             <DialogDescription>
@@ -359,38 +450,18 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Permissions</Label>
-              <div className="space-y-1 max-h-64 overflow-y-auto rounded-xl border border-slate-100 p-2">
-                {PERMISSIONS.map((perm) => {
-                  const isEnabled = inviteData.permissions[perm.key] !== false
-                  return (
-                    <button
-                      key={perm.key}
-                      type="button"
-                      onClick={() => setInviteData(prev => ({
-                        ...prev,
-                        permissions: {
-                          ...prev.permissions,
-                          [perm.key]: !isEnabled,
-                        },
-                      }))}
-                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors ${
-                        isEnabled ? 'bg-indigo-50 text-indigo-900' : 'bg-slate-50 text-slate-500'
-                      }`}
-                    >
-                      <span>
-                        <span className="block text-sm font-semibold">{perm.label}</span>
-                        <span className="block text-xs text-slate-500">{perm.description}</span>
-                      </span>
-                      <span className={`grid h-6 w-6 place-items-center rounded-full ${isEnabled ? 'bg-[#4f46e5] text-white' : 'bg-slate-200 text-slate-400'}`}>
-                        {isEnabled ? <Check className="h-3.5 w-3.5" /> : <XIcon className="h-3.5 w-3.5" />}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <PermissionAccessEditor
+              permissions={inviteData.permissions}
+              onPermissionsChange={(permissions) => setInviteData(prev => ({ ...prev, permissions }))}
+              branches={branches}
+              selectedBranchIds={inviteData.accessible_branch_ids}
+              primaryBranchId={inviteData.branch_id}
+              onBranchAccessChange={(accessibleBranchIds, branchId) => setInviteData(prev => ({
+                ...prev,
+                accessible_branch_ids: accessibleBranchIds,
+                branch_id: branchId,
+              }))}
+            />
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsInviteOpen(false)} className="rounded-xl flex-1 sm:flex-none">Cancel</Button>
@@ -474,66 +545,49 @@ export function StaffClient({ initialStaff, currentUserId, currentUserRole }: St
 
       {/* Permissions Modal */}
       <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Shield className="w-5 h-5 text-[#4f46e5]" />
-              Manage Permissions
+              Access & Permissions
             </DialogTitle>
             <DialogDescription>
-              Toggle access to individual modules for {selectedStaff?.name || selectedStaff?.email}.
+              Toggle feature access and branch access for {selectedStaff?.name || selectedStaff?.email}.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-1 max-h-[400px] overflow-y-auto">
-            {PERMISSIONS.map((perm) => {
-              const isEnabled = editData.permissions[perm.key] !== false
-              return (
-                <button
-                  key={perm.key}
-                  type="button"
-                  onClick={() => setEditData(prev => ({
-                    ...prev,
-                    permissions: {
-                      ...prev.permissions,
-                      [perm.key]: !isEnabled,
-                    },
-                  }))}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 ${
-                    isEnabled
-                      ? 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100'
-                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100 opacity-60'
-                  }`}
-                >
-                  <div className="text-left">
-                    <p className={`text-sm font-semibold ${
-                      isEnabled ? 'text-indigo-900' : 'text-slate-500'
-                    }`}>
-                      {perm.label}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">{perm.description}</p>
-                  </div>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isEnabled
-                      ? 'bg-[#4f46e5] text-white'
-                      : 'bg-slate-200 text-slate-400'
-                  }`}>
-                    {isEnabled ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
-                  </div>
-                </button>
-              )
-            })}
+          <div className="py-4">
+            <PermissionAccessEditor
+              permissions={editData.permissions}
+              onPermissionsChange={(permissions) => setEditData(prev => ({ ...prev, permissions }))}
+              branches={branches}
+              selectedBranchIds={editData.accessible_branch_ids}
+              primaryBranchId={editData.branch_id}
+              onBranchAccessChange={(accessibleBranchIds, branchId) => setEditData(prev => ({
+                ...prev,
+                accessible_branch_ids: accessibleBranchIds,
+                branch_id: branchId,
+              }))}
+            />
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsPermissionsOpen(false)} className="rounded-xl flex-1 sm:flex-none">Cancel</Button>
             <Button
               onClick={async () => {
                 if (!selectedStaff) return
+                if (editData.accessible_branch_ids.length === 0 || !editData.branch_id) {
+                  toast.error('Select at least one branch for this staff member')
+                  return
+                }
                 setIsSubmitting(true)
                 try {
                   const res = await fetch(`/api/staff/${selectedStaff.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ permissions: editData.permissions }),
+                    body: JSON.stringify({
+                      permissions: editData.permissions,
+                      branch_id: editData.branch_id,
+                      accessible_branch_ids: editData.accessible_branch_ids,
+                    }),
                   })
                   const result = await safeJsonParse(res)
                   if (!res.ok) throw new Error(result.error || 'Failed to update permissions')

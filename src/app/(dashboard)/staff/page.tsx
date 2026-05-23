@@ -17,9 +17,17 @@ export default async function StaffPage() {
   // Fetch all staff members
   const { data: staffMembers } = await supabase
     .from('staff')
-    .select('id, name, email, phone, role, status, profile_photo_url, last_login, permissions')
+    .select('id, name, email, phone, role, status, branch_id, accessible_branch_ids, profile_photo_url, last_login, permissions')
     .eq('business_id', currentStaff.business_id)
     .order('created_at')
+
+  const { data: branches } = await supabase
+    .from('branches')
+    .select('id, name, prefix, city, is_default')
+    .eq('business_id', currentStaff.business_id)
+    .eq('status', 'active')
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: true })
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
@@ -30,6 +38,7 @@ export default async function StaffPage() {
 
       <StaffClient 
         initialStaff={staffMembers || []} 
+        branches={branches || []}
         currentUserId={user.id}
         currentUserRole={currentStaff.role}
       />

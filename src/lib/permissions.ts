@@ -9,15 +9,49 @@
 
 export const PERMISSION_KEYS = [
   'manage_dashboard',
+  'view_dashboard_financials',
   'manage_bookings',
+  'create_bookings',
+  'edit_bookings',
+  'cancel_bookings',
+  'process_pickups',
+  'process_returns',
   'manage_inventory',
+  'create_inventory',
+  'edit_inventory',
+  'adjust_inventory_stock',
+  'import_inventory',
+  'sync_inventory',
   'manage_customers',
+  'create_customers',
+  'edit_customers',
+  'manage_customer_blacklist',
   'manage_payments',
+  'record_payments',
+  'void_payments',
+  'refund_deposits',
   'manage_washing',
+  'log_washing',
+  'complete_washing',
   'manage_analytics',
+  'export_reports',
   'manage_expenses',
+  'create_expenses',
+  'edit_expenses',
   'manage_staff',
+  'create_staff',
+  'edit_staff',
+  'manage_staff_permissions',
   'manage_settings',
+  'manage_company_profile',
+  'manage_branches',
+  'manage_booking_rules',
+  'manage_invoice_settings',
+  'manage_display_preferences',
+  'manage_sms_settings',
+  'manage_integrations',
+  'view_audit_log',
+  'manage_notifications',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -28,31 +62,144 @@ export interface PermissionDef {
   description: string
 }
 
-export const PERMISSIONS: PermissionDef[] = [
-  { key: 'manage_dashboard', label: 'Dashboard', description: 'View the main dashboard and stats' },
-  { key: 'manage_bookings', label: 'Bookings', description: 'Create, view, and manage bookings' },
-  { key: 'manage_inventory', label: 'Inventory', description: 'Add, edit, and view inventory items' },
-  { key: 'manage_customers', label: 'Customers', description: 'View and manage customer records' },
-  { key: 'manage_payments', label: 'Payments', description: 'View and record payments' },
-  { key: 'manage_washing', label: 'Washing Queue', description: 'Manage the washing/cleaning queue' },
-  { key: 'manage_analytics', label: 'Analytics', description: 'Access reports and analytics' },
-  { key: 'manage_expenses', label: 'Expenses', description: 'Record and view business expenses' },
-  { key: 'manage_staff', label: 'Staff Management', description: 'View and manage team members' },
-  { key: 'manage_settings', label: 'Settings', description: 'Access business and app settings' },
+export interface PermissionGroup {
+  id: string
+  label: string
+  description: string
+  permissions: PermissionDef[]
+}
+
+export const PERMISSION_GROUPS: PermissionGroup[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    description: 'Home screen, counters, and quick business overview',
+    permissions: [
+      { key: 'manage_dashboard', label: 'Open dashboard', description: 'View the main dashboard and quick stats' },
+      { key: 'view_dashboard_financials', label: 'View financial cards', description: 'See revenue, payment, and balance summaries' },
+    ],
+  },
+  {
+    id: 'bookings',
+    label: 'Bookings',
+    description: 'Booking creation, pickup, return, and cancellation flow',
+    permissions: [
+      { key: 'manage_bookings', label: 'Open bookings', description: 'View the booking list and booking details' },
+      { key: 'create_bookings', label: 'Create bookings', description: 'Start a new booking and reserve stock' },
+      { key: 'edit_bookings', label: 'Edit bookings', description: 'Change booking dates, items, notes, and status' },
+      { key: 'cancel_bookings', label: 'Cancel bookings', description: 'Cancel bookings and release locked stock' },
+      { key: 'process_pickups', label: 'Process pickups', description: 'Complete pickup handover and mark items out' },
+      { key: 'process_returns', label: 'Process returns', description: 'Complete returns and record item condition' },
+    ],
+  },
+  {
+    id: 'inventory',
+    label: 'Inventory',
+    description: 'Products, variants, images, stock, import, and sync tools',
+    permissions: [
+      { key: 'manage_inventory', label: 'Open inventory', description: 'View inventory items and availability' },
+      { key: 'create_inventory', label: 'Add inventory', description: 'Create products, sizes, colours, and stock' },
+      { key: 'edit_inventory', label: 'Edit inventory', description: 'Update product details, pricing, and images' },
+      { key: 'adjust_inventory_stock', label: 'Adjust stock', description: 'Change variant quantities and stock status' },
+      { key: 'import_inventory', label: 'CSV import', description: 'Bulk upload products from CSV files' },
+      { key: 'sync_inventory', label: 'Sync stock', description: 'Rebuild stock counts from bookings and returns' },
+    ],
+  },
+  {
+    id: 'customers',
+    label: 'Customers',
+    description: 'Customer records, ID proof, notes, and blacklist controls',
+    permissions: [
+      { key: 'manage_customers', label: 'Open customers', description: 'View customer list and profiles' },
+      { key: 'create_customers', label: 'Add customers', description: 'Create customer records during booking or directly' },
+      { key: 'edit_customers', label: 'Edit customers', description: 'Update customer contact details and notes' },
+      { key: 'manage_customer_blacklist', label: 'Blacklist customers', description: 'Block or unblock risky customers' },
+    ],
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    description: 'Advance, balance, deposit, refunds, and payment history',
+    permissions: [
+      { key: 'manage_payments', label: 'Open payments', description: 'View payments and balances' },
+      { key: 'record_payments', label: 'Record payments', description: 'Collect advance, balance, and deposit amounts' },
+      { key: 'void_payments', label: 'Void payments', description: 'Reverse incorrect payment records' },
+      { key: 'refund_deposits', label: 'Refund deposits', description: 'Record refundable deposit returns' },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    description: 'Washing queue, expenses, analytics, reports, and notifications',
+    permissions: [
+      { key: 'manage_washing', label: 'Open washing queue', description: 'View washing and ready-for-use items' },
+      { key: 'log_washing', label: 'Log washing', description: 'Send items to washing or cleaning' },
+      { key: 'complete_washing', label: 'Complete washing', description: 'Mark washed items ready and update condition' },
+      { key: 'manage_expenses', label: 'Open expenses', description: 'View business expense records' },
+      { key: 'create_expenses', label: 'Add expenses', description: 'Record rent, salary, transport, or other expenses' },
+      { key: 'edit_expenses', label: 'Edit expenses', description: 'Update or correct expense records' },
+      { key: 'manage_analytics', label: 'Open analytics', description: 'View analytics dashboards and charts' },
+      { key: 'export_reports', label: 'Export reports', description: 'Download reports for accounting or review' },
+      { key: 'manage_notifications', label: 'Notifications', description: 'View and manage app notifications' },
+    ],
+  },
+  {
+    id: 'staff',
+    label: 'Staff',
+    description: 'Team members, passwords, roles, permissions, and branch access',
+    permissions: [
+      { key: 'manage_staff', label: 'Open staff', description: 'View team members and staff profiles' },
+      { key: 'create_staff', label: 'Add staff', description: 'Create staff logins and passwords' },
+      { key: 'edit_staff', label: 'Edit staff', description: 'Update staff role, status, and profile details' },
+      { key: 'manage_staff_permissions', label: 'Manage permissions', description: 'Change module permissions and branch access' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    description: 'Company, branches, invoice, rules, display, SMS, integrations, and audit logs',
+    permissions: [
+      { key: 'manage_settings', label: 'Open settings', description: 'Access the settings area' },
+      { key: 'manage_company_profile', label: 'Company profile', description: 'Edit business name, logo, tax, and contact details' },
+      { key: 'manage_branches', label: 'Branches', description: 'Create and update store branches' },
+      { key: 'manage_booking_rules', label: 'Booking rules', description: 'Edit advance, deposit, date, and stock rules' },
+      { key: 'manage_invoice_settings', label: 'Invoice settings', description: 'Configure invoice print, GST, footer, and Vyapar setup' },
+      { key: 'manage_display_preferences', label: 'Display preferences', description: 'Change language, theme, currency, and app display' },
+      { key: 'manage_sms_settings', label: 'SMS settings', description: 'Configure message provider and templates' },
+      { key: 'manage_integrations', label: 'Integrations', description: 'Manage WhatsApp, email, weather, and external integrations' },
+      { key: 'view_audit_log', label: 'Audit log', description: 'View business activity history' },
+    ],
+  },
 ]
+
+export const PERMISSIONS: PermissionDef[] = PERMISSION_GROUPS.flatMap(group => group.permissions)
 
 /** Maps a sidebar href to the permission key required */
 export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/dashboard': 'manage_dashboard',
+  '/bookings/new': 'create_bookings',
   '/bookings': 'manage_bookings',
+  '/inventory/new': 'create_inventory',
   '/inventory': 'manage_inventory',
+  '/customers/new': 'create_customers',
+  '/customers/blacklist': 'manage_customer_blacklist',
   '/customers': 'manage_customers',
   '/payments': 'manage_payments',
   '/washing': 'manage_washing',
   '/analytics': 'manage_analytics',
   '/expenses': 'manage_expenses',
   '/staff': 'manage_staff',
+  '/settings/company': 'manage_company_profile',
+  '/settings/branches': 'manage_branches',
+  '/settings/booking-rules': 'manage_booking_rules',
+  '/settings/invoice': 'manage_invoice_settings',
+  '/settings/display': 'manage_display_preferences',
+  '/settings/sms': 'manage_sms_settings',
+  '/settings/integrations': 'manage_integrations',
+  '/settings/audit-log': 'view_audit_log',
+  '/settings/staff': 'manage_staff',
   '/settings': 'manage_settings',
+  '/notifications': 'manage_notifications',
 }
 
 /**
@@ -100,9 +247,11 @@ export function canAccessRoute(
   if (pathname.startsWith('/notifications')) return true
 
   // Find the matching route prefix
-  const matchedRoute = Object.keys(ROUTE_PERMISSION_MAP).find(
-    route => pathname === route || pathname.startsWith(route + '/')
-  )
+  const matchedRoute = Object.keys(ROUTE_PERMISSION_MAP)
+    .sort((a, b) => b.length - a.length)
+    .find(
+      route => pathname === route || pathname.startsWith(route + '/')
+    )
 
   if (!matchedRoute) return true // Unknown routes are accessible by default
 

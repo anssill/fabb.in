@@ -41,10 +41,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('business_id', staff.business_id)
     .eq('status', 'active')
 
+  const branchAccess = Array.isArray(staff.accessible_branch_ids) ? staff.accessible_branch_ids : []
+  const visibleBranches = staff.role === 'owner' || staff.role === 'super_admin' || branchAccess.length === 0
+    ? branches || []
+    : (branches || []).filter(branch => branchAccess.includes(branch.id))
+  const activeBranchId = visibleBranches.some(branch => branch.id === staff.branch_id)
+    ? staff.branch_id
+    : visibleBranches[0]?.id || staff.branch_id
+  const staffWithActiveBranch = { ...staff, branch_id: activeBranchId }
+
   return (
     <div className="min-h-screen bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
-      <StoreInitializer staff={staff} business={business} branches={branches || []} />
-      <SidebarWrapper staff={staff} branches={branches || []} />
+      <StoreInitializer staff={staffWithActiveBranch} business={business} branches={visibleBranches} />
+      <SidebarWrapper staff={staffWithActiveBranch} branches={visibleBranches} />
       <NotificationRealtime />
       <DataRealtime />
       <div className="lg:ml-[17.5rem] flex flex-col min-h-screen transition-all duration-300">

@@ -9,6 +9,7 @@ export interface StaffData {
   status: string
   business_id: string | null
   branch_id: string | null
+  accessible_branch_ids: string[] | null
   setup_completed: boolean
   profile_photo_url: string | null
   permissions: Record<string, boolean>

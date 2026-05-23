@@ -10,6 +10,8 @@ const updateStaffSchema = z.object({
   role: z.enum(['owner', 'manager', 'staff']).optional(),
   status: z.enum(['active', 'suspended']).optional(),
   permissions: z.record(z.string(), z.boolean()).optional(),
+  branch_id: z.string().uuid().nullable().optional(),
+  accessible_branch_ids: z.array(z.string().uuid()).optional(),
 })
 
 export async function PATCH(
@@ -35,7 +37,7 @@ export async function PATCH(
 
     const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('staff')
-      .select('id, business_id')
+      .select('id, business_id, branch_id')
       .eq('id', id)
       .single()
 
@@ -43,11 +45,51 @@ export async function PATCH(
       return NextResponse.json({ error: 'Staff member not found' }, { status: 404 })
     }
 
+    const { branch_id, accessible_branch_ids, ...staffFields } = validated.data
     const updatePayload = {
+      ...staffFields,
       ...validated.data,
       ...(Object.prototype.hasOwnProperty.call(validated.data, 'phone')
         ? { phone: validated.data.phone?.trim() || null }
         : {}),
+    }
+
+    delete (updatePayload as Record<string, unknown>).accessible_branch_ids
+    delete (updatePayload as Record<string, unknown>).branch_id
+
+    if (accessible_branch_ids !== undefined || branch_id !== undefined) {
+      const { data: activeBranches, error: branchError } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('business_id', currentStaff.business_id)
+        .eq('status', 'active')
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true })
+
+      if (branchError || !activeBranches || activeBranches.length === 0) {
+        return NextResponse.json({ error: 'No active branch found for this business' }, { status: 400 })
+      }
+
+      const validBranchIds = new Set(activeBranches.map(branch => branch.id))
+      const requestedBranchIds = Array.from(new Set(accessible_branch_ids || []))
+      const invalidBranchIds = requestedBranchIds.filter(branchId => !validBranchIds.has(branchId))
+      if (invalidBranchIds.length > 0) {
+        return NextResponse.json({ error: 'One or more selected branches are invalid' }, { status: 400 })
+      }
+
+      const resolvedAccessibleBranchIds = requestedBranchIds.length > 0
+        ? requestedBranchIds
+        : targetStaff.branch_id && validBranchIds.has(targetStaff.branch_id)
+          ? [targetStaff.branch_id]
+          : [activeBranches[0].id]
+      const resolvedBranchId = branch_id && resolvedAccessibleBranchIds.includes(branch_id)
+        ? branch_id
+        : resolvedAccessibleBranchIds[0]
+
+      Object.assign(updatePayload, {
+        branch_id: resolvedBranchId,
+        accessible_branch_ids: resolvedAccessibleBranchIds,
+      })
     }
 
     const { data: staff, error } = await supabaseAdmin
@@ -55,7 +97,7 @@ export async function PATCH(
       .update(updatePayload)
       .eq('id', id)
       .eq('business_id', currentStaff.business_id)
-      .select('id, name, email, phone, role, status, profile_photo_url, last_login, permissions')
+      .select('id, name, email, phone, role, status, branch_id, accessible_branch_ids, profile_photo_url, last_login, permissions')
       .single()
 
     if (error) {

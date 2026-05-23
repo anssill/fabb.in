@@ -234,6 +234,7 @@ interface Props {
     role: string
     profile_photo_url: string | null
     branch_id: string | null
+    accessible_branch_ids?: string[] | null
     permissions?: Record<string, boolean> | null
     business?: { name: string; logo_url: string | null }
     branch?: { name: string }

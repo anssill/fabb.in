@@ -6,6 +6,7 @@ export interface CurrentStaffContext {
   id: string
   business_id: string
   branch_id: string | null
+  accessible_branch_ids: string[] | null
   role: string
   email: string
   name: string | null
@@ -25,7 +26,7 @@ export async function getCurrentStaffContext(): Promise<CurrentStaffContext> {
   const admin = getSupabaseAdmin()
   const { data: staff, error } = await admin
     .from('staff')
-    .select('id, business_id, branch_id, role, email, name, permissions, status')
+    .select('id, business_id, branch_id, accessible_branch_ids, role, email, name, permissions, status')
     .eq('id', user.id)
     .single()
 
@@ -46,6 +47,7 @@ export async function getCurrentStaffContext(): Promise<CurrentStaffContext> {
     id: staff.id,
     business_id: staff.business_id,
     branch_id: staff.branch_id,
+    accessible_branch_ids: staff.accessible_branch_ids,
     role: staff.role,
     email: staff.email,
     name: staff.name,
