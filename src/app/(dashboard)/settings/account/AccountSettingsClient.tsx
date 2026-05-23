@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,44 +8,85 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { useAppStore } from '@/lib/store'
-import { createClient } from '@/lib/supabase/client'
+import type { StaffData } from '@/lib/store'
 import { safeJsonParse } from '@/lib/api-utils'
 import { toast } from 'sonner'
 import { Save, Camera, Lock, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { PinSetupDialog } from '@/components/shared/PinSetupDialog'
 
-export function AccountSettingsClient() {
+export function AccountSettingsClient({ initialStaff }: { initialStaff: StaffData | null }) {
   const { staff, setStaff } = useAppStore()
-  const supabase = createClient()
+  const currentStaff = staff || initialStaff
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [name, setName] = useState(staff?.name ?? '')
-  const [phone, setPhone] = useState('') // would need phone in staff model
+  const [name, setName] = useState(currentStaff?.name ?? '')
+  const [phone, setPhone] = useState(currentStaff?.phone ?? '')
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const initials = staff?.name
-    ? staff.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : staff?.email?.slice(0, 2).toUpperCase() ?? 'U'
+  useEffect(() => {
+    if (initialStaff && (!staff || staff.id !== initialStaff.id)) {
+      setStaff(initialStaff)
+    }
+  }, [initialStaff, setStaff, staff])
+
+  useEffect(() => {
+    if (!currentStaff) return
+    setName(currentStaff.name ?? '')
+    setPhone(currentStaff.phone ?? '')
+  }, [currentStaff])
+
+  const initials = currentStaff?.name
+    ? currentStaff.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : currentStaff?.email?.slice(0, 2).toUpperCase() ?? 'U'
 
   async function handleSaveProfile() {
-    if (!staff) return
+    if (!currentStaff) return
     setIsSavingProfile(true)
     try {
-      const { error } = await supabase
-        .from('staff')
-        .update({ name })
-        .eq('id', staff.id)
-      if (error) throw error
-      setStaff({ ...staff, name })
+      const res = await fetch('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone }),
+      })
+      const result = await safeJsonParse(res)
+      if (!res.ok) throw new Error(result.error || 'Failed to update profile')
+      setStaff(result.staff || { ...currentStaff, name, phone: phone || null })
       toast.success('Profile updated')
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile')
     } finally {
       setIsSavingProfile(false)
+    }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !currentStaff?.business_id) return
+
+    setIsUploadingPhoto(true)
+    try {
+      const { StorageService } = await import('@/lib/storage-service')
+      const photoUrl = await StorageService.uploadStaffPhoto(currentStaff.business_id, currentStaff.id, file)
+      const res = await fetch('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_photo_url: photoUrl }),
+      })
+      const result = await safeJsonParse(res)
+      if (!res.ok) throw new Error(result.error || 'Failed to update photo')
+      setStaff(result.staff || { ...currentStaff, profile_photo_url: photoUrl })
+      toast.success('Profile photo updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to upload photo')
+    } finally {
+      setIsUploadingPhoto(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -60,14 +101,9 @@ export function AccountSettingsClient() {
     }
     setIsSavingPassword(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
       })
       const data = await safeJsonParse(res)
@@ -102,17 +138,25 @@ export function AccountSettingsClient() {
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={staff?.profile_photo_url ?? undefined} />
+                <AvatarImage src={currentStaff?.profile_photo_url ?? undefined} />
                 <AvatarFallback className="bg-blue-100 text-blue-700 text-lg font-semibold">{initials}</AvatarFallback>
               </Avatar>
-              <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-slate-50 shadow-sm">
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center hover:bg-slate-50 shadow-sm disabled:opacity-60"
+              >
                 <Camera className="w-3 h-3 text-slate-500" />
               </button>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">{staff?.name || staff?.email}</p>
-              <p className="text-xs text-slate-500 capitalize">{staff?.role?.replace('_', ' ')}</p>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-600 mt-1 -ml-2">Change photo</Button>
+              <p className="text-sm font-semibold text-slate-900">{currentStaff?.name || currentStaff?.email}</p>
+              <p className="text-xs text-slate-500 capitalize">{currentStaff?.role?.replace('_', ' ')}</p>
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-blue-600 mt-1 -ml-2" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto}>
+                {isUploadingPhoto ? 'Uploading...' : 'Change photo'}
+              </Button>
             </div>
           </div>
 
@@ -125,8 +169,12 @@ export function AccountSettingsClient() {
             </div>
             <div className="space-y-1.5">
               <Label>Email Address</Label>
-              <Input value={staff?.email ?? ''} readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed" />
+              <Input value={currentStaff?.email ?? ''} readOnly className="bg-slate-50 text-slate-500 cursor-not-allowed" />
               <p className="text-xs text-slate-400">Email cannot be changed here. Contact your admin.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone Number</Label>
+              <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Your phone number" />
             </div>
           </div>
 
@@ -194,20 +242,20 @@ export function AccountSettingsClient() {
           <p className="text-sm text-slate-600 mb-4">
             Set a 4-digit PIN to lock your screen after 5 minutes of inactivity. Useful on shared devices.
           </p>
-          {(staff as any)?.pin_hash ? (
+          {currentStaff?.pin_hash ? (
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <p className="text-sm text-green-700 font-medium">✓ PIN is set</p>
                 <p className="text-xs text-slate-400 mt-0.5">Your screen will lock automatically when idle</p>
               </div>
-              <PinSetupDialog staffId={staff?.id ?? ''} hasPinSet={true} />
+              <PinSetupDialog staffId={currentStaff?.id ?? ''} hasPinSet={true} />
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <p className="text-sm text-slate-500">No PIN set</p>
               </div>
-              <PinSetupDialog staffId={staff?.id ?? ''} hasPinSet={false} />
+              <PinSetupDialog staffId={currentStaff?.id ?? ''} hasPinSet={false} />
             </div>
           )}
         </CardContent>
@@ -224,8 +272,8 @@ export function AccountSettingsClient() {
           <p className="text-sm text-slate-600 mb-4">
             To delete your account or transfer ownership, please contact the business owner or reach out to Fabb.booking support.
           </p>
-          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
-            Contact Support
+          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" asChild>
+            <a href="mailto:support@fabb.booking">Contact Support</a>
           </Button>
         </CardContent>
       </Card>

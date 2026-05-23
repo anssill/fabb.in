@@ -88,7 +88,7 @@ function LoginForm() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed'
       if (message.toLowerCase().includes('rate limit')) {
-        toast.error('Email OTP limit reached. Please wait before requesting another OTP, or use password login.')
+        toast.error('Email OTP request was blocked by the auth provider. You can use password login instead.')
       } else {
         toast.error(message)
       }

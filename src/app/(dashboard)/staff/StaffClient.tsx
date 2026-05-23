@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { safeJsonParse } from '@/lib/api-utils'
 import { PERMISSIONS, getDefaultPermissions } from '@/lib/permissions'
@@ -36,14 +35,12 @@ interface StaffMember {
 
 interface StaffClientProps {
   initialStaff: StaffMember[]
-  businessId: string
   currentUserId: string
   currentUserRole: string
 }
 
-export function StaffClient({ initialStaff, businessId, currentUserId, currentUserRole }: StaffClientProps) {
+export function StaffClient({ initialStaff, currentUserId, currentUserRole }: StaffClientProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
   const [searchQuery, setSearchQuery] = useState('')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -69,6 +66,10 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
   })
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false)
 
+  useEffect(() => {
+    setStaff(initialStaff)
+  }, [initialStaff])
+
   const filteredStaff = staff.filter(m => 
     m.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     m.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -92,7 +93,6 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-business-id': businessId
         },
         body: JSON.stringify(inviteData),
       })
@@ -102,6 +102,9 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
       if (!res.ok) throw new Error(result.error || 'Failed to create staff')
 
       toast.success('Staff created successfully!')
+      if (result.staff) {
+        setStaff(prev => [...prev, result.staff])
+      }
       setIsInviteOpen(false)
       setInviteData({ email: '', name: '', password: '', role: 'staff', phone: '', permissions: getDefaultPermissions() as Record<string, boolean> })
       router.refresh()
@@ -145,20 +148,25 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
     if (!selectedStaff) return
     setIsSubmitting(true)
     try {
-      const { error } = await supabase
-        .from('staff')
-        .update({
+      const res = await fetch(`/api/staff/${selectedStaff.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: editData.name,
           phone: editData.phone,
           role: editData.role,
           status: editData.status,
           permissions: editData.permissions,
-        })
-        .eq('id', selectedStaff.id)
+        }),
+      })
+      const result = await safeJsonParse(res)
 
-      if (error) throw error
+      if (!res.ok) throw new Error(result.error || 'Failed to update staff')
 
       toast.success('Staff updated successfully')
+      if (result.staff) {
+        setStaff(prev => prev.map(member => member.id === result.staff.id ? result.staff : member))
+      }
       setIsEditOpen(false)
       router.refresh()
     } catch (error: any) {
@@ -522,12 +530,17 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
                 if (!selectedStaff) return
                 setIsSubmitting(true)
                 try {
-                  const { error } = await supabase
-                    .from('staff')
-                    .update({ permissions: editData.permissions })
-                    .eq('id', selectedStaff.id)
-                  if (error) throw error
+                  const res = await fetch(`/api/staff/${selectedStaff.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ permissions: editData.permissions }),
+                  })
+                  const result = await safeJsonParse(res)
+                  if (!res.ok) throw new Error(result.error || 'Failed to update permissions')
                   toast.success('Permissions updated successfully')
+                  if (result.staff) {
+                    setStaff(prev => prev.map(member => member.id === result.staff.id ? result.staff : member))
+                  }
                   setIsPermissionsOpen(false)
                   router.refresh()
                 } catch (error: any) {

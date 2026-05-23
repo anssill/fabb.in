@@ -67,7 +67,6 @@ export function DataRealtime() {
       supabase
         .channel(`realtime-global-${table}`)
         .on(
-          // @ts-ignore
           'postgres_changes',
           { event: '*', schema: 'public', table },
           handleUpdate

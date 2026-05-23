@@ -11,8 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
+import type { BusinessData } from '@/lib/store'
+import { safeJsonParse } from '@/lib/api-utils'
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -32,9 +33,9 @@ const formSchema = z.object({
 const inputClass = 'h-11 rounded-2xl border-slate-100 bg-slate-50 shadow-none focus-visible:ring-[#4f46e5]'
 const selectClass = 'h-11 rounded-2xl border-slate-100 bg-slate-50 shadow-none focus:ring-[#4f46e5]'
 
-export function CompanySettingsClient() {
+export function CompanySettingsClient({ initialBusiness }: { initialBusiness: BusinessData | null }) {
   const { business, setBusiness } = useAppStore()
-  const supabase = createClient()
+  const currentBusiness = business || initialBusiness
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -58,41 +59,49 @@ export function CompanySettingsClient() {
   })
 
   useEffect(() => {
-    if (!business) return
+    if (initialBusiness && (!business || business.id !== initialBusiness.id)) {
+      setBusiness(initialBusiness)
+    }
+  }, [business, initialBusiness, setBusiness])
+
+  useEffect(() => {
+    if (!currentBusiness) return
 
     form.reset({
-      name: business.name || '',
-      email: business.email || '',
-      phone: business.phone || '',
-      address: business.address || '',
-      city: business.city || '',
-      state: business.state || '',
-      pincode: business.pincode || '',
-      country: business.country || 'India',
-      currency: business.currency || 'INR',
-      timezone: business.timezone || 'Asia/Kolkata',
-      gst_number: business.gst_number || '',
-      pan_number: business.pan_number || '',
+      name: currentBusiness.name || '',
+      email: currentBusiness.email || '',
+      phone: currentBusiness.phone || '',
+      address: currentBusiness.address || '',
+      city: currentBusiness.city || '',
+      state: currentBusiness.state || '',
+      pincode: currentBusiness.pincode || '',
+      country: currentBusiness.country || 'India',
+      currency: currentBusiness.currency || 'INR',
+      timezone: currentBusiness.timezone || 'Asia/Kolkata',
+      gst_number: currentBusiness.gst_number || '',
+      pan_number: currentBusiness.pan_number || '',
     })
-  }, [business, form])
+  }, [currentBusiness, form])
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !business) return
+    if (!file || !currentBusiness) return
 
     setIsUploading(true)
     try {
       const { StorageService } = await import('@/lib/storage-service')
-      const logoUrl = await StorageService.uploadCompanyLogo(business.id, file)
+      const logoUrl = await StorageService.uploadCompanyLogo(currentBusiness.id, file)
 
-      const { error } = await supabase
-        .from('businesses')
-        .update({ logo_url: logoUrl })
-        .eq('id', business.id)
+      const res = await fetch('/api/settings/company', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: logoUrl }),
+      })
+      const result = await safeJsonParse(res)
 
-      if (error) throw error
+      if (!res.ok) throw new Error(result.error || 'Failed to save logo')
 
-      setBusiness({ ...business, logo_url: logoUrl })
+      setBusiness(result.business || { ...currentBusiness, logo_url: logoUrl })
       toast.success('Logo uploaded successfully')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to upload logo')
@@ -103,21 +112,23 @@ export function CompanySettingsClient() {
   }
 
   async function handleRemoveLogo() {
-    if (!business?.logo_url) return
+    if (!currentBusiness?.logo_url) return
 
     setIsUploading(true)
     try {
       const { StorageService } = await import('@/lib/storage-service')
-      await StorageService.deleteImage(business.logo_url)
+      await StorageService.deleteImage(currentBusiness.logo_url)
 
-      const { error } = await supabase
-        .from('businesses')
-        .update({ logo_url: null })
-        .eq('id', business.id)
+      const res = await fetch('/api/settings/company', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: null }),
+      })
+      const result = await safeJsonParse(res)
 
-      if (error) throw error
+      if (!res.ok) throw new Error(result.error || 'Failed to remove logo')
 
-      setBusiness({ ...business, logo_url: null })
+      setBusiness(result.business || { ...currentBusiness, logo_url: null })
       toast.success('Logo removed successfully')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to remove logo')
@@ -127,7 +138,7 @@ export function CompanySettingsClient() {
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!business) return
+    if (!currentBusiness) return
 
     setIsLoading(true)
     try {
@@ -146,14 +157,16 @@ export function CompanySettingsClient() {
         pan_number: values.pan_number || null,
       }
 
-      const { error } = await supabase
-        .from('businesses')
-        .update(nextBusiness)
-        .eq('id', business.id)
+      const res = await fetch('/api/settings/company', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextBusiness),
+      })
+      const result = await safeJsonParse(res)
 
-      if (error) throw error
+      if (!res.ok) throw new Error(result.error || 'Failed to update company profile')
 
-      setBusiness({ ...business, ...nextBusiness })
+      setBusiness(result.business || { ...currentBusiness, ...nextBusiness })
       toast.success('Company profile updated successfully')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update company profile')
@@ -162,7 +175,7 @@ export function CompanySettingsClient() {
     }
   }
 
-  if (!business) {
+  if (!currentBusiness) {
     return (
       <div className="flex h-40 items-center justify-center rounded-[1.65rem] bg-white text-sm text-slate-500 shadow-sm">
         Loading company profile...
@@ -178,9 +191,9 @@ export function CompanySettingsClient() {
             <div className="mb-6 flex flex-col gap-4 rounded-[1.35rem] bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-                  {business.logo_url ? (
+                  {currentBusiness.logo_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={business.logo_url} alt="Logo" className="h-full w-full object-contain" />
+                    <img src={currentBusiness.logo_url} alt="Logo" className="h-full w-full object-contain" />
                   ) : (
                     <Building2 className="h-8 w-8 text-slate-400" />
                   )}
@@ -201,7 +214,7 @@ export function CompanySettingsClient() {
                   <ImageUp className="mr-2 h-3.5 w-3.5" />
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </Button>
-                {business.logo_url && (
+                {currentBusiness.logo_url && (
                   <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full text-xs text-red-600 hover:bg-red-50 hover:text-red-700" onClick={handleRemoveLogo} disabled={isUploading}>
                     <Trash2 className="mr-2 h-3.5 w-3.5" />
                     Remove

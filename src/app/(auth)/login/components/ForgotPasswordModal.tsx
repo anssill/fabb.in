@@ -26,7 +26,6 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'input' | 'sent' | 'not_found'>('input')
   const [loading, setLoading] = useState(false)
-  const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
     if (open) {
@@ -34,12 +33,6 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
       setState('input')
     }
   }, [open])
-
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const timer = setInterval(() => setCooldown((c) => c - 1), 1000)
-    return () => clearInterval(timer)
-  }, [cooldown])
 
   const handleSend = async () => {
     setLoading(true)
@@ -54,7 +47,6 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
         setState('not_found')
       } else {
         setState('sent')
-        setCooldown(60)
       }
     } catch {
       setState('not_found')
@@ -143,7 +135,7 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
             <Button
               className="w-full bg-primary text-white font-bold h-14 rounded-xl mt-2 flex items-center justify-center gap-2 group relative overflow-hidden"
               onClick={handleSend}
-              disabled={cooldown > 0 || loading}
+              disabled={loading}
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -151,7 +143,7 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
                 <>
                   <RotateCcw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
                   <span className="relative z-10">
-                    {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend link'}
+                    Resend link
                   </span>
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0" />
                 </>
@@ -202,4 +194,3 @@ export function ForgotPasswordModal({ open, onOpenChange }: Props) {
     </Dialog>
   )
 }
-

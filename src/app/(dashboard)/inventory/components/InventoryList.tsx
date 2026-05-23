@@ -62,7 +62,7 @@ export function InventoryList({ initialItems }: InventoryListProps) {
         .from('booking_items')
         .select(`
           quantity,
-          variant_id,
+          item_variant_id,
           item_id,
           bookings!inner(pickup_date, return_date, status)
         `)
@@ -99,7 +99,7 @@ export function InventoryList({ initialItems }: InventoryListProps) {
         for (let d = new Date(dateRange.from); d <= dateRange.to; d = addDays(d, 1)) {
           const dayStr = format(d, 'yyyy-MM-dd')
           const reservedOnDay = bookings
-            .filter(bk => bk.variant_id === v.id)
+            .filter(bk => bk.item_variant_id === v.id)
             .reduce((sum, bk) => {
               const pickup = bk.bookings.pickup_date
               const retDate = parseISO(bk.bookings.return_date)

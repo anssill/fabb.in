@@ -4,6 +4,7 @@ export interface StaffData {
   id: string
   name: string | null
   email: string
+  phone: string | null
   role: 'super_admin' | 'owner' | 'manager' | 'staff'
   status: string
   business_id: string | null
@@ -11,6 +12,7 @@ export interface StaffData {
   setup_completed: boolean
   profile_photo_url: string | null
   permissions: Record<string, boolean>
+  pin_hash?: string | null
 }
 
 export interface BusinessData {

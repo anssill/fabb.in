@@ -14,6 +14,8 @@ interface Props {
   items: BookingItem[]
   setItems: (items: BookingItem[]) => void
   dates: BookingDates
+  bufferDays?: number
+  enforceStockLimit?: boolean
 }
 
 interface SearchResult {
@@ -32,7 +34,7 @@ interface SearchResult {
   }[]
 }
 
-export function ItemsStep({ items, setItems, dates }: Props) {
+export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStockLimit = false }: Props) {
   const { staff } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -50,9 +52,9 @@ export function ItemsStep({ items, setItems, dates }: Props) {
     try {
       const supabase = createClient()
       
-      // Calculate pickup_date - 1 day for turnover buffer
+      // Calculate pickup_date minus configured turnover buffer
       const pickupDateObj = new Date(dates.pickup_date)
-      pickupDateObj.setDate(pickupDateObj.getDate() - 1)
+      pickupDateObj.setDate(pickupDateObj.getDate() - bufferDays)
       const pickupMinus1 = pickupDateObj.toISOString().slice(0, 10)
 
       const { data, error } = await supabase
@@ -73,9 +75,9 @@ export function ItemsStep({ items, setItems, dates }: Props) {
         const activePickup = bk.pickup_date
         const activeReturn = bk.return_date
         
-        // Parse return date and add 1 day for buffer
+        // Parse return date and add configured buffer
         const retDate = new Date(activeReturn)
-        retDate.setDate(retDate.getDate() + 1)
+        retDate.setDate(retDate.getDate() + bufferDays)
         const activeReturnWithBuffer = retDate.toISOString().slice(0, 10)
 
         // Check if [activePickup, activeReturnWithBuffer] overlaps with [dates.pickup_date, dates.return_date]
@@ -97,7 +99,7 @@ export function ItemsStep({ items, setItems, dates }: Props) {
 
   useEffect(() => {
     fetchAvailability()
-  }, [dates.pickup_date, dates.return_date, staff?.business_id])
+    }, [dates.pickup_date, dates.return_date, staff?.business_id, bufferDays])
 
   // Synchronize variantTotalStocks when results change
   useEffect(() => {
@@ -213,6 +215,10 @@ export function ItemsStep({ items, setItems, dates }: Props) {
 
     const dynamicAvailable = variant.total_stock - (overlappingQuantities[variant.id] || 0)
     if (dynamicAvailable <= 0) {
+      if (enforceStockLimit) {
+        toast.error('This variant is already booked for the selected dates.')
+        return
+      }
       toast.warning('Booking Conflict: This variant is already booked for the selected dates!', {
         description: 'Allowed as override. Please verify availability manually.',
       })
@@ -246,6 +252,10 @@ export function ItemsStep({ items, setItems, dates }: Props) {
       const dynamicAvailable = totalStockVal - reservedVal
 
       if (selectedItem.quantity + delta > dynamicAvailable) {
+        if (enforceStockLimit) {
+          toast.error(`Only ${Math.max(0, dynamicAvailable)} unit${dynamicAvailable === 1 ? '' : 's'} available for these dates.`)
+          return
+        }
         toast.warning(`Conflict: Quantity exceeds available stock (${dynamicAvailable} available) for these dates.`, {
           description: 'Override allowed. Please verify manually.',
         })

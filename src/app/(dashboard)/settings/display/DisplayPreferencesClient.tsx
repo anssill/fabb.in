@@ -6,21 +6,44 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { toast } from 'sonner'
 
 type Theme = 'light' | 'dark' | 'system'
 type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'DD-MMM-YYYY'
 type CurrencyFormat = 'indian' | 'international'
 
-export function DisplayPreferencesClient() {
+interface DisplayPreferences {
+  theme: Theme
+  dateFormat: DateFormat
+  currencyFormat: CurrencyFormat
+}
+
+const defaultPreferences: DisplayPreferences = {
+  theme: 'light',
+  dateFormat: 'DD/MM/YYYY',
+  currencyFormat: 'indian',
+}
+
+export function DisplayPreferencesClient({ initialPreferences }: { initialPreferences?: Partial<DisplayPreferences> | null }) {
   const { theme: nextTheme, setTheme: setNextTheme } = useTheme()
-  const [theme, setTheme] = useState<Theme>('light')
-  const [dateFormat, setDateFormat] = useState<DateFormat>('DD/MM/YYYY')
-  const [currencyFormat, setCurrencyFormat] = useState<CurrencyFormat>('indian')
+  const [theme, setTheme] = useState<Theme>((initialPreferences?.theme as Theme) || defaultPreferences.theme)
+  const [dateFormat, setDateFormat] = useState<DateFormat>((initialPreferences?.dateFormat as DateFormat) || defaultPreferences.dateFormat)
+  const [currencyFormat, setCurrencyFormat] = useState<CurrencyFormat>((initialPreferences?.currencyFormat as CurrencyFormat) || defaultPreferences.currencyFormat)
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('fabb_display_prefs')
-      if (saved) {
+      if (initialPreferences?.theme || initialPreferences?.dateFormat || initialPreferences?.currencyFormat) {
+        const next = {
+          ...defaultPreferences,
+          ...initialPreferences,
+        } as DisplayPreferences
+        setTheme(next.theme)
+        setDateFormat(next.dateFormat)
+        setCurrencyFormat(next.currencyFormat)
+        setNextTheme(next.theme)
+        localStorage.setItem('fabb_display_prefs', JSON.stringify(next))
+      } else if (saved) {
         const parsed = JSON.parse(saved)
         if (parsed.theme) {
           setTheme(parsed.theme as Theme)
@@ -35,10 +58,9 @@ export function DisplayPreferencesClient() {
         setTheme(nextTheme as Theme)
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [initialPreferences, nextTheme, setNextTheme])
 
-  function savePrefs(updates: Partial<{ theme: Theme; dateFormat: DateFormat; currencyFormat: CurrencyFormat }>) {
+  async function savePrefs(updates: Partial<DisplayPreferences>) {
     const current = {
       theme, dateFormat, currencyFormat,
       ...updates,
@@ -48,6 +70,17 @@ export function DisplayPreferencesClient() {
     // Apply theme immediately via next-themes
     if (updates.theme) {
       setNextTheme(updates.theme)
+    }
+
+    try {
+      const res = await fetch('/api/account/display-preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(current),
+      })
+      if (!res.ok) throw new Error('Failed to save display preferences')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save display preferences')
     }
   }
 
@@ -61,7 +94,7 @@ export function DisplayPreferencesClient() {
         <CardContent>
           <RadioGroup
             value={theme}
-            onValueChange={(v) => { setTheme(v as Theme); savePrefs({ theme: v as Theme }) }}
+            onValueChange={(v) => { setTheme(v as Theme); void savePrefs({ theme: v as Theme }) }}
             className="grid grid-cols-3 gap-3"
           >
             {([
@@ -95,7 +128,7 @@ export function DisplayPreferencesClient() {
         <CardContent>
           <RadioGroup
             value={dateFormat}
-            onValueChange={(v) => { setDateFormat(v as DateFormat); savePrefs({ dateFormat: v as DateFormat }) }}
+            onValueChange={(v) => { setDateFormat(v as DateFormat); void savePrefs({ dateFormat: v as DateFormat }) }}
             className="space-y-3"
           >
             {([
@@ -123,7 +156,7 @@ export function DisplayPreferencesClient() {
         <CardContent>
           <RadioGroup
             value={currencyFormat}
-            onValueChange={(v) => { setCurrencyFormat(v as CurrencyFormat); savePrefs({ currencyFormat: v as CurrencyFormat }) }}
+            onValueChange={(v) => { setCurrencyFormat(v as CurrencyFormat); void savePrefs({ currencyFormat: v as CurrencyFormat }) }}
             className="space-y-3"
           >
             {([
@@ -142,7 +175,7 @@ export function DisplayPreferencesClient() {
         </CardContent>
       </Card>
 
-      <p className="text-xs text-slate-400 text-center">Preferences are saved automatically to this device.</p>
+      <p className="text-xs text-slate-400 text-center">Preferences are saved to your account and synced on this device.</p>
     </div>
   )
 }

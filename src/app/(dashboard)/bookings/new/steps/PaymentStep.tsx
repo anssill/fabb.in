@@ -11,14 +11,16 @@ interface Props {
   payment: BookingPayment
   setPayment: (p: BookingPayment) => void
   totalAmount: number
+  minAdvancePct?: number
+  requirePhysicalBill?: boolean
 }
 
-export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
+export function PaymentStep({ payment, setPayment, totalAmount, minAdvancePct = 30, requirePhysicalBill = false }: Props) {
   const balanceDue = totalAmount - payment.advance_amount - (payment.deposit_amount ?? 0)
-  const minAdvance = Math.round(totalAmount * 0.3)
+  const minAdvance = Math.round(totalAmount * minAdvancePct / 100)
 
   const presets = [
-    { label: '30%', value: Math.round(totalAmount * 0.3) },
+    { label: `${minAdvancePct}%`, value: minAdvance },
     { label: '50%', value: Math.round(totalAmount * 0.5) },
     { label: 'Full', value: totalAmount },
   ]
@@ -98,13 +100,16 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
 
         {/* Physical bill number */}
         <div className="space-y-2">
-          <Label>Physical bill number <span className="text-muted-foreground">(optional)</span></Label>
+          <Label>Physical bill number <span className="text-muted-foreground">{requirePhysicalBill ? '(required)' : '(optional)'}</span></Label>
           <Input
             value={payment.physical_bill_number || ''}
             onChange={(e) => setPayment({ ...payment, physical_bill_number: e.target.value.toUpperCase().slice(0, 40) })}
             placeholder="Bill book number"
           />
           <p className="text-xs text-muted-foreground">Use the number from the paper bill so it can be searched later.</p>
+          {requirePhysicalBill && !payment.physical_bill_number?.trim() && (
+            <p className="text-xs text-red-500">Required by booking rules.</p>
+          )}
         </div>
 
         {/* Security deposit */}

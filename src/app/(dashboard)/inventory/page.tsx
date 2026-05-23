@@ -26,7 +26,6 @@ export default async function InventoryPage() {
       item_variants(id, size, colour, total_stock, available_stock, reserved_stock)
     `, { count: 'exact' })
     .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 

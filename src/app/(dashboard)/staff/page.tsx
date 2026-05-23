@@ -30,7 +30,6 @@ export default async function StaffPage() {
 
       <StaffClient 
         initialStaff={staffMembers || []} 
-        businessId={currentStaff.business_id}
         currentUserId={user.id}
         currentUserRole={currentStaff.role}
       />

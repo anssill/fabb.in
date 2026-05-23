@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaffContext } from '@/lib/auth/current-staff'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { NotionService } from '@/lib/notion'
 import { revalidatePath } from 'next/cache'
 
@@ -10,12 +11,9 @@ function formatSupabaseError(error: any): Error {
 }
 
 export async function createItem(formData: any, variants: any[]) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
+  if (!staff.branch_id) throw new Error('Staff branch is not assigned. Please assign a branch before adding inventory.')
 
   // Generate SKU if empty
   const sku = formData.sku || `${formData.category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
@@ -38,7 +36,7 @@ export async function createItem(formData: any, variants: any[]) {
       cover_image_url: formData.cover_image_url || null,
       is_active: true,
       status: 'available',
-      created_by: user.id,
+      created_by: staff.id,
     })
     .select('id')
     .single()
@@ -58,7 +56,10 @@ export async function createItem(formData: any, variants: any[]) {
   }))
 
   const { error: varErr } = await supabase.from('item_variants').insert(variantRows)
-  if (varErr) throw formatSupabaseError(varErr)
+  if (varErr) {
+    await supabase.from('items').delete().eq('id', item!.id)
+    throw formatSupabaseError(varErr)
+  }
 
   // 3. Link image to `item_images` table
   if (formData.cover_image_url) {
@@ -67,7 +68,7 @@ export async function createItem(formData: any, variants: any[]) {
       url: formData.cover_image_url,
       is_cover: true,
       display_order: 0,
-      uploaded_by: user.id
+      uploaded_by: staff.id
     })
   }
 
@@ -96,26 +97,33 @@ export async function createItem(formData: any, variants: any[]) {
   }
 
   // 4. Audit log
-  await supabase.from('audit_log').insert({
+  const { error: auditError } = await supabase.from('audit_log').insert({
     business_id: staff.business_id,
-    staff_id: user.id,
+    branch_id: staff.branch_id,
+    staff_id: staff.id,
     action: 'item.created',
     table_name: 'items',
     record_id: item!.id,
     new_value: { name: formData.name, sku, variants: variants.length, notion_sync: !!notionPageId },
   })
+  if (auditError) console.error('Failed to write item audit log:', auditError)
 
   revalidatePath('/inventory')
   return { id: item.id }
 }
 
 export async function updateItem(itemId: string, formData: any, variants: any[]) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
 
-  const { data: staff } = await supabase.from('staff').select('business_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const { data: existingItem, error: existingError } = await supabase
+    .from('items')
+    .select('id')
+    .eq('id', itemId)
+    .eq('business_id', staff.business_id)
+    .single()
+
+  if (existingError || !existingItem) throw new Error(existingError?.message || 'Inventory item not found')
 
   // 1. Update main item
   const { error: itemErr } = await supabase
@@ -133,6 +141,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
       updated_at: new Date().toISOString(),
     })
     .eq('id', itemId)
+    .eq('business_id', staff.business_id)
 
   if (itemErr) throw formatSupabaseError(itemErr)
 
@@ -185,7 +194,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
           url: formData.cover_image_url,
           is_cover: true,
           display_order: 0,
-          uploaded_by: user.id
+          uploaded_by: staff.id
         })
       }
     }
@@ -207,7 +216,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
       price: formData.price,
       condition: formData.condition,
       stockSummary,
-    }, currentItem?.notion_page_id)
+    }, currentItem?.notion_page_id || undefined)
 
     if (notionPageId && notionPageId !== currentItem?.notion_page_id) {
       await supabase
@@ -220,14 +229,16 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
   }
 
   // 4. Audit Log
-  await supabase.from('audit_log').insert({
+  const { error: auditError } = await supabase.from('audit_log').insert({
     business_id: staff.business_id,
-    staff_id: user.id,
+    branch_id: staff.branch_id,
+    staff_id: staff.id,
     action: 'item.updated',
     table_name: 'items',
     record_id: itemId,
     new_value: { name: formData.name, variants: variants.length },
   })
+  if (auditError) console.error('Failed to write item audit log:', auditError)
 
   revalidatePath('/inventory')
   revalidatePath(`/inventory/${itemId}`)
@@ -235,14 +246,14 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
 }
 
 export async function updateItemStatus(itemId: string, status: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
 
   const { error } = await supabase
     .from('items')
     .update({ status })
     .eq('id', itemId)
+    .eq('business_id', staff.business_id)
 
   if (error) throw formatSupabaseError(error)
 
@@ -251,17 +262,8 @@ export async function updateItemStatus(itemId: string, status: string) {
 }
 
 export async function syncFullInventory() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  const { data: staff } = await supabase
-    .from('staff')
-    .select('business_id')
-    .eq('id', user.id)
-    .single()
-  
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
 
   // 1. Call the database reconstruction RPC
   const { error } = await supabase.rpc('sync_all_inventory_stock', {
@@ -271,14 +273,16 @@ export async function syncFullInventory() {
   if (error) throw formatSupabaseError(error)
 
   // 2. Add to audit log
-  await supabase.from('audit_log').insert({
+  const { error: auditError } = await supabase.from('audit_log').insert({
     business_id: staff.business_id,
-    staff_id: user.id,
+    branch_id: staff.branch_id,
+    staff_id: staff.id,
     action: 'inventory.fully_synced',
     table_name: 'businesses',
     record_id: staff.business_id,
     new_value: { timestamp: new Date().toISOString() }
   })
+  if (auditError) console.error('Failed to write inventory sync audit log:', auditError)
 
   revalidatePath('/inventory')
   revalidatePath('/bookings')

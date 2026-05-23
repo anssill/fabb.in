@@ -147,7 +147,7 @@ export default function NewItemPage() {
       router.refresh()
     } catch (err) {
       console.error('Item creation error:', err)
-      toast.error('Failed to add item')
+      toast.error(err instanceof Error ? err.message : 'Failed to add item')
     } finally {
       setSaving(false)
     }

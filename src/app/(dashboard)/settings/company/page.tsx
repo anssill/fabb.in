@@ -1,10 +1,21 @@
 import { CompanySettingsClient } from './CompanySettingsClient'
+import { getCurrentStaffContext } from '@/lib/auth/current-staff'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import type { BusinessData } from '@/lib/store'
 
 export const metadata = {
   title: 'Company Settings | Fabb.booking',
 }
 
-export default function CompanySettingsPage() {
+export default async function CompanySettingsPage() {
+  const staff = await getCurrentStaffContext()
+  const admin = getSupabaseAdmin()
+  const { data: business } = await admin
+    .from('businesses')
+    .select('*')
+    .eq('id', staff.business_id)
+    .single()
+
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -14,7 +25,7 @@ export default function CompanySettingsPage() {
         </div>
       </div>
 
-      <CompanySettingsClient />
+      <CompanySettingsClient initialBusiness={business as unknown as BusinessData | null} />
     </div>
   )
 }

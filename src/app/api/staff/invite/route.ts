@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { canManageBusiness, getCurrentStaffContext } from '@/lib/auth/current-staff'
 import { z } from 'zod'
 
 const inviteSchema = z.object({
@@ -14,6 +15,11 @@ const inviteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const currentStaff = await getCurrentStaffContext()
+    if (!canManageBusiness(currentStaff.role)) {
+      return NextResponse.json({ error: 'You do not have permission to add staff' }, { status: 403 })
+    }
+
     const body = await safeJsonParse(req)
     const validated = inviteSchema.safeParse(body)
     
@@ -34,11 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Staff member already exists with this email' }, { status: 400 })
     }
 
-    // 2. Get business_id from headers
-    const bizId = req.headers.get('x-business-id')
-    if (!bizId) {
-      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
-    }
+    const bizId = currentStaff.business_id
 
     const { data: defaultBranch, error: branchError } = await supabaseAdmin
       .from('branches')
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Create Staff Record. Staff are not linked to a branch here.
-    const { error: staffError } = await supabaseAdmin.from('staff').insert({
+    const { data: staffRecord, error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUser.user.id,
       business_id: bizId,
       branch_id: defaultBranch.id,
@@ -79,6 +81,8 @@ export async function POST(req: NextRequest) {
       permissions: permissions || {},
       setup_completed: true, // They are invited, not setting up a new business
     })
+    .select('id, name, email, phone, role, status, profile_photo_url, last_login, permissions')
+    .single()
 
     if (staffError) {
       // Cleanup auth user if staff record fails
@@ -88,7 +92,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Staff created successfully. They can log in with their email and password.' 
+      staff: staffRecord,
+      message: 'Staff created successfully. They can log in with their email and password.'
     })
 
   } catch (error) {

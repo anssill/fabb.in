@@ -85,6 +85,16 @@ const STEPS = [
 export default function NewBookingPage() {
   const router = useRouter()
   const { activeBranch, staff } = useAppStore()
+  const bookingRules = ((activeBranch?.settings as any) || {})
+  const minAdvancePct = Number(bookingRules.min_advance_pct ?? 30)
+  const depositDefaultPct = Number(bookingRules.deposit_default_pct ?? 20)
+  const bufferDays = Number(bookingRules.buffer_days ?? 1)
+  const minRentalDays = Number(bookingRules.min_rental_days ?? 1)
+  const maxBookingWindow = Number(bookingRules.max_booking_window ?? 180)
+  const allowSameDayBooking = bookingRules.allow_same_day_booking ?? true
+  const requirePhysicalBill = bookingRules.require_physical_bill_number ?? false
+  const requireCustomerIdProof = bookingRules.require_customer_id_proof ?? false
+  const enforceStockLimit = bookingRules.enforce_stock_limit ?? false
   const [currentStep, setCurrentStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
@@ -114,14 +124,35 @@ export default function NewBookingPage() {
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
-      case 0: return !!customer.name && !!customer.phone && customer.phone.length >= 10
-      case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
+      case 0:
+        return !!customer.name
+          && !!customer.phone
+          && customer.phone.length >= 10
+          && (!requireCustomerIdProof || !!customer.id_proof_url || !!customer.id_proof_file)
+      case 1: {
+        if (!dates.event_date || !dates.pickup_date || !dates.return_date) return false
+        const rentalDays = calculateBillableRentalDays(dates.pickup_date, dates.return_date)
+        if (rentalDays < minRentalDays) return false
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const pickup = new Date(dates.pickup_date)
+        pickup.setHours(0, 0, 0, 0)
+        if (!allowSameDayBooking && pickup.getTime() === today.getTime()) return false
+        const maxPickup = new Date(today)
+        maxPickup.setDate(maxPickup.getDate() + maxBookingWindow)
+        if (pickup > maxPickup) return false
+        return true
+      }
       case 2: return items.length > 0
       case 3: return pricing.total_amount > 0
-      case 4: return payment.advance_amount > 0
+      case 4: {
+        const minAdvance = Math.round(pricing.total_amount * minAdvancePct / 100)
+        return payment.advance_amount >= minAdvance
+          && (!requirePhysicalBill || !!payment.physical_bill_number?.trim())
+      }
       default: return true
     }
-  }, [currentStep, customer, items, dates, pricing, payment])
+  }, [allowSameDayBooking, currentStep, customer, dates, items.length, maxBookingWindow, minAdvancePct, minRentalDays, payment.advance_amount, payment.physical_bill_number, pricing.total_amount, requireCustomerIdProof, requirePhysicalBill])
 
   const handleNext = () => {
     if (currentStep === 2) {
@@ -135,9 +166,13 @@ export default function NewBookingPage() {
       }))
     }
     if (currentStep === 3) {
-      // Auto-calculate advance (30% default)
-      const defaultAdvance = Math.round(pricing.total_amount * 0.3)
-      setPayment((prev) => ({ ...prev, advance_amount: prev.advance_amount || defaultAdvance }))
+      const defaultAdvance = Math.round(pricing.total_amount * minAdvancePct / 100)
+      const defaultDeposit = Math.round(pricing.total_amount * depositDefaultPct / 100)
+      setPayment((prev) => ({
+        ...prev,
+        advance_amount: prev.advance_amount || defaultAdvance,
+        deposit_amount: prev.deposit_amount || defaultDeposit,
+      }))
     }
     setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
@@ -228,9 +263,9 @@ export default function NewBookingPage() {
       <Card className="shadow-sm border-border">
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
         {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
-        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} />}
+        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} bufferDays={bufferDays} enforceStockLimit={enforceStockLimit} />}
         {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} dates={dates} />}
-        {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} />}
+        {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} minAdvancePct={minAdvancePct} requirePhysicalBill={requirePhysicalBill} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}
       </Card>
 

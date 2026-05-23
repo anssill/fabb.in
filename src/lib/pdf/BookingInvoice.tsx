@@ -10,6 +10,7 @@ import {
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const THERMAL_WIDTH = 226.77 // 80mm in PDF points.
+const MM_TO_POINTS = 2.83465
 
 const styles = StyleSheet.create({
   page: {
@@ -87,6 +88,11 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginTop: 8,
   },
+  signature: {
+    textAlign: 'right',
+    fontSize: 7,
+    marginTop: 12,
+  },
 })
 
 interface Props {
@@ -109,6 +115,7 @@ export function BookingInvoice({ booking, business, branch }: Props) {
   const items: any[] = booking.booking_items || []
   const payments: any[] = (booking.booking_payments || []).filter((p: any) => !p.is_voided)
   const settings = ((branch?.settings as any)?.invoice) || {}
+  const pageWidth = Math.max(164, Number(settings.paper_width_mm ?? 80) * MM_TO_POINTS)
 
   const rentalDays = booking.pickup_date && booking.return_date
     ? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
@@ -129,14 +136,15 @@ export function BookingInvoice({ booking, business, branch }: Props) {
 
   return (
     <Document>
-      <Page size={[THERMAL_WIDTH, pageHeight]} style={styles.page}>
+      <Page size={[pageWidth, pageHeight]} style={[styles.page, { width: pageWidth }]}>
         <Text style={styles.businessName}>{business?.name || 'Fabb.booking'}</Text>
         {branch?.address ? <Text style={styles.center}>{branch.address}</Text> : null}
         <Text style={styles.center}>
           {[branch?.city, business?.state].filter(Boolean).join(', ')}
         </Text>
-        {business?.gst_number ? <Text style={styles.center}>GSTIN: {business.gst_number}</Text> : null}
+        {business?.gst_number && settings.gst_enabled !== false ? <Text style={styles.center}>GSTIN: {business.gst_number}</Text> : null}
         {business?.phone ? <Text style={styles.center}>Ph: {business.phone}</Text> : null}
+        {settings.vyapar_counter_name ? <Text style={styles.center}>{settings.vyapar_counter_name}</Text> : null}
 
         <View style={styles.divider} />
 
@@ -246,12 +254,25 @@ export function BookingInvoice({ booking, business, branch }: Props) {
 
         <View style={styles.divider} />
 
+        {settings.show_bank_details && (settings.bank_name || settings.bank_account || settings.bank_ifsc) ? (
+          <>
+            <Text style={styles.sectionTitle}>Bank Details</Text>
+            {settings.bank_name ? <Text>{settings.bank_name}</Text> : null}
+            {settings.bank_account ? <Text>A/C: {settings.bank_account}</Text> : null}
+            {settings.bank_ifsc ? <Text>IFSC: {settings.bank_ifsc}</Text> : null}
+            <View style={styles.divider} />
+          </>
+        ) : null}
+
         <Text style={styles.footer}>
           {settings.footer_text || `Thank you for choosing ${business?.name || 'us'}.`}
         </Text>
         <Text style={styles.footer}>
           {settings.terms_text || 'Terms & Conditions Apply. This is a computer-generated invoice.'}
         </Text>
+        {settings.signature_line !== false ? (
+          <Text style={styles.signature}>Authorised Signatory</Text>
+        ) : null}
       </Page>
     </Document>
   )
