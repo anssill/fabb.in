@@ -4,11 +4,12 @@ import { useState } from 'react'
 import type { ElementType } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, Building2, CalendarCheck, Loader2, LockKeyhole, LogIn, Mail, ShieldCheck, User } from 'lucide-react'
+import { ArrowRight, Building2, Loader2, LockKeyhole, LogIn, Mail, ShieldCheck, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -79,11 +80,9 @@ export default function SignupPage() {
 
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4f46e5] shadow-sm">
-              <CalendarCheck className="h-5 w-5" />
-            </span>
+            <BrandLogo className="h-10 w-10" priority />
             <div>
-              <p className="text-sm font-bold">Fabb.booking</p>
+              <p className="text-sm font-bold">Fabb</p>
               <p className="text-xs text-slate-500">Supabase powered setup</p>
             </div>
           </div>

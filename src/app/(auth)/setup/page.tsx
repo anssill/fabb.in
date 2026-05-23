@@ -229,7 +229,7 @@ export default function SetupPage() {
                 <Building2 className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-bold">Fabb.booking</p>
+                <p className="text-sm font-bold">Fabb</p>
                 <p className="text-xs text-slate-500">Workspace setup</p>
               </div>
             </div>

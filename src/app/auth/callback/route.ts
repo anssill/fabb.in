@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
     }
   )
 
+  const redirectWithSession = (path: string) => {
+    const redirectResponse = NextResponse.redirect(new URL(path, request.url))
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie)
+    })
+    return redirectResponse
+  }
+
   const {
     data: { session },
     error,
@@ -38,12 +46,7 @@ export async function GET(request: NextRequest) {
 
   // If this is a password recovery flow, redirect straight to the reset page
   if (next === '/reset-password') {
-    const redirectResponse = NextResponse.redirect(new URL('/reset-password', request.url))
-    // Copy the session cookies so the reset page can read the session
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value)
-    })
-    return redirectResponse
+    return redirectWithSession('/reset-password')
   }
 
   // Look up staff record
@@ -54,11 +57,11 @@ export async function GET(request: NextRequest) {
     .single()
 
   if (!staffRecord) {
-    return NextResponse.redirect(new URL('/login?error=no_account', request.url))
+    return redirectWithSession('/login?error=no_account')
   }
 
   if (staffRecord.status === 'suspended') {
-    return NextResponse.redirect(new URL('/suspended', request.url))
+    return redirectWithSession('/suspended')
   }
 
   // Update last login
@@ -71,8 +74,8 @@ export async function GET(request: NextRequest) {
     .eq('id', staffRecord.id)
 
   if (!staffRecord.setup_completed && staffRecord.role === 'owner') {
-    return NextResponse.redirect(new URL('/setup', request.url))
+    return redirectWithSession('/setup')
   }
 
-  return NextResponse.redirect(new URL('/dashboard', request.url))
+  return redirectWithSession('/dashboard')
 }

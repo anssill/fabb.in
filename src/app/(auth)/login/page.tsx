@@ -3,12 +3,14 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, CalendarCheck, Loader2, LockKeyhole, Mail, ShieldCheck, UserPlus } from 'lucide-react'
+import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
+import { BrandLogo } from '@/components/brand/BrandLogo'
+import { getAuthRedirectUrl } from '@/lib/auth/redirect-url'
 
 const proofPoints = [
   'Supabase secured workspace',
@@ -57,7 +59,7 @@ function LoginForm() {
           email: cleanEmail,
           options: {
             shouldCreateUser: false,
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: getAuthRedirectUrl('/auth/callback'),
           },
         })
 
@@ -100,11 +102,9 @@ function LoginForm() {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[1fr_430px]">
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4f46e5] shadow-sm">
-              <CalendarCheck className="h-5 w-5" />
-            </span>
+            <BrandLogo className="h-10 w-10" priority />
             <div>
-              <p className="text-sm font-bold">Fabb.booking</p>
+              <p className="text-sm font-bold">Fabb</p>
               <p className="text-xs text-slate-500">Rental command center</p>
             </div>
           </div>
@@ -143,7 +143,7 @@ function LoginForm() {
             <div className="mb-8 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Welcome back</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Log in to Fabb.booking</h2>
+                <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Log in to Fabb</h2>
               </div>
               <Link href="/signup" className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-500 hover:text-[#4f46e5]" aria-label="Create an account">
                 <UserPlus className="h-4 w-4" />
@@ -221,7 +221,7 @@ function LoginForm() {
             </button>
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              New to Fabb.booking?{' '}
+              New to Fabb?{' '}
               <Link href="/signup" className="font-semibold text-[#4f46e5] hover:underline">Create a workspace</Link>
             </p>
           </div>

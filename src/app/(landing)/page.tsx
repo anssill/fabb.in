@@ -55,7 +55,7 @@ export default function LandingPage() {
                 <div className="max-w-xl">
                   <Badge className="rounded-full border-0 bg-indigo-50 px-3 py-1 text-[#4f46e5]">Rental operations dashboard</Badge>
                   <h1 className="mt-6 max-w-lg text-5xl font-semibold leading-none tracking-normal text-slate-950 sm:text-6xl">
-                    Fabb.booking
+                    Fabb
                   </h1>
                   <p className="mt-5 max-w-md text-base leading-7 text-slate-600">
                     A calm workspace for apparel rentals: bookings, inventory, payments, staff and washing queues connected through Supabase.

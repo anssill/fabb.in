@@ -10,23 +10,30 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://fabb-booking.com'),
-  title: 'Fabb.booking — Clothing Rental Management',
+  metadataBase: new URL('https://fabbin-xi.vercel.app'),
+  title: 'Fabb — Clothing Rental Management',
   description:
     'India\'s #1 SaaS for clothing rental businesses. Manage inventory, bookings, customers, and payments in one place.',
   keywords: ['clothing rental', 'rental management', 'SaaS', 'India', 'booking software', 'kerala fashion'],
-  authors: [{ name: 'Fabb.booking Team' }],
+  authors: [{ name: 'Fabb Team' }],
+  icons: {
+    icon: [
+      { url: '/brand/fabb-icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/fabb-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/brand/fabb-icon-180.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
-    title: 'Fabb.booking — Clothing Rental Management',
+    title: 'Fabb — Clothing Rental Management',
     description: 'Transform your clothing rental business with professional management software.',
-    url: 'https://fabb-booking.com',
-    siteName: 'Fabb.booking',
+    url: 'https://fabbin-xi.vercel.app',
+    siteName: 'Fabb',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Fabb.booking Dashboard Preview',
+        alt: 'Fabb Dashboard Preview',
       },
     ],
     locale: 'en_IN',
@@ -34,7 +41,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fabb.booking — Clothing Rental Management',
+    title: 'Fabb — Clothing Rental Management',
     description: 'The all-in-one platform for professional clothing rental businesses.',
     images: ['/og-image.png'],
   },

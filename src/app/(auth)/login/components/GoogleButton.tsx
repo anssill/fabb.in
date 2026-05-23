@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { getAuthRedirectUrl } from '@/lib/auth/redirect-url'
 
 export function GoogleButton() {
   const [loading, setLoading] = useState(false)
@@ -15,7 +16,7 @@ export function GoogleButton() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthRedirectUrl('/auth/callback'),
       },
     })
     if (error) {

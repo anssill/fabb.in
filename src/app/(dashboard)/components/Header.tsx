@@ -60,7 +60,7 @@ export function Header({ staff }: Props) {
           <p className="truncate text-sm font-semibold capitalize text-slate-950 dark:text-white">
             {pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
           </p>
-          <p className="hidden text-xs text-slate-500 sm:block">Fabb.booking workspace</p>
+          <p className="hidden text-xs text-slate-500 sm:block">Fabb workspace</p>
         </div>
       </div>
 

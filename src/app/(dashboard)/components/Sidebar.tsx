@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { BranchSwitcher } from './BranchSwitcher'
 import { hasPermission, ROUTE_PERMISSION_MAP } from '@/lib/permissions'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 interface NavItem {
   label: string
@@ -104,12 +105,10 @@ function NavContent({
       <div className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-[#4f46e5] shadow-sm ring-1 ring-slate-100 transition-transform hover:scale-105">
-              <span className="text-sm font-black">F</span>
-            </div>
+            <BrandLogo className="h-9 w-9 shrink-0 transition-transform hover:scale-105" />
             {!sidebarCollapsed && (
               <p className="truncate text-sm font-bold text-slate-950 dark:text-white">
-                {staff.business?.name || 'Fabb.booking'}
+                {staff.business?.name || 'Fabb'}
               </p>
             )}
           </div>
