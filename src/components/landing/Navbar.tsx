@@ -19,9 +19,8 @@ export function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-5">
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-[1.75rem] bg-[#f7f8fd]/95 px-5 shadow-sm ring-1 ring-white/80 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2 text-slate-950">
-          <BrandLogo className="h-9 w-9" priority />
-          <span className="text-base font-bold tracking-normal">Fabb</span>
+        <Link href="/" className="flex items-center text-slate-950">
+          <BrandLogo className="h-9 w-28" priority />
         </Link>
 
         <div className="hidden items-center gap-9 md:flex">

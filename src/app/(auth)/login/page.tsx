@@ -102,7 +102,7 @@ function LoginForm() {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[1fr_430px]">
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-10 w-10" priority />
+            <BrandLogo className="h-10 w-32" priority />
             <div>
               <p className="text-sm font-bold">Fabb</p>
               <p className="text-xs text-slate-500">Rental command center</p>

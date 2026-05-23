@@ -105,7 +105,7 @@ function NavContent({
       <div className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-9 w-9 shrink-0 transition-transform hover:scale-105" />
+            <BrandLogo compact className="h-9 w-9 shrink-0 transition-transform hover:scale-105" />
             {!sidebarCollapsed && (
               <p className="truncate text-sm font-bold text-slate-950 dark:text-white">
                 {staff.business?.name || 'Fabb'}

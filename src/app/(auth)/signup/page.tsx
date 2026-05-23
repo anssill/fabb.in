@@ -80,7 +80,7 @@ export default function SignupPage() {
 
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-10 w-10" priority />
+            <BrandLogo className="h-10 w-32" priority />
             <div>
               <p className="text-sm font-bold">Fabb</p>
               <p className="text-xs text-slate-500">Supabase powered setup</p>
