@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Search, Package, QrCode, Calendar as CalendarIcon, Layers } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { QRScanner } from '@/components/shared/QRScanner'
 import { createClient } from '@/lib/supabase/client'
@@ -276,9 +277,12 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                 <Card className="group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                   <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center relative overflow-hidden">
                     {item.cover_image_url ? (
-                      <img 
+                      <Image 
                         src={item.cover_image_url} 
                         alt={item.name} 
+                        width={480}
+                        height={360}
+                        sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                       />
                     ) : (

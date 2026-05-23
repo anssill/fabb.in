@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 
 export function NotificationRealtime() {
   const { staff, setUnreadNotifications } = useAppStore()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!staff?.id) return
@@ -15,7 +15,7 @@ export function NotificationRealtime() {
     const fetchUnreadCount = async () => {
       const { count, error } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('target_staff_id', staff.id)
         .eq('is_read', false)
 

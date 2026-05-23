@@ -7,7 +7,7 @@ import { useAppStore } from '@/lib/store'
 
 export function DataRealtime() {
   const router = useRouter()
-  const { business } = useAppStore()
+  const { business, activeBranch } = useAppStore()
   // Use a ref to persist the timeout between renders without triggering them
   const timeoutId = useRef<NodeJS.Timeout | null>(null)
 
@@ -24,10 +24,10 @@ export function DataRealtime() {
       
       timeoutId.current = setTimeout(() => {
         router.refresh()
-      }, 500)
+      }, 1000)
     })
 
-    if (!business?.id) {
+    if (!business?.id || !activeBranch?.id) {
       return () => {
         authSubscription.unsubscribe()
       }
@@ -39,6 +39,9 @@ export function DataRealtime() {
       if (payload.new && 'business_id' in payload.new && payload.new.business_id) {
         if (payload.new.business_id !== business.id) return
       }
+      if (payload.new && 'branch_id' in payload.new && payload.new.branch_id) {
+        if (payload.new.branch_id !== activeBranch.id) return
+      }
 
       // Debounce the router.refresh to prevent excessive server calls
       if (timeoutId.current) {
@@ -47,28 +50,25 @@ export function DataRealtime() {
       
       timeoutId.current = setTimeout(() => {
         router.refresh()
-      }, 500)
+      }, 1000)
     }
 
-    const tables = [
-      'bookings', 
-      'booking_items', 
-      'booking_payments', 
-      'booking_timeline',
-      'customers', 
-      'items', 
-      'item_variants', 
-      'expenses', 
+    const branchScopedTables = [
+      'bookings',
+      'booking_payments',
+      'customers',
+      'items',
+      'expenses',
       'washing_queue',
-      'staff_attendance'
+      'staff_attendance',
     ]
 
-    const channels = tables.map(table => 
+    const channels = branchScopedTables.map(table => 
       supabase
-        .channel(`realtime-global-${table}`)
+        .channel(`realtime-branch-${activeBranch.id}-${table}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table },
+          { event: '*', schema: 'public', table, filter: `branch_id=eq.${activeBranch.id}` },
           handleUpdate
         )
         .subscribe()
@@ -79,7 +79,7 @@ export function DataRealtime() {
       authSubscription.unsubscribe()
       channels.forEach(channel => supabase.removeChannel(channel))
     }
-  }, [business?.id, router])
+  }, [business?.id, activeBranch?.id, router])
 
   return null
 }
