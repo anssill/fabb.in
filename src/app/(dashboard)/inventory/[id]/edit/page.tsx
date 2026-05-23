@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { isValidUuid } from '@/lib/api-utils'
+import { getCurrentStaffContext } from '@/lib/auth/current-staff'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -12,7 +13,8 @@ export default async function EditInventoryPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const supabase = await createClient()
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
 
   const { data: item } = await supabase
     .from('items')
@@ -21,7 +23,8 @@ export default async function EditInventoryPage({ params }: { params: Promise<{ 
       item_variants(id, size, colour, total_stock, available_stock, reserved_stock, price_override)
     `)
     .eq('id', id)
-    .single()
+    .eq('business_id', staff.business_id)
+    .maybeSingle()
 
   if (!item) notFound()
 

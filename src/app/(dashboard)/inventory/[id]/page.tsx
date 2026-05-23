@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { isValidUuid } from '@/lib/api-utils'
+import { getCurrentStaffContext } from '@/lib/auth/current-staff'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +26,8 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
     notFound()
   }
 
-  const supabase = await createClient()
+  const staff = await getCurrentStaffContext()
+  const supabase = getSupabaseAdmin()
 
   const { data: item } = await supabase
     .from('items')
@@ -35,7 +37,8 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
       branch:branches(name)
     `)
     .eq('id', id)
-    .single()
+    .eq('business_id', staff.business_id)
+    .maybeSingle()
 
   if (!item) notFound()
 
@@ -57,7 +60,7 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const { data: calendarBookings } = await supabase
     .from('booking_items')
-    .select('variant_id, quantity, booking:bookings!inner(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
+    .select('item_variant_id, quantity, booking:bookings!inner(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
     .eq('item_id', id)
     .gte('booking.return_date', thirtyDaysAgo.toISOString().split('T')[0])
     .order('booking(pickup_date)', { ascending: true })
@@ -74,7 +77,7 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
       pickup_date: bk.pickup_date,
       return_date: bk.return_date,
       customer_name: cust?.name || 'Customer',
-      variant_id: bi.variant_id,
+      variant_id: bi.item_variant_id,
       quantity: bi.quantity || 1,
     }
   }).filter(Boolean) as any[]
@@ -286,12 +289,18 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
           </Card>
 
           {/* QR Tag */}
-          <ItemTag item={{ sku: item.sku, name: item.name, category: item.category }} />
+          <ItemTag item={{ sku: item.sku || item.id, name: item.name, category: item.category }} />
         </div>
       </div>
 
       {/* Availability Calendar — full width below */}
-      <AvailabilityCalendar bookings={calendarData} variants={item.item_variants} />
+      <AvailabilityCalendar
+        bookings={calendarData}
+        variants={(item.item_variants || []).map((variant) => ({
+          ...variant,
+          colour: variant.colour || '',
+        }))}
+      />
     </div>
   )
 }
