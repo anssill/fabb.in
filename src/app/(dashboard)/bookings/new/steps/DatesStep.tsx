@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 interface Props {
   dates: BookingDates
@@ -71,7 +72,7 @@ export function DatesStep({ dates, setDates }: Props) {
   }
 
   const rentalDays = dates.pickup_date && dates.return_date
-    ? Math.max(1, Math.ceil((new Date(dates.return_date).getTime() - new Date(dates.pickup_date).getTime()) / (1000 * 60 * 60 * 24)))
+    ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
     : 0
 
   return (
@@ -296,4 +297,3 @@ export function DatesStep({ dates, setDates }: Props) {
     </>
   )
 }
-

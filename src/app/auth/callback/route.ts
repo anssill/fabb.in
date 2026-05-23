@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   const searchParams = new URL(request.url).searchParams
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   // Look up staff record
   const { data: staffRecord } = await supabase
     .from('staff')
-    .select('status, role, setup_completed, business_id, branch_id')
+    .select('id, status, role, setup_completed, business_id, branch_id')
     .eq('email', session.user.email!)
     .single()
 
@@ -61,10 +62,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Update last login
-  await supabase
+  await supabaseAdmin
     .from('staff')
-    .update({ last_login: new Date().toISOString() })
-    .eq('email', session.user.email!)
+    .update({
+      status: staffRecord.status === 'invited' ? 'active' : staffRecord.status,
+      last_login: new Date().toISOString(),
+    })
+    .eq('id', staffRecord.id)
 
   if (!staffRecord.setup_completed && staffRecord.role === 'owner') {
     return NextResponse.redirect(new URL('/setup', request.url))

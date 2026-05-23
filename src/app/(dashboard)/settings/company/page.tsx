@@ -6,10 +6,12 @@ export const metadata = {
 
 export default function CompanySettingsPage() {
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">Company Profile</h2>
-        <p className="text-sm text-slate-500">Manage your business contact details, logo and regional settings.</p>
+    <div className="mx-auto max-w-5xl space-y-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Company Profile</h1>
+          <p className="text-sm text-slate-500">Manage your business contact details, logo and regional settings.</p>
+        </div>
       </div>
 
       <CompanySettingsClient />

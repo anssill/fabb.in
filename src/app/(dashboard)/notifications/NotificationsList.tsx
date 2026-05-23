@@ -39,10 +39,10 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Notifications</h1>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Notifications</h1>
           <p className="text-sm text-slate-500">Stay updated on your bookings and activities</p>
         </div>
         <Button 
@@ -56,7 +56,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
         </Button>
       </div>
 
-      <Card className="shadow-sm border-slate-200">
+      <Card>
         <CardContent className="p-0">
           {notifications && notifications.length > 0 ? (
             <div className="divide-y divide-slate-100">
@@ -64,7 +64,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                 <div
                   key={notif.id}
                   className={`flex items-start gap-4 p-4 hover:bg-slate-50 transition-colors group ${
-                    !notif.is_read ? 'bg-blue-50/50' : ''
+                    !notif.is_read ? 'bg-indigo-50/50' : ''
                   }`}
                   onClick={() => !notif.is_read && handleMarkRead(notif.id)}
                 >
@@ -72,7 +72,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                     notif.type === 'success' ? 'bg-emerald-100 text-emerald-600' :
                     notif.type === 'warning' ? 'bg-amber-100 text-amber-600' :
                     notif.type === 'error' ? 'bg-rose-100 text-rose-600' :
-                    'bg-blue-100 text-blue-600'
+                    'bg-indigo-100 text-[#4f46e5]'
                   }`}>
                     <Bell className="w-5 h-5" />
                   </div>
@@ -117,7 +117,7 @@ export function NotificationsList({ initialNotifications }: NotificationsListPro
                           minute: '2-digit',
                         })}
                       </p>
-                      {!notif.is_read && <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                      {!notif.is_read && <div className="w-1.5 h-1.5 rounded-full bg-[#4f46e5]" />}
                     </div>
                   </div>
                 </div>

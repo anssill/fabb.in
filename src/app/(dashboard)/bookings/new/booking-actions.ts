@@ -6,6 +6,7 @@ import { createInternalNotification } from '../../notifications/notification-act
 import { revalidatePath } from 'next/cache'
 import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 interface BookingData {
   customer: {
@@ -89,9 +90,7 @@ export async function createNewBookingFlow(data: BookingData) {
     const bookingNumber = `${prefix}-${dateStr}-${randomSuffix}`
 
     // 3. Create booking
-    const rentalDays = Math.max(1, Math.ceil(
-      (new Date(data.dates.return_date).getTime() - new Date(data.dates.pickup_date).getTime()) / (1000 * 60 * 60 * 24)
-    ))
+    const rentalDays = calculateBillableRentalDays(data.dates.pickup_date, data.dates.return_date)
 
     const { data: booking, error: bookingErr } = await supabase
       .from('bookings')
@@ -117,6 +116,7 @@ export async function createNewBookingFlow(data: BookingData) {
         occasion: data.dates.occasion || null,
         booking_source: data.dates.booking_source || 'walk_in',
         notes: data.dates.notes || null,
+        physical_bill_number: data.payment.physical_bill_number?.trim() || null,
       })
       .select('id')
       .single()

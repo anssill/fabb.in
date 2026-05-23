@@ -28,7 +28,7 @@ interface Props {
   activities: ActivityItem[]
 }
 
-const getActionMeta = (action: string, entity: string) => {
+const getActionMeta = (action: string) => {
   const a = action.toLowerCase()
   if (a.includes('create'))  return { icon: PlusCircle,     color: 'text-emerald-500', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700' }
   if (a.includes('pickup') || a.includes('out')) return { icon: ArrowUpCircle,   color: 'text-blue-500',    bg: 'bg-blue-50',    badge: 'bg-blue-100 text-blue-700' }
@@ -43,7 +43,7 @@ const initials = (name: string) =>
 
 export function DashboardActivity({ activities }: Props) {
   return (
-    <Card className="h-full">
+    <Card className="h-full min-w-0 rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Activity className="w-4 h-4 text-slate-500" />
@@ -61,7 +61,7 @@ export function DashboardActivity({ activities }: Props) {
           ) : (
             <div className="divide-y">
               {activities.map((activity) => {
-                const meta = getActionMeta(activity.action, activity.entity_type)
+                const meta = getActionMeta(activity.action)
                 const Icon = meta.icon
                 return (
                   <div key={activity.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">

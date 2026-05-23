@@ -1,14 +1,14 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Mail, Lock, Building, User, ArrowRight, Loader2 } from 'lucide-react';
+import { useState } from 'react'
+import type { ElementType } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowRight, Building2, CalendarCheck, Loader2, LockKeyhole, LogIn, Mail, ShieldCheck, User } from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -16,190 +16,136 @@ export default function SignupPage() {
     fullName: '',
     email: '',
     password: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  })
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
     try {
-      const { signUpAction } = await import('@/lib/auth/actions');
-      const result = await signUpAction(formData);
+      const { signUpAction } = await import('@/lib/auth/actions')
+      const result = await signUpAction(formData)
 
-      if (result?.error) {
-        throw new Error(result.error);
-      }
+      if (result?.error) throw new Error(result.error)
 
-      toast.success('Account created! Please login.');
-      router.push('/login');
-    } catch (error: any) {
-      toast.error(error.message || 'Something went wrong');
+      toast.success('Workspace created. Finish your business profile next.')
+      router.push('/setup')
+      router.refresh()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Something went wrong')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleChange = (id: keyof typeof formData, value: string) => {
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
+    setFormData((prev) => ({ ...prev, [id]: value }))
+  }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col relative overflow-hidden justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Background Orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[160px]" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[50%] h-[50%] bg-blue-500/5 rounded-full blur-[160px]" />
-      </div>
-
-      <div className="w-full max-w-xl z-10 relative">
-        <div className="text-center mb-10">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-black tracking-tight text-white mb-3"
-          >
-            FABB<span className="text-primary italic">.IN</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-lg text-slate-400 font-medium"
-          >
-            Start growing your business operations today
-          </motion.p>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 md:p-12 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] relative overflow-hidden"
-        >
-          {/* Subtle top light bar */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Create an account</h2>
-            <p className="text-slate-400">Enter your details to register your business</p>
-          </div>
-
-          <form onSubmit={handleSignup} className="space-y-6">
-            <div className="space-y-5">
-              
-              {/* Business Name */}
-              <div className="space-y-3">
-                <Label htmlFor="businessName" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Business Name</Label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                    <Building className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                  </div>
-                  <Input 
-                    id="businessName"
-                    value={formData.businessName}
-                    onChange={(e) => handleChange('businessName', e.target.value)}
-                    required
-                    placeholder="Acme Inc."
-                    className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
-                  />
-                </div>
+    <main className="min-h-screen bg-[#e9ebf5] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[430px_1fr]">
+        <section className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
+          <div className="rounded-[1.65rem] bg-white p-6 shadow-sm sm:p-8">
+            <div className="mb-7 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">New workspace</p>
+                <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Create your business account</h1>
               </div>
-
-              {/* Full Name */}
-              <div className="space-y-3">
-                <Label htmlFor="fullName" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Full Name</Label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                    <User className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                  </div>
-                  <Input 
-                    id="fullName"
-                    value={formData.fullName}
-                    onChange={(e) => handleChange('fullName', e.target.value)}
-                    required
-                    placeholder="John Doe"
-                    className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-3">
-                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Email</Label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                    <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                  </div>
-                  <Input 
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleChange('email', e.target.value)}
-                    required
-                    placeholder="name@example.com"
-                    className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-3">
-                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Password</Label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                    <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                  </div>
-                  <Input 
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleChange('password', e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80"
-                  />
-                </div>
-              </div>
-
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/30 h-16 text-lg font-black rounded-2xl group relative overflow-hidden active:scale-[0.98] transition-transform mt-6"
-              size="lg"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-              ) : (
-                <span className="flex items-center gap-3 justify-center">
-                  CREATE BUSINESS ACCOUNT <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              )}
-            </Button>
-
-            <div className="pt-6 text-center">
-              <span className="text-sm font-medium text-slate-500">Already have an account? </span>
-              <Link 
-                href="/login" 
-                className="text-sm font-bold text-primary hover:text-white transition-all underline underline-offset-4 decoration-primary/30"
-              >
-                Sign In
+              <Link href="/login" className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-500 hover:text-[#4f46e5]" aria-label="Log in">
+                <LogIn className="h-4 w-4" />
               </Link>
             </div>
-          </form>
-        </motion.div>
 
-        {/* Global Security Badge */}
-        <div className="mt-12 flex justify-center opacity-30">
-          <div className="px-4 py-2 border border-white/10 rounded-full flex items-center gap-3 bg-white/5 backdrop-blur-md">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">AES-256 Auth Shield Active</span>
+            <form onSubmit={handleSignup} className="space-y-4">
+              <Field icon={Building2} id="businessName" label="Business name" value={formData.businessName} placeholder="Fabb Rentals" autoComplete="organization" onChange={(value) => handleChange('businessName', value)} />
+              <Field icon={User} id="fullName" label="Owner name" value={formData.fullName} placeholder="Your name" autoComplete="name" onChange={(value) => handleChange('fullName', value)} />
+              <Field icon={Mail} id="email" label="Email address" type="email" value={formData.email} placeholder="owner@boutique.com" autoComplete="email" onChange={(value) => handleChange('email', value)} />
+              <Field icon={LockKeyhole} id="password" label="Password" type="password" value={formData.password} placeholder="Minimum 8 characters" autoComplete="new-password" minLength={8} onChange={(value) => handleChange('password', value)} />
+
+              <Button type="submit" disabled={loading} className="h-12 w-full rounded-full bg-[#4f46e5] text-white shadow-sm hover:bg-[#4338ca]">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Create workspace <ArrowRight className="ml-2 h-4 w-4" /></>}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-slate-500">
+              Already have a workspace?{' '}
+              <Link href="/login" className="font-semibold text-[#4f46e5] hover:underline">Log in</Link>
+            </p>
           </div>
-        </div>
+        </section>
+
+        <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
+          <div className="flex items-center gap-2">
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4f46e5] shadow-sm">
+              <CalendarCheck className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Fabb.booking</p>
+              <p className="text-xs text-slate-500">Supabase powered setup</p>
+            </div>
+          </div>
+
+          <div className="mt-12 rounded-[1.65rem] bg-white p-6 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">What gets created</p>
+            <h2 className="mt-3 max-w-lg text-4xl font-semibold leading-tight tracking-normal text-slate-950">
+              One signup creates your business, owner profile and first branch.
+            </h2>
+            <div className="mt-8 grid gap-3">
+              {['Business profile in Supabase', 'Default branch with booking prefix', 'Owner staff record for dashboard access'].map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                  <ShieldCheck className="h-4 w-4 text-[#4f46e5]" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  )
+}
+
+function Field({
+  icon: Icon,
+  id,
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  autoComplete,
+  minLength,
+}: {
+  icon: ElementType
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  type?: string
+  placeholder: string
+  autoComplete: string
+  minLength?: number
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-sm font-medium text-slate-700">{label}</Label>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          minLength={minLength}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          className="h-12 rounded-2xl border-slate-100 bg-slate-50 pl-11 text-sm shadow-none focus-visible:ring-[#4f46e5]"
+        />
       </div>
     </div>
-  );
+  )
 }

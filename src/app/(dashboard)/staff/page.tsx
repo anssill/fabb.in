@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { StaffClient } from './StaffClient'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 export default async function StaffPage() {
   const supabase = await createClient()
@@ -31,10 +29,10 @@ export default async function StaffPage() {
     .order('name')
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-8">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Team Management</h1>
-        <p className="text-slate-500 mt-1">Manage your team members, roles, and branch assignments.</p>
+        <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Team Management</h1>
+        <p className="mt-1 text-sm text-slate-500">Manage your team members, roles, and branch assignments.</p>
       </div>
 
       <StaffClient 

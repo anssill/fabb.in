@@ -14,8 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, Search, LogOut, User, Settings, Moon, Sun, ChevronRight } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { Bell, LogOut, User, Settings, Moon, Sun, Search } from 'lucide-react'
 import { useState } from 'react'
 
 interface Props {
@@ -52,33 +51,29 @@ export function Header({ staff }: Props) {
   const pathSegments = pathname.split('/').filter(Boolean)
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-60 z-30 h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-6 transition-all duration-300">
-      {/* Left: Breadcrumbs */}
-      <div className="flex-1 ml-10 lg:ml-0 flex items-center gap-2 overflow-hidden">
-        {pathSegments.map((segment: string, index: number) => (
-          <div key={index} className="flex items-center gap-1 shrink-0">
-            {index > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />}
-            <span className={`text-sm capitalize ${
-              index === pathSegments.length - 1 
-                ? 'font-semibold text-slate-900 dark:text-white' 
-                : 'text-slate-500'
-            }`}>
-              {segment.replace(/-/g, ' ')}
-            </span>
-          </div>
-        ))}
+    <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/70 bg-[#e9ebf5]/85 px-4 backdrop-blur-xl transition-all duration-300 lg:left-[17.5rem] lg:px-7 dark:border-slate-800 dark:bg-slate-950/80">
+      <div className="ml-10 flex min-w-0 flex-1 items-center gap-3 lg:ml-0">
+        <div className="hidden h-10 w-10 place-items-center rounded-full bg-white text-slate-600 shadow-sm sm:grid">
+          <Search className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold capitalize text-slate-950 dark:text-white">
+            {pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
+          </p>
+          <p className="hidden text-xs text-slate-500 sm:block">Fabb.booking workspace</p>
+        </div>
       </div>
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="text-slate-500">
+        <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          className="relative text-slate-500"
+          className="relative h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm"
           onClick={() => router.push('/notifications')}
         >
           <Bell className="w-4 h-4" />
@@ -94,12 +89,13 @@ export function Header({ staff }: Props) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="h-11 gap-2 rounded-full bg-white px-2 pl-2 pr-3 shadow-sm">
               <Avatar className="w-7 h-7">
                 <AvatarFallback className="text-xs bg-blue-100 text-blue-700">{initials}</AvatarFallback>
               </Avatar>
-              <span className="hidden lg:inline text-sm font-medium text-slate-700 dark:text-slate-200">
-                {staff.name || 'User'}
+              <span className="hidden text-left lg:block">
+                <span className="block text-sm font-semibold leading-tight text-slate-800 dark:text-slate-100">{staff.name || 'User'}</span>
+                <span className="block text-[11px] capitalize leading-tight text-slate-400">{staff.role.replace(/_/g, ' ')}</span>
               </span>
             </Button>
           </DropdownMenuTrigger>

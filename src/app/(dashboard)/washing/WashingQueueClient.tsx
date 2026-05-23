@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -72,9 +72,9 @@ function ItemCard({
   const isReady = log.stage === 'ready'
 
   return (
-    <div className={`flex flex-col gap-3 p-3 rounded-lg border ${isUrgent ? 'border-red-200 bg-red-50/30' : 'border-slate-200 bg-white'} ${compact ? '' : 'sm:flex-row sm:items-center'}`}>
+    <div className={`flex flex-col gap-3 rounded-2xl border p-3 ${isUrgent ? 'border-red-200 bg-red-50/30' : 'border-slate-100 bg-white'} ${compact ? '' : 'sm:flex-row sm:items-center'}`}>
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isReady ? 'bg-emerald-50' : 'bg-cyan-50'}`}>
+        <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${isReady ? 'bg-emerald-50' : 'bg-cyan-50'}`}>
           {isReady ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Waves className="w-4 h-4 text-cyan-600" />}
         </div>
         <div className="min-w-0">
@@ -201,12 +201,12 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
     <div className="space-y-4">
       {/* View toggle */}
       <div className="flex justify-end">
-        <div className="flex items-center p-1 bg-slate-100 rounded-lg gap-1">
+        <div className="flex items-center gap-1 rounded-2xl bg-white p-1 shadow-sm">
           <Button
             size="sm"
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             onClick={() => setViewMode('list')}
-            className={viewMode === 'list' ? 'h-7 px-3 bg-white text-slate-900 shadow-sm hover:bg-white' : 'h-7 px-3 text-slate-600 hover:bg-white/60'}
+            className={viewMode === 'list' ? 'h-8 px-3 bg-[#4f46e5] text-white shadow-sm hover:bg-[#4338ca]' : 'h-8 px-3 text-slate-600 hover:bg-slate-50'}
           >
             <List className="w-3.5 h-3.5 mr-1.5" />
             List
@@ -215,7 +215,7 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
             size="sm"
             variant={viewMode === 'kanban' ? 'default' : 'ghost'}
             onClick={() => setViewMode('kanban')}
-            className={viewMode === 'kanban' ? 'h-7 px-3 bg-white text-slate-900 shadow-sm hover:bg-white' : 'h-7 px-3 text-slate-600 hover:bg-white/60'}
+            className={viewMode === 'kanban' ? 'h-8 px-3 bg-[#4f46e5] text-white shadow-sm hover:bg-[#4338ca]' : 'h-8 px-3 text-slate-600 hover:bg-slate-50'}
           >
             <LayoutGrid className="w-3.5 h-3.5 mr-1.5" />
             Kanban
@@ -248,7 +248,7 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
             const stageItems = initialLogs.filter(l => l.stage === stage)
             return (
               <div key={stage} className="flex flex-col gap-2">
-                <div className={`flex items-center justify-between px-3 py-2 rounded-lg ${STAGE_COLORS[stage]}`}>
+                <div className={`flex items-center justify-between px-3 py-2 rounded-2xl ${STAGE_COLORS[stage]}`}>
                   <span className="text-sm font-semibold">{STAGE_LABELS[stage]}</span>
                   <Badge variant="outline" className="bg-white/60 border-transparent text-current h-5 px-1.5 text-xs">
                     {stageItems.length}
@@ -256,7 +256,7 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
                 </div>
                 <div className="space-y-2 min-h-[120px]">
                   {stageItems.length === 0 ? (
-                    <div className="border-2 border-dashed border-slate-200 rounded-lg h-24 flex items-center justify-center">
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl h-24 flex items-center justify-center">
                       <p className="text-xs text-slate-400">No items</p>
                     </div>
                   ) : (

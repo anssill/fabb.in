@@ -8,7 +8,7 @@ export default async function NotificationsPage() {
   const notifications = await getNotifications()
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-[960px]">
       <NotificationsList initialNotifications={notifications} />
     </div>
   )

@@ -7,6 +7,7 @@ import {
   View,
   StyleSheet,
 } from '@react-pdf/renderer'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 // Register fonts if needed (Optional for standard)
 // Font.register({ family: 'Inter', src: '...' })
@@ -141,9 +142,7 @@ export function BookingInvoice({ booking, business, branch }: Props) {
 
   // Calculate rental days from pickup/return dates
   const rentalDays = booking.pickup_date && booking.return_date
-    ? Math.max(1, Math.ceil(
-        (new Date(booking.return_date).getTime() - new Date(booking.pickup_date).getTime()) / (1000 * 60 * 60 * 24)
-      ))
+    ? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
     : 1
 
   // Use total_amount from booking if available; otherwise derive from items

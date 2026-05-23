@@ -162,11 +162,11 @@ export function ItemsStep({ items, setItems, dates }: Props) {
         .eq('is_active', true)
         .limit(10)
 
-      if (query.length >= 2) {
+      if (query.length >= 1) {
         dbQuery = dbQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
       }
 
-      const { data, error } = await dbQuery
+      const { data, error } = await dbQuery.order('name', { ascending: true })
       if (error) throw error
 
       const normalized = ((data as SearchResult[]) || [])
@@ -191,6 +191,18 @@ export function ItemsStep({ items, setItems, dates }: Props) {
     handleSearch('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staff?.business_id])
+
+  useEffect(() => {
+    if (!staff?.business_id) return
+    if (searchQuery.trim().length === 0) return
+
+    const delayDebounce = setTimeout(() => {
+      handleSearch(searchQuery)
+    }, 250)
+
+    return () => clearTimeout(delayDebounce)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, staff?.business_id])
 
   const addItem = (item: SearchResult, variant: SearchResult['item_variants'][0]) => {
     const exists = items.find((i) => i.variant_id === variant.id)

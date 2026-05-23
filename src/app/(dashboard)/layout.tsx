@@ -42,14 +42,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('status', 'active')
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
       <StoreInitializer staff={staff} business={business} branches={branches || []} />
       <SidebarWrapper staff={staff} branches={branches || []} />
       <NotificationRealtime />
       <DataRealtime />
-      <div className="lg:ml-60 flex flex-col min-h-screen transition-all duration-300">
+      <div className="lg:ml-[17.5rem] flex flex-col min-h-screen transition-all duration-300">
         <Header staff={staff} />
-        <main className="flex-1 p-4 lg:p-6 mt-14">
+        <main className="flex-1 p-3 pt-16 sm:p-5 sm:pt-18 lg:p-7 lg:pt-20">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

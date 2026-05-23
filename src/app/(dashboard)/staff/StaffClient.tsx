@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -15,11 +15,11 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { safeJsonParse } from '@/lib/api-utils'
-import { PERMISSIONS, getDefaultPermissions, type PermissionKey } from '@/lib/permissions'
+import { PERMISSIONS, getDefaultPermissions } from '@/lib/permissions'
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: 'bg-purple-100 text-purple-700 border-purple-200',
-  manager: 'bg-blue-100 text-blue-700 border-blue-200',
+  owner: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  manager: 'bg-blue-50 text-blue-700 border-blue-100',
   staff: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
@@ -85,8 +85,8 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
   const canManage = ['owner', 'manager'].includes(currentUserRole)
 
   async function handleInvite() {
-    if (!inviteData.email || !inviteData.name || !inviteData.branchId || !inviteData.phone) {
-      toast.error('Please fill in all required fields (including Phone)')
+    if (!inviteData.email || !inviteData.name || !inviteData.branchId) {
+      toast.error('Please fill in all required fields')
       return
     }
 
@@ -194,14 +194,14 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 max-w-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
               placeholder="Search by name or email..." 
-              className="pl-10 h-10 border-slate-200 focus-visible:ring-blue-500 rounded-xl"
+              className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -209,7 +209,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
         </div>
         
         {canManage && (
-          <Button onClick={() => setIsInviteOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-10 px-6">
+          <Button onClick={() => setIsInviteOpen(true)} className="h-10 px-6">
             <Plus className="w-4 h-4 mr-2" />
             Invite Staff
           </Button>
@@ -222,15 +222,15 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
           const branchName = branches.find(b => b.id === member.branch_id)?.name || 'No branch'
           
           return (
-            <Card key={member.id} className="group hover:shadow-md transition-all duration-200 border-slate-200 rounded-2xl overflow-hidden">
+            <Card key={member.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <Avatar className="w-12 h-12 rounded-full border-2 border-slate-50 shadow-sm">
-                      <AvatarFallback className="bg-blue-50 text-blue-600 font-semibold">{initials}</AvatarFallback>
+                    <Avatar className="w-12 h-12 rounded-2xl border-2 border-slate-50 shadow-sm">
+                      <AvatarFallback className="bg-indigo-50 text-[#4f46e5] font-semibold">{initials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-base font-semibold text-slate-900 group-hover:text-[#4f46e5] transition-colors">
                         {member.name || 'Set name'}
                       </h3>
                       <Badge variant="outline" className={`mt-1 text-[10px] uppercase font-bold tracking-tight py-0 px-2 rounded-full ${ROLE_COLORS[member.role]}`}>
@@ -329,7 +329,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="invite-phone">Phone Number (Required for OTP Login)</Label>
+              <Label htmlFor="invite-phone">Phone Number <span className="text-slate-400">(optional)</span></Label>
               <Input 
                 id="invite-phone" 
                 type="tel" 
@@ -372,7 +372,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
             <Button 
               onClick={handleInvite} 
               disabled={isSubmitting} 
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
             >
               {isSubmitting ? 'Sending Invite...' : 'Send Invitation'}
             </Button>
@@ -454,7 +454,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
             <Button 
               onClick={handleUpdate} 
               disabled={isSubmitting} 
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
@@ -467,7 +467,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-600" />
+              <Shield className="w-5 h-5 text-[#4f46e5]" />
               Manage Permissions
             </DialogTitle>
             <DialogDescription>
@@ -490,13 +490,13 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                   }))}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 ${
                     isEnabled
-                      ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                      ? 'bg-indigo-50 border-indigo-100 hover:bg-indigo-100'
                       : 'bg-slate-50 border-slate-200 hover:bg-slate-100 opacity-60'
                   }`}
                 >
                   <div className="text-left">
                     <p className={`text-sm font-semibold ${
-                      isEnabled ? 'text-blue-900' : 'text-slate-500'
+                      isEnabled ? 'text-indigo-900' : 'text-slate-500'
                     }`}>
                       {perm.label}
                     </p>
@@ -504,7 +504,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                   </div>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                     isEnabled
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-[#4f46e5] text-white'
                       : 'bg-slate-200 text-slate-400'
                   }`}>
                     {isEnabled ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
@@ -535,7 +535,7 @@ export function StaffClient({ initialStaff, branches, businessId, currentUserId,
                 }
               }}
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex-1 sm:flex-none"
+              className="flex-1 sm:flex-none"
             >
               {isSubmitting ? 'Saving...' : 'Save Permissions'}
             </Button>

@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { BookingActions } from './components/BookingActions'
 import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
 import { BookingSmsButton } from './components/BookingSmsButton'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft:     { color: 'bg-slate-100 text-slate-700',   label: 'Draft' },
@@ -79,9 +80,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.draft
 
   const isOverdue = booking.status === 'out' && new Date(booking.return_date) < new Date()
-  const rentalDays = (booking as any).rental_days ?? Math.max(1, Math.ceil(
-    (new Date(booking.return_date).getTime() - new Date(booking.pickup_date).getTime()) / (1000 * 60 * 60 * 24)
-  ))
+  const rentalDays = (booking as any).rental_days ?? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
 
   const payments = ((booking.booking_payments || []) as any[]).filter((p: any) => !p.is_voided)
   const totalPaid = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
@@ -320,6 +319,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <span className="text-slate-500">Booking ID</span>
                     <span className="font-mono text-xs font-medium">{booking.id.slice(0, 8)}…</span>
                   </div>
+                  {(booking as any).physical_bill_number && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Physical bill</span>
+                      <span className="font-mono text-xs font-medium">{(booking as any).physical_bill_number}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Created by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>

@@ -96,6 +96,17 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           </div>
         )}
 
+        {/* Physical bill number */}
+        <div className="space-y-2">
+          <Label>Physical bill number <span className="text-muted-foreground">(optional)</span></Label>
+          <Input
+            value={payment.physical_bill_number || ''}
+            onChange={(e) => setPayment({ ...payment, physical_bill_number: e.target.value.toUpperCase().slice(0, 40) })}
+            placeholder="Bill book number"
+          />
+          <p className="text-xs text-muted-foreground">Use the number from the paper bill so it can be searched later.</p>
+        </div>
+
         {/* Security deposit */}
         <div className="space-y-2">
           <Label>Security deposit <span className="text-muted-foreground">(optional)</span></Label>

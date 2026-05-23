@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Menu,
   X,
-  Building2,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -26,7 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { BranchSwitcher } from './BranchSwitcher'
-import { hasPermission, ROUTE_PERMISSION_MAP, type PermissionKey } from '@/lib/permissions'
+import { hasPermission, ROUTE_PERMISSION_MAP } from '@/lib/permissions'
 
 interface NavItem {
   label: string
@@ -34,6 +33,13 @@ interface NavItem {
   icon: React.ElementType
   badge?: number
   roles?: string[]
+}
+
+type Branch = {
+  id: string
+  name?: string | null
+  prefix?: string | null
+  [key: string]: unknown
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -68,7 +74,7 @@ function NavContent({
   pathname: string
   onNavigate?: () => void
   staff: Props['staff']
-  branches: any[]
+  branches: Branch[]
   role: string
   roleLabels: Record<string, string>
   unreadNotifications: number
@@ -95,14 +101,14 @@ function NavContent({
   return (
     <div className="flex flex-col h-full">
       {/* Brand Section */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+      <div className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm transition-transform hover:scale-105">
-              <span className="text-white font-bold text-sm">F</span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-[#4f46e5] shadow-sm ring-1 ring-slate-100 transition-transform hover:scale-105">
+              <span className="text-sm font-black">F</span>
             </div>
             {!sidebarCollapsed && (
-              <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              <p className="truncate text-sm font-bold text-slate-950 dark:text-white">
                 {staff.business?.name || 'Fabb.booking'}
               </p>
             )}
@@ -117,8 +123,8 @@ function NavContent({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 overflow-y-auto">
-        <ul className="space-y-0.5 px-2">
+      <nav className="flex-1 overflow-y-auto py-2">
+        <ul className="space-y-1 px-3">
           {NAV_ITEMS.filter(isVisible).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -131,15 +137,15 @@ function NavContent({
                     <TooltipTrigger asChild>
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative ${
+                        className={`relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
                           isActive
-                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+                            ? 'bg-[#4f46e5] text-white shadow-sm'
+                            : 'text-slate-500 hover:bg-white hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                         }`}
                         onClick={onNavigate}
                       >
                         {isActive && (
-                          <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-600 rounded-r" />
+                          <div className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white/70" />
                         )}
                         <Icon className="w-5 h-5 shrink-0" />
                         {!sidebarCollapsed && (
@@ -166,8 +172,8 @@ function NavContent({
       </nav>
 
       {/* Bottom Section */}
-      <div className="border-t border-slate-200 dark:border-slate-700 py-2 px-2">
-        <ul className="space-y-0.5">
+      <div className="px-3 py-2">
+        <ul className="space-y-1">
           {BOTTOM_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = pathname.startsWith(item.href)
@@ -177,10 +183,10 @@ function NavContent({
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
+                      ? 'bg-[#4f46e5] text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-white hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800'
                   }`}
                   onClick={onNavigate}
                 >
@@ -203,17 +209,17 @@ function NavContent({
       </div>
 
       {/* User section */}
-      <div className="border-t border-slate-200 dark:border-slate-700 p-3">
+      <div className="m-3 rounded-3xl bg-white p-3 shadow-sm dark:bg-slate-900">
         <div className="flex items-center gap-3">
           <Avatar className="w-8 h-8 shrink-0">
             <AvatarFallback className="text-xs bg-blue-100 text-blue-700">{initials}</AvatarFallback>
           </Avatar>
           {!sidebarCollapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                 {staff.name || 'User'}
               </p>
-              <p className="text-xs text-slate-500 truncate">{roleLabels[role] || role}</p>
+              <p className="truncate text-xs text-slate-500">{roleLabels[role] || role}</p>
             </div>
           )}
         </div>
@@ -233,7 +239,7 @@ interface Props {
     business?: { name: string; logo_url: string | null }
     branch?: { name: string }
   }
-  branches: any[]
+  branches: Branch[]
 }
 
 export function SidebarWrapper({ staff, branches }: Props) {
@@ -258,7 +264,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
       <Button
         variant="ghost"
         size="sm"
-        className="fixed top-3 left-3 z-50 lg:hidden"
+          className="fixed left-3 top-3 z-50 rounded-full bg-white shadow-sm lg:hidden"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -274,7 +280,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
 
       {/* Mobile sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-60 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transform transition-transform duration-300 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-40 w-60 transform bg-[#f7f8fd] transition-transform duration-300 dark:bg-slate-900 lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -293,7 +299,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
 
       {/* Desktop sidebar */}
       <aside
-        className={`hidden lg:flex fixed inset-y-0 left-0 z-40 flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-all duration-300 ${
+        className={`fixed bottom-5 left-5 top-5 z-40 hidden flex-col rounded-[1.75rem] bg-[#f7f8fd] shadow-sm ring-1 ring-white/80 transition-all duration-300 dark:bg-slate-900 dark:ring-slate-800 lg:flex ${
           sidebarCollapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -310,7 +316,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
         />
         <button
           onClick={toggleSidebar}
-          className="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 shadow-sm"
+          className="absolute -right-3 top-20 flex h-7 w-7 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-sm hover:text-slate-600 dark:border-slate-700 dark:bg-slate-800"
         >
           {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
         </button>

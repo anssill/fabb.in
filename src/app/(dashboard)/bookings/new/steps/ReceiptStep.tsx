@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Printer, Share2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { BookingCustomer, BookingItem, BookingDates, BookingPricing, BookingPayment } from '../page'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 interface Props {
   bookingId: string | null
@@ -19,7 +20,7 @@ interface Props {
 export function ReceiptStep({ bookingId, customer, items, dates, pricing, payment }: Props) {
   const balanceDue = Math.max(0, pricing.total_amount - payment.advance_amount - (payment.deposit_amount ?? 0))
   const rentalDays = dates.pickup_date && dates.return_date
-    ? Math.max(1, Math.ceil((new Date(dates.return_date).getTime() - new Date(dates.pickup_date).getTime()) / (1000 * 60 * 60 * 24)))
+    ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
     : 1
 
   return (

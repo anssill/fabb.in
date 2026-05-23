@@ -418,6 +418,7 @@ export type Database = {
           notes: string | null
           notion_page_id: string | null
           occasion: string | null
+          physical_bill_number: string | null
           pickup_completed_at: string | null
           pickup_date: string
           rental_days: number
@@ -452,6 +453,7 @@ export type Database = {
           notes?: string | null
           notion_page_id?: string | null
           occasion?: string | null
+          physical_bill_number?: string | null
           pickup_completed_at?: string | null
           pickup_date: string
           rental_days?: number
@@ -486,6 +488,7 @@ export type Database = {
           notes?: string | null
           notion_page_id?: string | null
           occasion?: string | null
+          physical_bill_number?: string | null
           pickup_completed_at?: string | null
           pickup_date?: string
           rental_days?: number

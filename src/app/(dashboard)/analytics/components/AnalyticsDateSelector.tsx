@@ -23,7 +23,7 @@ export function AnalyticsDateSelector({ current }: { current: Period }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-white p-1 shadow-sm">
       {PERIODS.map(({ key, label }) => (
         <Button
           key={key}
@@ -32,8 +32,8 @@ export function AnalyticsDateSelector({ current }: { current: Period }) {
           onClick={() => handleSelect(key)}
           className={
             current === key
-              ? 'h-7 px-3 text-xs bg-white text-slate-900 shadow-sm hover:bg-white'
-              : 'h-7 px-3 text-xs text-slate-600 hover:bg-white/60'
+              ? 'h-8 px-3 text-xs bg-[#4f46e5] text-white shadow-sm hover:bg-[#4338ca]'
+              : 'h-8 px-3 text-xs text-slate-600 hover:bg-slate-50'
           }
         >
           {label}

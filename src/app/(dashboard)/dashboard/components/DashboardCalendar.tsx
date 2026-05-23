@@ -33,7 +33,7 @@ export function DashboardCalendar({ pickupDates, returnDates }: Props) {
   }
 
   return (
-    <Card className="col-span-full lg:col-span-1">
+    <Card className="col-span-full min-w-0 rounded-[1.65rem] border-0 bg-white shadow-sm ring-0 lg:col-span-1">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-blue-600" />

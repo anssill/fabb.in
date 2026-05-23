@@ -6,27 +6,34 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 const signupSchema = z.object({
-  businessName: z.string().min(2, "Business name is too short"),
-  fullName: z.string().min(2, "Full name is too short"),
-  email: z.string().email("Invalid email address"),
+  businessName: z.string().trim().min(2, "Business name is too short"),
+  fullName: z.string().trim().min(2, "Full name is too short"),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-export async function signUpAction(formData: any) {
+const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type SignUpInput = z.infer<typeof signupSchema>;
+type LoginInput = z.infer<typeof loginSchema>;
+
+export async function signUpAction(formData: SignUpInput) {
   const validated = signupSchema.safeParse(formData);
   if (!validated.success) {
     return { error: validated.error.issues[0].message };
   }
 
   const { businessName, fullName, email, password } = validated.data;
-  const cleanEmail = email.toLowerCase().trim();
 
   try {
     // 1. Check for existing staff (admin check)
     const { data: existingStaff } = await supabaseAdmin
       .from('staff')
       .select('id')
-      .eq('email', cleanEmail)
+      .eq('email', email)
       .maybeSingle();
 
     if (existingStaff) {
@@ -42,7 +49,7 @@ export async function signUpAction(formData: any) {
       .insert({ 
         name: businessName, 
         slug, 
-        email: cleanEmail,
+        email,
         status: 'trial',
         plan: 'basic'
       })
@@ -76,7 +83,7 @@ export async function signUpAction(formData: any) {
     // 4. Create Auth User via Supabase Client (so session is handled properly)
     const supabase = await createClient();
     const { data: authResult, error: authError } = await supabase.auth.signUp({
-      email: cleanEmail,
+      email,
       password: password,
       options: {
         data: {
@@ -105,7 +112,7 @@ export async function signUpAction(formData: any) {
         id: userId,
         business_id: business.id,
         branch_id: branch.id,
-        email: cleanEmail,
+        email,
         name: fullName,
         role: 'owner',
         status: 'approved',
@@ -124,16 +131,21 @@ export async function signUpAction(formData: any) {
       .eq('id', business.id);
 
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || 'An unexpected error occurred' };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'An unexpected error occurred' };
   }
 }
 
-export async function loginAction(formData: any) {
+export async function loginAction(formData: LoginInput) {
+  const validated = loginSchema.safeParse(formData);
+  if (!validated.success) {
+    return { error: validated.error.issues[0].message };
+  }
+
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: formData.email,
-    password: formData.password,
+  const { error } = await supabase.auth.signInWithPassword({
+    email: validated.data.email,
+    password: validated.data.password,
   });
 
   if (error) return { error: error.message };

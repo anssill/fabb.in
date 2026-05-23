@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { IndianRupee, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { IndianRupee, TrendingDown, TrendingUp } from 'lucide-react'
 import { RecordExpenseDialog } from './RecordExpenseDialog'
 import { ExpensesClient } from './ExpensesClient'
 
@@ -85,11 +85,11 @@ export default async function ExpensesPage() {
     .slice(0, 5)
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Expenses</h1>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Expenses</h1>
           <p className="text-sm text-slate-500">{count ?? 0} records total</p>
         </div>
         <RecordExpenseDialog />
@@ -100,7 +100,7 @@ export default async function ExpensesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
@@ -114,7 +114,7 @@ export default async function ExpensesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
                 <TrendingDown className="w-5 h-5 text-red-600" />
               </div>
               <div>
@@ -133,7 +133,7 @@ export default async function ExpensesPage() {
         <Card className={profit >= 0 ? 'border-green-200' : 'border-red-200'}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${profit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
                 <IndianRupee className={`w-5 h-5 ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
               </div>
               <div>
@@ -173,7 +173,7 @@ export default async function ExpensesPage() {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5">
                       <div
-                        className="bg-blue-500 h-1.5 rounded-full"
+                        className="h-1.5 rounded-full bg-[#4f46e5]"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -196,7 +196,6 @@ export default async function ExpensesPage() {
           receipt_url: e.receipt_url || null,
           created_at: e.created_at,
         }))}
-        businessId={staff.business_id}
       />
     </div>
   )

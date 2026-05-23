@@ -35,7 +35,7 @@ export function DashboardPaymentChart({ distribution }: Props) {
 
   if (!distribution.length) {
     return (
-      <Card>
+      <Card className="min-w-0 rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Wallet className="w-4 h-4 text-violet-600" />
@@ -51,7 +51,7 @@ export function DashboardPaymentChart({ distribution }: Props) {
   }
 
   return (
-    <Card>
+    <Card className="min-w-0 rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -70,7 +70,7 @@ export function DashboardPaymentChart({ distribution }: Props) {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+        <ChartContainer config={chartConfig} className="h-[200px] min-h-[200px] min-w-[220px] w-full">
           <PieChart>
             <ChartTooltip
               content={

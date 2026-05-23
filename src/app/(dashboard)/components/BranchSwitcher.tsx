@@ -15,7 +15,7 @@ import { switchActiveBranch } from './branch-actions'
 
 interface Branch {
   id: string
-  name: string
+  name?: string | null
 }
 
 interface Props {
@@ -33,7 +33,7 @@ export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) 
     return (
       <div className="flex items-center gap-2 px-1 py-1.5 text-sm text-slate-500">
         <Building2 className="w-4 h-4 shrink-0" />
-        <span className="truncate">{branch.name}</span>
+        <span className="truncate">{branch.name || 'Main Branch'}</span>
       </div>
     )
   }
@@ -55,8 +55,8 @@ export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) 
       await switchActiveBranch(branchId)
       
       router.refresh()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to switch branch')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to switch branch')
     }
   }
 
@@ -71,7 +71,7 @@ export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) 
       <SelectContent>
         {branches.map((branch) => (
           <SelectItem key={branch.id} value={branch.id}>
-            {branch.name}
+            {branch.name || 'Main Branch'}
           </SelectItem>
         ))}
       </SelectContent>

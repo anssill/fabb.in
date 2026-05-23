@@ -7,25 +7,25 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Plus, Search, CalendarArrowUp, CalendarArrowDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
-import { differenceInDays } from 'date-fns'
 import { useAppStore } from '@/lib/store'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-100 text-amber-700',
-  booked: 'bg-blue-100 text-blue-700',
-  out: 'bg-violet-100 text-violet-700',
-  returned: 'bg-emerald-100 text-emerald-700',
+  pending: 'bg-amber-50 text-amber-700',
+  booked: 'bg-indigo-50 text-indigo-700',
+  out: 'bg-blue-50 text-blue-700',
+  returned: 'bg-emerald-50 text-emerald-700',
   closed: 'bg-slate-100 text-slate-700',
-  cancelled: 'bg-red-100 text-red-700',
+  cancelled: 'bg-rose-50 text-rose-700',
 }
 
 const STATUS_BAR: Record<string, string> = {
   pending: 'bg-amber-400',
-  booked: 'bg-blue-500',
-  out: 'bg-violet-500',
+  booked: 'bg-[#4f46e5]',
+  out: 'bg-blue-500',
   returned: 'bg-emerald-500',
   closed: 'bg-slate-400',
-  cancelled: 'bg-red-400',
+  cancelled: 'bg-rose-400',
 }
 
 type StatusFilter = 'all' | 'booked' | 'out' | 'returned' | 'pending' | 'closed' | 'cancelled'
@@ -53,7 +53,7 @@ export default function BookingsPage() {
       const { data } = await supabase
         .from('bookings')
         .select(`
-          id, booking_number, status, pickup_date, return_date, total_amount, balance_due, advance_amount, created_at,
+          id, booking_number, physical_bill_number, status, pickup_date, return_date, total_amount, balance_due, advance_amount, created_at,
           occasion, booking_source,
           customer:customers(id, name, phone),
           booking_items(item_name, size, quantity)
@@ -86,21 +86,27 @@ export default function BookingsPage() {
       const q = search.toLowerCase()
       return (
         booking.booking_number?.toLowerCase().includes(q) ||
+        booking.physical_bill_number?.toLowerCase().includes(q) ||
         (customer as any)?.name?.toLowerCase().includes(q) ||
         (customer as any)?.phone?.includes(q)
       )
+    }).sort((a, b) => {
+      if (statusFilter !== 'all') return 0
+      if (a.status === 'closed' && b.status !== 'closed') return 1
+      if (a.status !== 'closed' && b.status === 'closed') return -1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }, [bookings, search, statusFilter])
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Bookings</h1>
-          <p className="text-sm text-slate-500">{bookings.length} total bookings</p>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Bookings</h1>
+          <p className="text-sm text-slate-500">{bookings.length} total bookings across this branch</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+        <Button className="h-10 px-4" asChild>
           <Link href="/bookings/new">
             <Plus className="w-4 h-4 mr-2" />
             New Booking
@@ -109,20 +115,20 @@ export default function BookingsPage() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 border-b border-slate-200">
+      <div className="flex gap-2 overflow-x-auto rounded-[1.65rem] bg-white p-2 shadow-sm">
         {(['all', 'booked', 'out', 'returned', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t transition-colors
+            className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors
               ${statusFilter === status
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'bg-[#4f46e5] text-white shadow-sm'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
           >
             <span className="capitalize">{status}</span>
             {counts[status] ? (
-              <span className="ml-1.5 bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">
+              <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${statusFilter === status ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {counts[status]}
               </span>
             ) : null}
@@ -131,11 +137,11 @@ export default function BookingsPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
+      <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input
-          placeholder="Search by booking ID or customer name..."
-          className="pl-10 h-9"
+          placeholder="Search by booking ID, bill number, or customer..."
+          className="pl-10"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -152,7 +158,7 @@ export default function BookingsPage() {
             const itemSummary = (items as any[]).map((i: any) => `${i.item_name} (${i.size}×${i.quantity})`).join(', ')
             const isOverdue = booking.status === 'out' && new Date(booking.return_date) < new Date()
             const rentalDays = booking.pickup_date && booking.return_date
-              ? Math.max(1, differenceInDays(new Date(booking.return_date), new Date(booking.pickup_date)))
+              ? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
               : 0
             const balanceDue = Number(booking.balance_due ?? 0)
             const statusKey = isOverdue ? 'out' : booking.status
@@ -161,7 +167,7 @@ export default function BookingsPage() {
               <Link
                 key={booking.id}
                 href={`/bookings/${booking.id}`}
-                className="flex items-stretch bg-white border border-slate-200 rounded-lg hover:shadow-md transition-all group overflow-hidden"
+                className="flex items-stretch overflow-hidden rounded-[1.65rem] bg-white shadow-sm transition-all group hover:-translate-y-0.5 hover:shadow-md"
               >
                 {/* Colored left status bar */}
                 <div className={`w-1 flex-shrink-0 ${STATUS_BAR[statusKey] || 'bg-slate-300'}`} />
@@ -172,6 +178,9 @@ export default function BookingsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-sm font-mono font-semibold text-slate-700">{booking.booking_number}</span>
+                      {booking.physical_bill_number && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">Bill {booking.physical_bill_number}</span>
+                      )}
                       {isOverdue ? (
                         <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />OVERDUE</Badge>
                       ) : (
@@ -214,7 +223,7 @@ export default function BookingsPage() {
             )
           })
         ) : (
-          <div className="text-center py-20 bg-white border border-dashed border-slate-200 rounded-lg">
+          <div className="rounded-[1.65rem] border border-dashed border-slate-200 bg-white py-20 text-center shadow-sm">
             <div className="w-12 h-12 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
               <Plus className="w-6 h-6 text-slate-400" />
             </div>
@@ -225,7 +234,7 @@ export default function BookingsPage() {
               {search ? 'Try a different search term.' : 'Create your first booking to get started.'}
             </p>
             {!search && (
-              <Button className="mt-4 bg-blue-600 hover:bg-blue-700" asChild>
+              <Button className="mt-4" asChild>
                 <Link href="/bookings/new"><Plus className="w-4 h-4 mr-2" />New Booking</Link>
               </Button>
             )}

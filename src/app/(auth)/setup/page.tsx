@@ -1,57 +1,46 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import type { ElementType } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  CheckCircle, 
-  Building2, 
-  MapPin, 
-  Users, 
-  Package, 
-  Rocket, 
-  Loader2, 
-  Eye, 
-  EyeOff,
-  ChevronRight,
-  ChevronLeft,
+import {
   ArrowRight,
-  Plus,
-  Trash2,
-  Lock,
   BadgeCheck,
-  Briefcase,
-  Star,
+  Building2,
+  CheckCircle2,
+  ChevronLeft,
+  Loader2,
+  LockKeyhole,
   Mail,
-  Phone
+  MapPin,
+  Package,
+  Phone,
+  Rocket,
+  Store,
+  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-
+import { Card, CardContent } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
 
 const STEPS = [
-  { label: 'Business', icon: Building2, description: 'Core Profile', sub: 'Define your identity' },
-  { label: 'Branch', icon: MapPin, description: 'Main Store', sub: 'Where magic happens' },
-  { label: 'Staff', icon: Users, description: 'Team Setup', sub: 'Add your co-pilots', skippable: true },
-  { label: 'Inventory', icon: Package, description: 'Catalog', sub: 'What are we selling?', skippable: true },
-  { label: 'Launch', icon: Rocket, description: 'Go Live', sub: 'Everything is ready', final: true },
+  { label: 'Business', icon: Building2, description: 'Business profile', sub: 'Saved to your Supabase business record' },
+  { label: 'Branch', icon: Store, description: 'Main branch', sub: 'Set the counter details used by bookings' },
+  { label: 'Staff', icon: Users, description: 'Team setup', sub: 'Invite your staff later from Settings' },
+  { label: 'Inventory', icon: Package, description: 'Catalog setup', sub: 'Add your first products from the dashboard' },
+  { label: 'Launch', icon: Rocket, description: 'Workspace ready', sub: 'Open the dashboard and start operating', final: true },
 ]
-
-const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories']
 
 export default function SetupPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
-  const [showPass, setShowPass] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
 
-  // Form States
   const [business, setBusiness] = useState({
     name: '', phone: '', email: '', address: '',
     city: '', state: '', pincode: '', gst_number: '',
@@ -62,20 +51,17 @@ export default function SetupPage() {
     name: '', address: '', city: '', phone: '', prefix: '',
   })
 
-  const [staffList, setStaffList] = useState<{ name: string; email: string; role: string }[]>([])
-  const [items, setItems] = useState<{
-    name: string; category: string; sizes: string; stock: number; price: number
-  }[]>([])
-
   const progress = ((currentStep + 1) / STEPS.length) * 100
 
-  // Initialization logic
   useEffect(() => {
     const init = async () => {
       try {
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { router.replace('/login'); return }
+        if (!user) {
+          router.replace('/login')
+          return
+        }
 
         const { data: staffRecord } = await supabase
           .from('staff')
@@ -83,17 +69,22 @@ export default function SetupPage() {
           .eq('id', user.id)
           .single()
 
-        if (!staffRecord) { router.replace('/login'); return }
-        if (staffRecord.setup_completed) { router.replace('/dashboard'); return }
+        if (!staffRecord) {
+          router.replace('/login')
+          return
+        }
+        if (staffRecord.setup_completed) {
+          router.replace('/dashboard')
+          return
+        }
 
-        const { data: bizData } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('id', staffRecord.business_id)
-          .single()
+        const [{ data: bizData }, { data: branchData }] = await Promise.all([
+          supabase.from('businesses').select('*').eq('id', staffRecord.business_id).single(),
+          supabase.from('branches').select('*').eq('id', staffRecord.branch_id).single(),
+        ])
 
         if (bizData) {
-          setBusiness(prev => ({
+          setBusiness((prev) => ({
             ...prev,
             name: bizData.name || '',
             phone: bizData.phone || '',
@@ -106,12 +97,6 @@ export default function SetupPage() {
           }))
         }
 
-        const { data: branchData } = await supabase
-          .from('branches')
-          .select('*')
-          .eq('id', staffRecord.branch_id)
-          .single()
-
         if (branchData) {
           setBranch({
             name: branchData.name || '',
@@ -121,12 +106,13 @@ export default function SetupPage() {
             prefix: branchData.prefix || '',
           })
         }
-      } catch (err) {
-        console.error('Initialization error:', err)
+      } catch (error) {
+        console.error('Initialization error:', error)
       } finally {
         setInitializing(false)
       }
     }
+
     init()
   }, [router])
 
@@ -146,7 +132,6 @@ export default function SetupPage() {
       if (!staffRecord) throw new Error('Profile missing')
 
       if (currentStep === 0) {
-        // Validation for step 0
         if (business.password && business.password !== business.confirmPassword) {
           toast.error('Passwords do not match')
           return
@@ -163,12 +148,14 @@ export default function SetupPage() {
           gst_number: business.gst_number || null,
         }).eq('id', staffRecord.business_id)
 
-        if (bizError) throw new Error('Update failed: ' + bizError.message)
+        if (bizError) throw new Error('Business update failed: ' + bizError.message)
 
         if (business.password) {
           const { error: authError } = await supabase.auth.updateUser({ password: business.password })
-          if (authError) throw new Error('Security update failed: ' + authError.message)
+          if (authError) throw new Error('Password update failed: ' + authError.message)
         }
+
+        toast.success('Business profile saved')
         setCurrentStep(1)
       } else if (currentStep === 1) {
         const { error: branchError } = await supabase.from('branches').update({
@@ -179,15 +166,17 @@ export default function SetupPage() {
           prefix: branch.prefix?.toUpperCase() || undefined,
         }).eq('id', staffRecord.branch_id)
 
-        if (branchError) throw new Error('Branch update failed')
+        if (branchError) throw new Error('Branch update failed: ' + branchError.message)
+
+        toast.success('Main branch saved')
         setCurrentStep(2)
       } else if (currentStep === 2) {
         setCurrentStep(3)
       } else if (currentStep === 3) {
         setCurrentStep(4)
       }
-    } catch (e: any) {
-      toast.error(e.message || 'Operation failed')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Operation failed')
     } finally {
       setLoading(false)
     }
@@ -207,11 +196,11 @@ export default function SetupPage() {
 
       if (error) throw error
 
-      toast.success('Workspace initialized successfully!')
+      toast.success('Workspace initialized successfully')
       router.push('/dashboard')
       router.refresh()
-    } catch (err: any) {
-      toast.error('Finalization failed: ' + err.message)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Finalization failed')
     } finally {
       setLoading(false)
     }
@@ -219,299 +208,191 @@ export default function SetupPage() {
 
   if (initializing) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center gap-4">
-        <motion.div 
-          animate={{ rotate: 360 }} 
-          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full"
-        />
-        <p className="text-slate-500 font-medium tracking-wide">Assembling your workspace...</p>
+      <div className="grid min-h-screen place-items-center bg-[#e9ebf5] text-slate-500">
+        <div className="flex flex-col items-center gap-4 rounded-[1.65rem] bg-white p-8 shadow-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-[#4f46e5]" />
+          <p className="text-sm font-medium">Loading your workspace...</p>
+        </div>
       </div>
     )
   }
 
+  const ActiveIcon = STEPS[currentStep].icon
+
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col relative overflow-hidden font-sans">
-      {/* Dynamic Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[160px] animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[50%] h-[50%] bg-blue-500/5 rounded-full blur-[160px]" />
-        <div className="absolute top-[20%] left-[10%] w-1 h-1 bg-white opacity-20 rounded-full shadow-[0_0_10px_2px_rgba(255,255,255,0.4)]" />
-      </div>
-
-      {/* Header */}
-      <header className="px-8 py-8 border-b border-white/5 relative z-20 bg-[#020617]/40 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/30 group cursor-default">
-              <Plus className="text-white w-7 h-7 group-hover:rotate-90 transition-transform duration-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter text-white">FABB<span className="text-primary italic">.IN</span></h1>
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-black">Workspace Setup</p>
-            </div>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8">
-            {STEPS.map((step, i) => (
-              <div key={i} className={`flex items-center gap-2 ${i <= currentStep ? 'text-primary' : 'text-slate-600'}`}>
-                <div className={`w-2 h-2 rounded-full ${i <= currentStep ? 'bg-primary' : 'bg-slate-800'}`} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{step.label}</span>
+    <main className="min-h-screen bg-[#e9ebf5] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl gap-5 lg:grid-cols-[280px_1fr]">
+        <aside className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
+          <div className="flex h-full flex-col rounded-[1.65rem] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#4f46e5] text-white">
+                <Building2 className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold">Fabb.booking</p>
+                <p className="text-xs text-slate-500">Workspace setup</p>
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Overall Progress</span>
-            <div className="w-40 h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                className="h-full bg-gradient-to-r from-primary to-blue-500 rounded-full"
-              />
+            <div className="mt-8">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Overall progress</p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-[#4f46e5] transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-2">
+              {STEPS.map((step, index) => {
+                const Icon = step.icon
+                const active = index === currentStep
+                const done = index < currentStep
+                return (
+                  <div key={step.label} className={active ? 'flex items-center gap-3 rounded-2xl bg-[#4f46e5] px-3 py-3 text-white' : 'flex items-center gap-3 rounded-2xl px-3 py-3 text-slate-500'}>
+                    <span className={active ? 'grid h-9 w-9 place-items-center rounded-xl bg-white/15' : done ? 'grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600' : 'grid h-9 w-9 place-items-center rounded-xl bg-slate-50'}>
+                      {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">{step.label}</p>
+                      <p className={active ? 'text-xs text-white/70' : 'text-xs text-slate-400'}>{step.description}</p>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
-        </div>
-      </header>
+        </aside>
 
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col py-16 relative z-10 px-4">
-        <div className="max-w-4xl mx-auto w-full">
-          
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, y: 30, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -30, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 100, damping: 20 }}
-              className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 md:p-20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] relative overflow-hidden"
-            >
-              {/* Glass background highlights */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              
-              <div className="relative z-10">
-                {/* Step Icon & Header */}
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-16">
-                  <div className="w-20 h-20 bg-slate-950 border border-white/10 rounded-[2rem] flex items-center justify-center text-primary shadow-inner">
-                    {(() => {
-                      const Icon = STEPS[currentStep].icon
-                      return <Icon className="w-10 h-10" />
-                    })()}
-                  </div>
-                  <div className="text-center md:text-left">
-                    <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1.5 rounded-full font-bold uppercase tracking-widest text-[10px]">
-                      Step 0{currentStep + 1} &mdash; {STEPS[currentStep].label}
-                    </Badge>
-                    <h2 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
-                      {STEPS[currentStep].description}
-                    </h2>
-                    <p className="text-slate-400 text-lg font-medium">{STEPS[currentStep].sub}</p>
+        <section className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
+          <Card className="min-h-full rounded-[1.65rem] border-0 bg-white shadow-sm">
+            <CardContent className="flex min-h-full flex-col p-5 sm:p-8">
+              <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex gap-4">
+                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-slate-100 text-[#4f46e5]">
+                    <ActiveIcon className="h-7 w-7" />
+                  </span>
+                  <div>
+                    <Badge className="rounded-full border-0 bg-indigo-50 text-[#4f46e5]">Step {currentStep + 1} of {STEPS.length}</Badge>
+                    <h1 className="mt-3 text-3xl font-semibold tracking-normal text-slate-950">{STEPS[currentStep].description}</h1>
+                    <p className="mt-2 text-sm text-slate-500">{STEPS[currentStep].sub}</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Forms Rendering */}
-                <div className="min-h-[300px]">
-                  {currentStep === 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Business Identity */}
-                      {/* Business Identity */}
-                      <div className="col-span-full space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Business Identity</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <Building2 className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            value={business.name}
-                            onChange={(e) => setBusiness({...business, name: e.target.value})}
-                            placeholder="Acme Luxury Collections" 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                      </div>
+              <div className="flex-1">
+                {currentStep === 0 && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <SetupField icon={Building2} label="Business name" value={business.name} placeholder="Acme Luxury Collections" onChange={(value) => setBusiness({ ...business, name: value })} className="md:col-span-2" />
+                    <SetupField icon={Mail} label="Support email" type="email" value={business.email} placeholder="hello@acme.com" onChange={(value) => setBusiness({ ...business, email: value })} />
+                    <SetupField icon={Phone} label="Primary phone" value={business.phone} placeholder="+91 00000 00000" onChange={(value) => setBusiness({ ...business, phone: value })} />
+                    <SetupField icon={MapPin} label="Address" value={business.address} placeholder="Main St, Floor 4" onChange={(value) => setBusiness({ ...business, address: value })} className="md:col-span-2" />
+                    <SetupField icon={MapPin} label="City" value={business.city} placeholder="Ahmedabad" onChange={(value) => setBusiness({ ...business, city: value })} />
+                    <SetupField icon={MapPin} label="State" value={business.state} placeholder="Gujarat" onChange={(value) => setBusiness({ ...business, state: value })} />
+                    <SetupField icon={MapPin} label="Pincode" value={business.pincode} placeholder="380001" onChange={(value) => setBusiness({ ...business, pincode: value })} />
+                    <SetupField icon={BadgeCheck} label="GST number" value={business.gst_number} placeholder="Optional" onChange={(value) => setBusiness({ ...business, gst_number: value })} />
+                    <SetupField icon={LockKeyhole} label="New password" type="password" value={business.password} placeholder="Optional" onChange={(value) => setBusiness({ ...business, password: value })} />
+                    <SetupField icon={LockKeyhole} label="Confirm password" type="password" value={business.confirmPassword} placeholder="Repeat password" onChange={(value) => setBusiness({ ...business, confirmPassword: value })} />
+                  </div>
+                )}
 
-                      {/* Support Email */}
-                      <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Support Email</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            type="email"
-                            value={business.email}
-                            onChange={(e) => setBusiness({...business, email: e.target.value})}
-                            placeholder="hello@acme.com" 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                      </div>
-
-                      {/* Primary Phone */}
-                      <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Primary Phone</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <Phone className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            type="tel"
-                            value={business.phone}
-                            onChange={(e) => setBusiness({...business, phone: e.target.value})}
-                            placeholder="+91 00000 00000" 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                      </div>
-
-                      {/* HQ Address */}
-                      <div className="col-span-full space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">HQ Address</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <MapPin className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            value={business.address}
-                            onChange={(e) => setBusiness({...business, address: e.target.value})}
-                            placeholder="Main St, Floor 4, Suite 2" 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                      </div>
+                {currentStep === 1 && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <SetupField icon={Store} label="Branch name" value={branch.name} placeholder="Main Flagship" onChange={(value) => setBranch({ ...branch, name: value })} className="md:col-span-2" />
+                    <SetupField icon={MapPin} label="Branch address" value={branch.address} placeholder="Counter address" onChange={(value) => setBranch({ ...branch, address: value })} className="md:col-span-2" />
+                    <SetupField icon={MapPin} label="City" value={branch.city} placeholder="Ahmedabad" onChange={(value) => setBranch({ ...branch, city: value })} />
+                    <SetupField icon={Phone} label="Phone" value={branch.phone} placeholder="+91 00000 00000" onChange={(value) => setBranch({ ...branch, phone: value })} />
+                    <SetupField icon={BadgeCheck} label="Invoice prefix" value={branch.prefix} placeholder="ABC" maxLength={3} onChange={(value) => setBranch({ ...branch, prefix: value.toUpperCase() })} />
+                    <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                      Example booking number: <span className="font-semibold text-slate-950">{branch.prefix || 'ABC'}-001</span>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {currentStep === 1 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Branch Name */}
-                      {/* Branch Name */}
-                      <div className="col-span-full space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Branch Name</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <MapPin className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            value={branch.name}
-                            onChange={(e) => setBranch({...branch, name: e.target.value})}
-                            placeholder="Main Flagship" 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                      </div>
-
-                      {/* Invoice Prefix */}
-                      <div className="col-span-full space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 ml-1">Invoice Prefix</Label>
-                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10 transition-colors">
-                            <Briefcase className="h-5 w-5 text-slate-500 group-focus-within:text-primary" />
-                          </div>
-                          <Input 
-                            value={branch.prefix}
-                            onChange={(e) => setBranch({...branch, prefix: e.target.value})}
-                            placeholder="ABC" 
-                            maxLength={3} 
-                            className="w-full h-14 pl-14 bg-slate-950/50 border border-white/5 rounded-2xl text-white placeholder:text-slate-600 focus:border-primary outline-none shadow-inner transition-all hover:bg-slate-950/80" 
-                          />
-                        </div>
-                        <p className="mt-2 text-[10px] font-bold text-slate-500 tracking-wider uppercase ml-1">Example ID: {branch.prefix || 'ABC'}-001</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {currentStep === 2 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <Users className="w-16 h-16 text-slate-700 mb-6" />
-                      <p className="text-slate-400 max-w-sm mb-8">You can invite team members later from the Settings dashboard. Ready to skip?</p>
-                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onClick={() => setCurrentStep(3)}>Skip Team Setup</Button>
-                    </div>
-                  )}
-
-                  {currentStep === 3 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <Package className="w-16 h-16 text-slate-700 mb-6" />
-                      <p className="text-slate-400 max-w-sm mb-8">Let's populate your inventory once we're in the dashboard for a better experience.</p>
-                      <Button variant="outline" className="h-14 px-10 rounded-2xl border-white/10" onClick={() => setCurrentStep(4)}>Skip Inventory</Button>
-                    </div>
-                  )}
-
-                  {currentStep === 4 && (
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-10 shadow-[0_0_50px_rgba(var(--primary-rgb),0.2)]">
-                        <BadgeCheck size={80} />
-                      </div>
-                      <h3 className="text-4xl font-black text-white mb-4">Command Center Ready</h3>
-                      <p className="text-slate-400 max-w-md text-lg leading-relaxed mb-12">
-                        Your workspace is initialized. Click the button below to launch into your performance dashboard.
-                      </p>
-                      <Button 
-                        size="lg"
-                        className="h-20 px-16 bg-primary text-white text-xl font-black rounded-[2rem] shadow-2xl shadow-primary/40 group hover:scale-105 transition-all"
-                        onClick={handleFinish}
-                        disabled={loading}
-                      >
-                        {loading ? <Loader2 className="animate-spin" /> : "ENTER DASHBOARD"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer Controls */}
-                {!STEPS[currentStep].final && (
-                  <div className="mt-20 flex items-center justify-between border-t border-white/5 pt-10">
-                    <Button 
-                      variant="ghost" 
-                      className="h-14 px-8 rounded-2xl hover:bg-white/5 text-slate-400 font-bold"
-                      onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                      disabled={currentStep === 0 || loading}
-                    >
-                      <ChevronLeft className="mr-2 h-5 w-5" /> Back
-                    </Button>
-                    
-                    <Button 
-                      className="h-16 px-12 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-2xl shadow-primary/30 active:scale-[0.98] transition-all flex items-center gap-3"
-                      onClick={handleNext}
-                      disabled={loading}
-                    >
-                      {loading ? <Loader2 className="animate-spin w-5 h-5 mx-auto" /> : (
-                        <>
-                          NEXT PHASE <ChevronRight className="w-5 h-5" />
-                        </>
-                      )}
-                    </Button>
+                {currentStep === 2 && <SkipPanel icon={Users} title="Invite your team later" detail="Staff permissions, attendance and role setup live in Settings once the dashboard is open." />}
+                {currentStep === 3 && <SkipPanel icon={Package} title="Add inventory from the dashboard" detail="The full inventory form has image upload, pricing, sizes and availability tools." />}
+                {currentStep === 4 && (
+                  <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
+                    <span className="grid h-24 w-24 place-items-center rounded-full bg-emerald-50 text-emerald-600">
+                      <BadgeCheck className="h-12 w-12" />
+                    </span>
+                    <h2 className="mt-6 text-3xl font-semibold tracking-normal">Command center ready</h2>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
+                      Your Supabase records are connected. Finish setup to unlock the dashboard.
+                    </p>
                   </div>
                 )}
               </div>
-            </motion.div>
-          </AnimatePresence>
 
-          {/* Sidebar visual aid (Optional) */}
-          <div className="mt-12 flex flex-col md:flex-row gap-6 items-center justify-center opacity-40">
-             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-               <Lock size={12} /> SSL SECURED
-             </div>
-             <div className="w-1 h-1 rounded-full bg-slate-800" />
-             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-               <BadgeCheck size={12} /> SUPABASE AUTH
-             </div>
-             <div className="w-1 h-1 rounded-full bg-slate-800" />
-             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-               <Star size={12} /> PREMIUM PLATFORM
-             </div>
-          </div>
-        </div>
-      </main>
+              <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5">
+                <Button variant="ghost" className="rounded-full text-slate-500" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0 || loading}>
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+                {STEPS[currentStep].final ? (
+                  <Button className="h-11 rounded-full bg-[#4f46e5] px-5 text-white hover:bg-[#4338ca]" onClick={handleFinish} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Enter dashboard <ArrowRight className="ml-2 h-4 w-4" /></>}
+                  </Button>
+                ) : (
+                  <Button className="h-11 rounded-full bg-[#4f46e5] px-5 text-white hover:bg-[#4338ca]" onClick={handleNext} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </main>
+  )
+}
 
-      {/* Dynamic Design Decoration */}
-      <div className="fixed top-1/2 left-0 -translate-y-1/2 pointer-events-none opacity-20">
-         <div className="h-[400px] w-[1px] bg-gradient-to-b from-transparent via-primary to-transparent" />
+function SetupField({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  maxLength,
+  className = '',
+}: {
+  icon: ElementType
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  type?: string
+  maxLength?: number
+  className?: string
+}) {
+  const id = label.toLowerCase().replace(/\s+/g, '-')
+
+  return (
+    <div className={`space-y-2 ${className}`}>
+      <Label htmlFor={id} className="text-sm font-medium text-slate-700">{label}</Label>
+      <div className="relative">
+        <Icon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Input
+          id={id}
+          type={type}
+          value={value}
+          maxLength={maxLength}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="h-12 rounded-2xl border-slate-100 bg-slate-50 pl-11 text-sm shadow-none focus-visible:ring-[#4f46e5]"
+        />
       </div>
-      <div className="fixed top-1/2 right-0 -translate-y-1/2 pointer-events-none opacity-20">
-         <div className="h-[400px] w-[1px] bg-gradient-to-b from-transparent via-primary to-transparent" />
-      </div>
+    </div>
+  )
+}
+
+function SkipPanel({ icon: Icon, title, detail }: { icon: ElementType; title: string; detail: string }) {
+  return (
+    <div className="flex min-h-[360px] flex-col items-center justify-center rounded-[1.65rem] bg-slate-50 p-8 text-center">
+      <span className="grid h-20 w-20 place-items-center rounded-3xl bg-white text-[#4f46e5] shadow-sm">
+        <Icon className="h-9 w-9" />
+      </span>
+      <h2 className="mt-6 text-2xl font-semibold tracking-normal">{title}</h2>
+      <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">{detail}</p>
     </div>
   )
 }

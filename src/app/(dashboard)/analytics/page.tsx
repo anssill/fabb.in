@@ -109,11 +109,11 @@ export default async function AnalyticsPage({
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header + Date selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Analytics</h1>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Analytics</h1>
           <p className="text-sm text-slate-500">Business performance — {PERIOD_LABELS[period]}</p>
         </div>
         <Suspense fallback={null}>
@@ -129,7 +129,7 @@ export default async function AnalyticsPage({
             <Card key={metric.label}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${metric.color}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${metric.color}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   {metric.up
@@ -267,7 +267,7 @@ export default async function AnalyticsPage({
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                    className="h-2 rounded-full bg-[#4f46e5] transition-all duration-500"
                     style={{ width: `${utilizationRate}%` }}
                   />
                 </div>

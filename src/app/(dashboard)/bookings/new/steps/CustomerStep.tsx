@@ -46,11 +46,12 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       }
     }
     fetchRecentCustomers()
-  }, [staff?.business_id, activeBranch?.id])
+  }, [staff?.business_id, staff?.branch_id, activeBranch?.id])
 
   // Live search debounced query
   useEffect(() => {
-    if (!searchQuery || searchQuery.length < 3 || !staff?.business_id) {
+    const query = searchQuery.trim()
+    if (!query || !staff?.business_id) {
       setSearchResults([])
       return
     }
@@ -64,7 +65,8 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
-          .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`)
+          .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+          .order('name', { ascending: true })
           .limit(5)
         setSearchResults(data || [])
       } catch {
@@ -75,10 +77,11 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     }, 300)
 
     return () => clearTimeout(delayDebounce)
-  }, [searchQuery, staff?.business_id, activeBranch?.id])
+  }, [searchQuery, staff?.business_id, staff?.branch_id, activeBranch?.id])
 
   const handleSearch = async () => {
-    if (!searchQuery || searchQuery.length < 3 || !staff?.business_id) return
+    const query = searchQuery.trim()
+    if (!query || !staff?.business_id) return
     setSearching(true)
     try {
       const supabase = createClient()
@@ -87,7 +90,8 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
         .eq('business_id', staff.business_id)
         .eq('branch_id', activeBranch?.id || staff.branch_id)
-        .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`)
+        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+        .order('name', { ascending: true })
         .limit(5)
 
       setSearchResults(data || [])
@@ -138,7 +142,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
-              <Button variant="outline" onClick={handleSearch} disabled={searching || searchQuery.length < 3}>
+              <Button variant="outline" onClick={handleSearch} disabled={searching || searchQuery.trim().length < 1}>
                 Search
               </Button>
             </div>
@@ -166,14 +170,14 @@ export function CustomerStep({ customer, setCustomer }: Props) {
               </div>
             )}
 
-            {searchResults.length === 0 && searchQuery.length >= 3 && !searching && (
+            {searchResults.length === 0 && searchQuery.trim().length >= 1 && !searching && (
               <div className="text-center py-6">
                 <p className="text-sm text-muted-foreground">No customers found</p>
               </div>
             )}
 
             {/* Recent Customers List */}
-            {searchQuery.length < 3 && recentCustomers.length > 0 && (
+            {searchQuery.trim().length < 1 && recentCustomers.length > 0 && (
               <div className="space-y-2 pt-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Customers</p>
                 <div className="space-y-2">
@@ -197,7 +201,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
               </div>
             )}
 
-            {searchQuery.length < 3 && loadingRecent && (
+            {searchQuery.trim().length < 1 && loadingRecent && (
               <div className="flex items-center justify-center py-6 gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Loading recent customers...

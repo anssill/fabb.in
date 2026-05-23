@@ -171,14 +171,14 @@ export default function PaymentsPage() {
   const isManager = ['owner', 'manager', 'super_admin'].includes(role)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-[1440px] space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Payments</h1>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Payments</h1>
           <p className="text-sm text-slate-500">{payments.length} transactions recorded</p>
         </div>
         {isManager && (
-          <Button variant="outline" onClick={() => setReconcileOpen(true)}>
+          <Button variant="outline" className="h-10 px-4" onClick={() => setReconcileOpen(true)}>
             <ClipboardList className="w-4 h-4 mr-2" />
             Reconcile
           </Button>
@@ -223,13 +223,13 @@ export default function PaymentsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search by booking number or customer..."
-                className="pl-10 h-9"
+                className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40 h-9">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
@@ -243,7 +243,7 @@ export default function PaymentsPage() {
               </SelectContent>
             </Select>
             <Select value={methodFilter} onValueChange={setMethodFilter}>
-              <SelectTrigger className="w-full sm:w-40 h-9">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Method" />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +274,7 @@ export default function PaymentsPage() {
                 return (
                   <div key={payment.id} className={`flex items-center justify-between p-4 hover:bg-slate-50 transition-colors ${payment.is_voided ? 'opacity-50' : ''}`}>
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-lg border border-slate-100">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-lg border border-slate-100">
                         {METHOD_ICONS[payment.method] || '💰'}
                       </div>
                       <div>
@@ -382,7 +382,7 @@ export default function PaymentsPage() {
 
           <SheetFooter className="mt-6">
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full"
               onClick={handleSaveReconciliation}
               disabled={reconcileSaving || !cashCounted}
             >

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { DatesStep } from './steps/DatesStep'
 import { PricingStep } from './steps/PricingStep'
 import { PaymentStep } from './steps/PaymentStep'
 import { ReceiptStep } from './steps/ReceiptStep'
+import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 export interface BookingCustomer {
   id?: string
@@ -68,6 +69,7 @@ export interface BookingPayment {
   deposit_amount: number
   method: 'cash' | 'upi' | 'card' | 'bank_transfer'
   reference?: string
+  physical_bill_number?: string
   notes?: string
 }
 
@@ -124,9 +126,7 @@ export default function NewBookingPage() {
   const handleNext = () => {
     if (currentStep === 2) {
       // Auto-calculate pricing when moving from dates
-      const rentalDays = Math.max(1, Math.ceil(
-        (new Date(dates.return_date).getTime() - new Date(dates.pickup_date).getTime()) / (1000 * 60 * 60 * 24)
-      ))
+      const rentalDays = calculateBillableRentalDays(dates.pickup_date, dates.return_date)
       const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity * rentalDays, 0)
       setPricing((prev) => ({
         ...prev,

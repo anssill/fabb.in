@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Search, Waves } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { WashingQueueClient } from './WashingQueueClient'
 import { WashLogDialog } from './WashLogDialog'
 
@@ -39,10 +39,10 @@ export default async function WashingPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-[1440px] space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Garment Lifecycle</h1>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Garment Lifecycle</h1>
           <p className="text-sm text-slate-500">
             {count ?? 0} total items in cycle · {sortedLogs.filter(l => l.stage === 'in_washing').length} washing · {sortedLogs.filter(l => l.stage === 'in_fitting').length} fitting · {sortedLogs.filter(l => l.stage === 'maintenance').length} maintenance
           </p>
@@ -54,15 +54,15 @@ export default async function WashingPage() {
         />
       </div>
 
-      <Card className="shadow-sm border-slate-200">
+      <Card>
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-3 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Search items in queue..." className="pl-10 h-9" />
+              <Input placeholder="Search items in queue..." className="pl-10" />
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-md bg-slate-50/50 text-xs text-slate-600">
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-100 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                 Urgent First
               </div>

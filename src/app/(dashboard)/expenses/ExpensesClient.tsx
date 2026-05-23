@@ -36,10 +36,9 @@ interface Expense {
 
 interface Props {
   initialExpenses: Expense[]
-  businessId: string
 }
 
-export function ExpensesClient({ initialExpenses, businessId }: Props) {
+export function ExpensesClient({ initialExpenses }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -78,11 +77,11 @@ export function ExpensesClient({ initialExpenses, businessId }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search expenses..."
-              className="pl-9 h-9"
+              className="pl-10"
             />
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-44 h-9">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -105,7 +104,7 @@ export function ExpensesClient({ initialExpenses, businessId }: Props) {
             {filtered.map((expense) => (
               <div key={expense.id} className="flex items-center justify-between py-3 hover:bg-slate-50 -mx-1 px-1 rounded transition-colors group">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
                     <IndianRupee className="w-4 h-4 text-red-500" />
                   </div>
                   <div className="min-w-0">

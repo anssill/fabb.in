@@ -41,17 +41,17 @@ export default async function InventoryPage() {
   const auditItems = allItems.filter(i => ['fair', 'poor'].includes(i.condition))
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Inventory</h1>
-          <p className="text-sm text-muted-foreground">Manage your rental assets</p>
+          <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Inventory</h1>
+          <p className="text-sm text-slate-500">Manage your rental assets and live availability</p>
         </div>
         <div className="flex items-center gap-2">
           <SyncInventoryButton />
           <CsvImportDialog />
-          <Button asChild>
+          <Button className="h-10 px-4" asChild>
             <Link href="/inventory/new">
               <Plus className="w-4 h-4 mr-2" />
               Add Item
@@ -64,13 +64,13 @@ export default async function InventoryPage() {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Items', value: totalItems, icon: Package, color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20' },
+          { label: 'Total Items', value: totalItems, icon: Package, color: 'text-[#4f46e5] bg-indigo-50' },
           { label: 'Available', value: availableItems, icon: Layers, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20' },
-          { label: 'On Rent', value: onRentItems, icon: PackageSearch, color: 'text-violet-600 dark:text-violet-400 bg-violet-500/10 dark:bg-violet-500/20' },
+          { label: 'On Rent', value: onRentItems, icon: PackageSearch, color: 'text-blue-600 bg-blue-50' },
           { label: 'In Washing', value: inWashingItems, icon: Waves, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-card border border-border rounded-lg p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
+          <div key={label} className="flex items-center gap-3 rounded-[1.65rem] bg-white p-4 shadow-sm">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${color}`}>
               <Icon className="w-4 h-4" />
             </div>
             <div>
@@ -83,12 +83,12 @@ export default async function InventoryPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="all" className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+        <TabsList>
+          <TabsTrigger value="all">
             <PackageSearch className="w-4 h-4 mr-2" />
             All Items ({totalItems})
           </TabsTrigger>
-          <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-sm">
+          <TabsTrigger value="audit">
             <ShieldAlert className="w-4 h-4 mr-2" />
             Quality Audit ({auditItems.length})
           </TabsTrigger>

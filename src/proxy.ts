@@ -7,7 +7,7 @@ export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone()
   const isAuthPage = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup') || url.pathname.startsWith('/reset-password')
   const isSetupPage = url.pathname.startsWith('/setup')
-  const isDashboardPage = url.pathname.startsWith('/dashboard') || url.pathname === '/'
+  const isDashboardPage = url.pathname.startsWith('/dashboard')
 
   // 1. If no user and trying to access protected page
   if (!user && (isDashboardPage || isSetupPage)) {
