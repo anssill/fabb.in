@@ -40,6 +40,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
     }
 
+    const { data: defaultBranch, error: branchError } = await supabaseAdmin
+      .from('branches')
+      .select('id')
+      .eq('business_id', bizId)
+      .eq('status', 'active')
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (branchError || !defaultBranch) {
+      return NextResponse.json({ error: 'No active branch found for this business' }, { status: 400 })
+    }
+
     // 3. Create Auth User with the admin-chosen password
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
@@ -56,7 +70,7 @@ export async function POST(req: NextRequest) {
     const { error: staffError } = await supabaseAdmin.from('staff').insert({
       id: authUser.user.id,
       business_id: bizId,
-      branch_id: null,
+      branch_id: defaultBranch.id,
       email: email.toLowerCase(),
       name,
       phone: phone?.trim() || null,
