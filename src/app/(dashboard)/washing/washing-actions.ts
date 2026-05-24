@@ -1,8 +1,44 @@
-'use client'
+'use server'
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseAdminClient, type SupabaseClient } from '@supabase/supabase-js'
 
-async function moveVariantOutOfAvailableStock(supabase: ReturnType<typeof createClient>, variantId?: string) {
+function getAdmin() {
+  return createSupabaseAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+async function requireActiveStaff(branchId?: string, businessId?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const admin = getAdmin()
+  const { data: staff, error } = await admin
+    .from('staff')
+    .select('id, business_id, branch_id, status')
+    .eq('id', user.id)
+    .single()
+
+  if (error || !staff || staff.status !== 'active') {
+    throw new Error('Unauthorized staff')
+  }
+
+  if (businessId && staff.business_id !== businessId) {
+    throw new Error('Business mismatch. Please refresh and try again.')
+  }
+
+  if (branchId && staff.branch_id !== branchId) {
+    throw new Error('Branch mismatch. Please refresh and try again.')
+  }
+
+  return { admin, staff }
+}
+
+async function moveVariantOutOfAvailableStock(supabase: SupabaseClient, variantId?: string) {
   if (!variantId) return null
 
   const { data: variant, error: variantError } = await supabase
@@ -33,7 +69,7 @@ async function moveVariantOutOfAvailableStock(supabase: ReturnType<typeof create
 }
 
 async function restoreVariantAvailableStock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   variantId: string | undefined,
   previousVariant: { available_stock: number; total_stock: number } | null
 ) {
@@ -56,7 +92,7 @@ export async function addToWashingQueue(data: {
   staffId: string
   stage?: 'in_washing' | 'in_fitting' | 'maintenance'
 }) {
-  const supabase = createClient()
+  const { admin: supabase, staff } = await requireActiveStaff(data.branchId, data.businessId)
   const stage = data.stage || 'in_washing'
   const previousVariant = await moveVariantOutOfAvailableStock(supabase, data.variantId)
   
@@ -70,7 +106,7 @@ export async function addToWashingQueue(data: {
       item_variant_id: data.variantId,
       priority: data.priority,
       notes: data.notes,
-      added_by: data.staffId,
+      added_by: staff.id,
       stage: stage
     })
     .select('id')
@@ -120,14 +156,21 @@ export async function markAsReady(
   businessId: string,
   condition?: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged'
 ) {
-  const supabase = createClient()
+  const { admin: supabase, staff } = await requireActiveStaff(branchId, businessId)
 
   // 1. Fetch the variant ID from the queue first
-  const { data: queueEntry } = await supabase
+  const { data: queueEntry, error: queueFetchError } = await supabase
     .from('washing_queue')
-    .select('item_variant_id')
+    .select('item_variant_id, branch_id, business_id, item_id')
     .eq('id', queueId)
+    .eq('item_id', itemId)
+    .eq('branch_id', branchId)
+    .eq('business_id', businessId)
     .single()
+
+  if (queueFetchError || !queueEntry) {
+    throw new Error('Washing queue item not found. Please refresh and try again.')
+  }
 
   // 1. Update washing_queue
   const { error: queueError } = await supabase
@@ -135,7 +178,7 @@ export async function markAsReady(
     .update({
       stage: 'ready',
       condition_after: condition,
-      completed_by: staffId,
+      completed_by: staff.id,
       completed_at: new Date().toISOString()
     })
     .eq('id', queueId)
@@ -214,7 +257,22 @@ export async function updateQueueStage(
   itemId: string,
   newStage: 'in_washing' | 'in_fitting' | 'maintenance'
 ) {
-  const supabase = createClient()
+  const { admin: supabase, staff } = await requireActiveStaff()
+
+  const { data: queueEntry, error: queueFetchError } = await supabase
+    .from('washing_queue')
+    .select('id, item_id, branch_id, business_id')
+    .eq('id', queueId)
+    .eq('item_id', itemId)
+    .single()
+
+  if (queueFetchError || !queueEntry) {
+    throw new Error('Washing queue item not found. Please refresh and try again.')
+  }
+
+  if (queueEntry.business_id !== staff.business_id || queueEntry.branch_id !== staff.branch_id) {
+    throw new Error('Branch mismatch. Please refresh and try again.')
+  }
 
   // 1. Update washing_queue
   const { error: queueError } = await supabase
