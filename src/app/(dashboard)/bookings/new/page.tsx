@@ -24,6 +24,8 @@ export interface BookingCustomer {
   id?: string
   name: string
   phone: string
+  alternate_phone?: string
+  emergency_phone?: string
   email?: string
   address?: string
   id_type?: string
@@ -88,7 +90,6 @@ export default function NewBookingPage() {
   const { activeBranch, staff } = useAppStore()
   const bookingRules = ((activeBranch?.settings as any) || {})
   const minAdvancePct = Number(bookingRules.min_advance_pct ?? 30)
-  const depositDefaultPct = Number(bookingRules.deposit_default_pct ?? 20)
   const bufferDays = Number(bookingRules.buffer_days ?? 1)
   const minRentalDays = Number(bookingRules.min_rental_days ?? 1)
   const maxBookingWindow = Number(bookingRules.max_booking_window ?? 180)
@@ -164,13 +165,6 @@ export default function NewBookingPage() {
         ...prev,
         subtotal,
         total_amount: subtotal - prev.discount_amount + prev.delivery_fee,
-      }))
-    }
-    if (currentStep === 3) {
-      const defaultDeposit = Math.round(pricing.total_amount * depositDefaultPct / 100)
-      setPayment((prev) => ({
-        ...prev,
-        deposit_amount: prev.deposit_amount || defaultDeposit,
       }))
     }
     setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1))

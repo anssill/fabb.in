@@ -19,6 +19,7 @@ import { PermissionAccessEditor, type StaffBranchOption } from './PermissionAcce
 
 const ROLE_COLORS: Record<string, string> = {
   owner: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  admin: 'bg-violet-50 text-violet-700 border-violet-100',
   manager: 'bg-blue-50 text-blue-700 border-blue-100',
   staff: 'bg-slate-100 text-slate-700 border-slate-200',
 }
@@ -62,7 +63,7 @@ function getInitialBranchAccess(member: Partial<StaffMember>, branches: StaffBra
     }
   }
 
-  if ((member.role === 'owner' || member.role === 'super_admin') && branches.length > 0) {
+  if ((member.role === 'owner' || member.role === 'admin' || member.role === 'super_admin') && branches.length > 0) {
     const allIds = branches.map(branch => branch.id)
     return {
       branchIds: allIds,
@@ -117,7 +118,7 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
     m.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const canManage = ['owner', 'manager'].includes(currentUserRole)
+  const canManage = ['owner', 'admin', 'manager', 'super_admin'].includes(currentUserRole)
 
   function openInvite() {
     const branchAccess = getInitialBranchAccess({ role: 'staff' }, branches)
@@ -445,6 +446,8 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
+                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
@@ -512,6 +515,7 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>

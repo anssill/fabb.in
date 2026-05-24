@@ -23,6 +23,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   const [isNew, setIsNew] = useState(false)
   const [searching, setSearching] = useState(false)
   const [loadingRecent, setLoadingRecent] = useState(false)
+  const [showExtraPhones, setShowExtraPhones] = useState(false)
 
   // Fetch recent customers on mount / when business ID is ready
   useEffect(() => {
@@ -33,7 +34,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         const supabase = createClient()
         const { data } = await supabase
           .from('customers')
-          .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
+          .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
           .order('created_at', { ascending: false })
@@ -62,10 +63,10 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         const supabase = createClient()
         const { data } = await supabase
           .from('customers')
-          .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
+          .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
-          .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+          .or(`name.ilike.%${query}%,phone.ilike.%${query}%,alternate_phone.ilike.%${query}%,emergency_phone.ilike.%${query}%,email.ilike.%${query}%`)
           .order('name', { ascending: true })
           .limit(5)
         setSearchResults(data || [])
@@ -87,10 +88,10 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       const supabase = createClient()
       const { data } = await supabase
         .from('customers')
-        .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
+        .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
         .eq('business_id', staff.business_id)
         .eq('branch_id', activeBranch?.id || staff.branch_id)
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,alternate_phone.ilike.%${query}%,emergency_phone.ilike.%${query}%,email.ilike.%${query}%`)
         .order('name', { ascending: true })
         .limit(5)
 
@@ -105,12 +106,14 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   const selectCustomer = (c: BookingCustomer) => {
     setCustomer(c)
     setIsNew(false)
+    setShowExtraPhones(Boolean(c.alternate_phone || c.emergency_phone))
     setSearchResults([])
   }
 
   const startNew = () => {
     setIsNew(true)
     setCustomer({ name: '', phone: searchQuery.match(/\d{10}/) ? searchQuery : '' })
+    setShowExtraPhones(false)
     setSearchResults([])
   }
 
@@ -250,6 +253,48 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                     />
                   </div>
                 </div>
+                {!showExtraPhones ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowExtraPhones(true)}
+                  >
+                    Add another mobile number
+                  </Button>
+                ) : (
+                  <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Alternate mobile <span className="text-muted-foreground">(optional)</span></Label>
+                        <Input
+                          value={customer.alternate_phone || ''}
+                          onChange={(e) => setCustomer({ ...customer, alternate_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="Second number"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Safety mobile <span className="text-muted-foreground">(optional)</span></Label>
+                        <Input
+                          value={customer.emergency_phone || ''}
+                          onChange={(e) => setCustomer({ ...customer, emergency_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="Family / backup number"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCustomer({ ...customer, alternate_phone: '', emergency_phone: '' })
+                        setShowExtraPhones(false)
+                      }}
+                    >
+                      Remove extra mobile numbers
+                    </Button>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Email <span className="text-muted-foreground">(optional)</span></Label>
@@ -291,6 +336,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                   <ImageUpload
                     value={customer.id_proof_url || (customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null)}
                     onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}
+                    enableCameraCapture
                   />
                 </div>
               </>
@@ -302,6 +348,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 <ImageUpload
                   value={customer.id_proof_file ? URL.createObjectURL(customer.id_proof_file) : null}
                   onChange={(file) => setCustomer({ ...customer, id_proof_file: file })}
+                  enableCameraCapture
                 />
               </div>
             )}

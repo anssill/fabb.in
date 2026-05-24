@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import imageCompression from 'browser-image-compression'
-import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, Loader2, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import Image from 'next/image'
@@ -13,11 +13,13 @@ interface ImageUploadProps {
   onChange: (file: File | null, previewUrl?: string | null) => void
   disabled?: boolean
   className?: string
+  enableCameraCapture?: boolean
 }
 
-export function ImageUpload({ value, onChange, disabled, className = '' }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, disabled, className = '', enableCameraCapture = false }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(value || null)
   const [isCompressing, setIsCompressing] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   // Update internal preview if external value changes (e.g., initial load)
   useEffect(() => {
@@ -109,6 +111,21 @@ export function ImageUpload({ value, onChange, disabled, className = '' }: Image
           `}
         >
           <input {...getInputProps()} />
+          {enableCameraCapture && (
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              disabled={disabled || isCompressing}
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? [])
+                event.target.value = ''
+                onDrop(files)
+              }}
+            />
+          )}
           <div className="flex flex-col items-center justify-center space-y-3">
             {isCompressing ? (
               <>
@@ -131,6 +148,21 @@ export function ImageUpload({ value, onChange, disabled, className = '' }: Image
                   <p className="text-xs text-slate-500">
                     Supports JPG, PNG, WEBP (Max 5MB)
                   </p>
+                  {enableCameraCapture && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-2"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        cameraInputRef.current?.click()
+                      }}
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take photo
+                    </Button>
+                  )}
                 </div>
               </>
             )}

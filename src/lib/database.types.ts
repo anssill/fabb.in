@@ -187,6 +187,7 @@ export type Database = {
           rental_days: number
           size: string
           subtotal: number | null
+          updated_at: string
         }
         Insert: {
           booking_id: string
@@ -203,6 +204,7 @@ export type Database = {
           rental_days: number
           size: string
           subtotal?: number | null
+          updated_at?: string
         }
         Update: {
           booking_id?: string
@@ -219,6 +221,7 @@ export type Database = {
           rental_days?: number
           size?: string
           subtotal?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -694,6 +697,7 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          alternate_phone: string | null
           blacklist_reason: string | null
           blacklisted: boolean
           blacklisted_at: string | null
@@ -703,6 +707,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           email: string | null
+          emergency_phone: string | null
           id: string
           id_number: string | null
           id_proof_url: string | null
@@ -717,6 +722,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          alternate_phone?: string | null
           blacklist_reason?: string | null
           blacklisted?: boolean
           blacklisted_at?: string | null
@@ -726,6 +732,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          emergency_phone?: string | null
           id?: string
           id_number?: string | null
           id_proof_url?: string | null
@@ -740,6 +747,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          alternate_phone?: string | null
           blacklist_reason?: string | null
           blacklisted?: boolean
           blacklisted_at?: string | null
@@ -749,6 +757,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          emergency_phone?: string | null
           id?: string
           id_number?: string | null
           id_proof_url?: string | null

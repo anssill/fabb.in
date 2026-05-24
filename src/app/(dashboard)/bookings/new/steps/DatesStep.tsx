@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CalendarDays, Calendar as CalendarIcon, Plus, X } from 'lucide-react'
+import { AlertTriangle, CalendarDays, Calendar as CalendarIcon, Plus, X } from 'lucide-react'
 import type { BookingDates } from '../page'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -115,6 +115,9 @@ export function DatesStep({ dates, setDates }: Props) {
   const rentalDays = dates.pickup_date && dates.return_date
     ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
     : 0
+  const pickupBeforeEvent = dates.pickup_date && dates.event_date
+    ? parseLocalDate(dates.pickup_date)!.getTime() < parseLocalDate(dates.event_date)!.getTime()
+    : false
 
   return (
     <>
@@ -294,6 +297,15 @@ export function DatesStep({ dates, setDates }: Props) {
           <div className="p-3 bg-muted border border-border text-foreground rounded-lg">
             <p className="text-sm font-medium">
               <span className="font-semibold text-primary">{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span> rental period
+            </p>
+          </div>
+        )}
+
+        {pickupBeforeEvent && (
+          <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p className="text-sm font-medium">
+              Pickup is before the event date. Please confirm this is intentional before continuing.
             </p>
           </div>
         )}

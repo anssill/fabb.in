@@ -5,7 +5,7 @@ export interface StaffData {
   name: string | null
   email: string
   phone: string | null
-  role: 'super_admin' | 'owner' | 'manager' | 'staff'
+  role: 'super_admin' | 'owner' | 'admin' | 'manager' | 'staff'
   status: string
   business_id: string | null
   branch_id: string | null

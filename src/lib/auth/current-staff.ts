@@ -56,5 +56,5 @@ export async function getCurrentStaffContext(): Promise<CurrentStaffContext> {
 }
 
 export function canManageBusiness(role: string) {
-  return role === 'owner' || role === 'manager' || role === 'super_admin'
+  return role === 'owner' || role === 'admin' || role === 'manager' || role === 'super_admin'
 }

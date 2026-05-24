@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { BookingActions } from './components/BookingActions'
 import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
 import { BookingSmsButton } from './components/BookingSmsButton'
+import { BookingItemsEditor } from './components/BookingItemsEditor'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -51,7 +52,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       branch:branches(name, city),
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
-        id, quantity, price, rental_days, subtotal, item_name, size,
+        id, item_id, item_variant_id, quantity, price, rental_days, subtotal, item_name, size,
         condition_on_return, condition_notes_on_return,
         item:items(id, name, cover_image_url, sku),
         variant:item_variants(size, colour)
@@ -88,6 +89,22 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   const statusSteps = ['pending', 'booked', 'out', 'returned', 'closed']
   const currentStepIdx = statusSteps.indexOf(booking.status)
+  const bookingItemRows = ((booking.booking_items || []) as any[]).map((bi: any) => {
+    const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
+    const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
+    return {
+      id: bi.id,
+      item_id: bi.item_id,
+      item_variant_id: bi.item_variant_id,
+      item_name: bi.item_name || item?.name || 'Item',
+      size: bi.size,
+      quantity: Number(bi.quantity || 1),
+      price: Number(bi.price || 0),
+      rental_days: Number(bi.rental_days ?? rentalDays),
+      subtotal: Number(subtotal),
+      cover_image_url: item?.cover_image_url || null,
+    }
+  })
 
   // suppress unused variable warning
   void branch
@@ -240,29 +257,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {((booking.booking_items || []) as any[]).map((bi: any) => {
-                      const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
-                      const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
-                      return (
-                        <div key={bi.id} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
-                          <div className="flex items-center gap-2">
-                            {item?.cover_image_url ? (
-                              <img src={item.cover_image_url} alt="" className="w-8 h-8 rounded object-cover" />
-                            ) : (
-                              <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-                                <Package className="w-4 h-4 text-slate-400" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="font-medium">{bi.item_name || item?.name || '—'}</p>
-                              <p className="text-xs text-slate-500">{bi.size} × {bi.quantity} · ₹{bi.price}/day</p>
-                            </div>
-                          </div>
-                          <p className="font-semibold">₹{Number(subtotal).toLocaleString('en-IN')}</p>
-                        </div>
-                      )
-                    })}
+                  <div className="space-y-3">
+                    <BookingItemsEditor
+                      bookingId={booking.id}
+                      status={booking.status}
+                      businessId={booking.business_id}
+                      branchId={booking.branch_id}
+                      items={bookingItemRows}
+                    />
                     <div className="flex justify-between text-sm font-semibold pt-2 border-t border-slate-200">
                       <span>Total</span>
                       <span>₹{Number(booking.total_amount ?? 0).toLocaleString('en-IN')}</span>
@@ -326,8 +328,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Created by</span>
+                    <span className="text-slate-500">Booked by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Booked time</span>
+                    <span className="font-medium">
+                      {new Date(booking.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                    </span>
                   </div>
                   {booking.notes && (
                     <div className="pt-2 border-t border-slate-100">
@@ -416,34 +424,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               <CardTitle className="text-sm font-semibold">Items in this Booking</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {((booking.booking_items || []) as any[]).map((bi: any) => {
-                  const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
-                  const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
-                  return (
-                    <div key={bi.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-                      {item?.cover_image_url ? (
-                        <img src={item.cover_image_url} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-14 h-14 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-slate-300" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">{bi.item_name || item?.name}</p>
-                        <p className="text-xs text-slate-500">Size: {bi.size} · Qty: {bi.quantity} · ₹{bi.price}/day × {bi.rental_days ?? rentalDays} days</p>
-                        {bi.condition_on_return && (
-                          <p className="text-xs text-slate-600 mt-1">
-                            Return condition: <span className="font-medium capitalize">{bi.condition_on_return}</span>
-                            {bi.condition_notes_on_return ? ` — ${bi.condition_notes_on_return}` : ''}
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-sm font-bold text-slate-900 flex-shrink-0">₹{Number(subtotal).toLocaleString('en-IN')}</p>
-                    </div>
-                  )
-                })}
-              </div>
+              <BookingItemsEditor
+                bookingId={booking.id}
+                status={booking.status}
+                businessId={booking.business_id}
+                branchId={booking.branch_id}
+                items={bookingItemRows}
+              />
             </CardContent>
           </Card>
         </TabsContent>

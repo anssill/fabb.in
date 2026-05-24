@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Button } from '@/components/ui/button'
-import { Upload, X, Loader2, ImageIcon, AlertCircle } from 'lucide-react'
+import { Upload, X, Loader2, ImageIcon, AlertCircle, Camera } from 'lucide-react'
 import imageCompression from 'browser-image-compression'
 import { toast } from 'sonner'
 
@@ -17,6 +17,7 @@ interface ImageUploadProps {
   className?: string
   maxSizeMB?: number
   multiple?: boolean
+  enableCameraCapture?: boolean
 }
 
 export function MediaUpload({
@@ -28,10 +29,12 @@ export function MediaUpload({
   label,
   className = '',
   maxSizeMB = 1,
-  multiple = false
+  multiple = false,
+  enableCameraCapture = false
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return
@@ -150,6 +153,21 @@ export function MediaUpload({
               `}
             >
               <input {...getInputProps()} />
+              {enableCameraCapture && (
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? [])
+                    event.target.value = ''
+                    onDrop(files)
+                  }}
+                />
+              )}
               {uploading ? (
                 <>
                   <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
@@ -164,6 +182,21 @@ export function MediaUpload({
                     {isDragActive ? 'Drop here' : (multiple ? 'Add photos' : 'Click or drop image')}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">PNG, JPG, WebP up to {maxSizeMB}MB</p>
+                  {enableCameraCapture && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 gap-2"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        cameraInputRef.current?.click()
+                      }}
+                    >
+                      <Camera className="w-4 h-4" />
+                      Take photo
+                    </Button>
+                  )}
                 </>
               )}
             </div>

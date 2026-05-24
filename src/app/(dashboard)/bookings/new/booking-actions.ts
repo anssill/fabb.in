@@ -13,6 +13,8 @@ interface BookingData {
     id?: string
     name: string
     phone: string
+    alternate_phone?: string
+    emergency_phone?: string
     email?: string
     address?: string
     id_type?: string
@@ -51,7 +53,7 @@ export async function createNewBookingFlow(data: BookingData) {
     if (variantIds.length > 0) {
       const { data: branchVariants, error: branchVariantErr } = await supabase
         .from('item_variants')
-        .select('id, items!inner(branch_id, business_id)')
+        .select('id, available_stock, items!inner(branch_id, business_id)')
         .in('id', variantIds)
         .eq('items.business_id', data.businessId)
         .eq('items.branch_id', data.branchId)
@@ -61,6 +63,19 @@ export async function createNewBookingFlow(data: BookingData) {
       const validVariantIds = new Set((branchVariants || []).map((variant) => variant.id))
       if (variantIds.some((variantId) => !validVariantIds.has(variantId))) {
         throw new Error('One or more selected items are not in the active branch.')
+      }
+
+      const requestedByVariant = data.items.reduce((acc: Record<string, number>, item) => {
+        acc[item.variant_id] = (acc[item.variant_id] || 0) + (Number(item.quantity) || 1)
+        return acc
+      }, {})
+      const unavailableVariant = (branchVariants || []).find((variant) => {
+        const requested = requestedByVariant[variant.id] || 0
+        return requested > Number((variant as any).available_stock || 0)
+      })
+
+      if (unavailableVariant) {
+        throw new Error('One of the selected sizes is no longer available. Please remove it or choose another size.')
       }
     }
 
@@ -83,6 +98,8 @@ export async function createNewBookingFlow(data: BookingData) {
         name: data.customer.name,
         email: data.customer.email || undefined,
         address: data.customer.address || undefined,
+        alternate_phone: data.customer.alternate_phone || undefined,
+        emergency_phone: data.customer.emergency_phone || undefined,
         id_type: data.customer.id_type || undefined,
         id_number: data.customer.id_number || undefined,
         id_proof_url: data.customer.id_proof_url || undefined,
@@ -111,6 +128,8 @@ export async function createNewBookingFlow(data: BookingData) {
           name: data.customer.name,
           email: data.customer.email || undefined,
           address: data.customer.address || undefined,
+          alternate_phone: data.customer.alternate_phone || undefined,
+          emergency_phone: data.customer.emergency_phone || undefined,
           id_type: data.customer.id_type || undefined,
           id_number: data.customer.id_number || undefined,
           id_proof_url: data.customer.id_proof_url || undefined,
@@ -124,6 +143,8 @@ export async function createNewBookingFlow(data: BookingData) {
             branch_id: data.branchId,
             name: data.customer.name,
             phone: data.customer.phone,
+            alternate_phone: data.customer.alternate_phone || null,
+            emergency_phone: data.customer.emergency_phone || null,
             email: data.customer.email || null,
             address: data.customer.address || null,
             id_type: data.customer.id_type || null,
@@ -208,13 +229,24 @@ export async function createNewBookingFlow(data: BookingData) {
     if (itemsErr) throw itemsErr
 
     // 4.1 Update Stock and Sync to Notion
+    const lockedItems: Array<{ variantId: string; quantity: number }> = []
     for (const item of data.items) {
       // Atomic stock reservation
       const { error: lockErr } = await supabase.rpc('lock_item_stock', {
         p_variant_id: item.variant_id,
         p_quantity: item.quantity,
       })
-      if (lockErr) throw lockErr
+      if (lockErr) {
+        for (const locked of lockedItems) {
+          await supabase.rpc('cancel_booking_stock', {
+            p_variant_id: locked.variantId,
+            p_quantity: locked.quantity,
+          })
+        }
+        await supabase.from('bookings').delete().eq('id', booking!.id)
+        throw new Error('One of the selected sizes is no longer available. Please remove it or choose another size.')
+      }
+      lockedItems.push({ variantId: item.variant_id, quantity: item.quantity })
 
       // Fetch all variants for this item to generate updated Notion summary
       const { data: variants } = await supabase

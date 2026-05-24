@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Search, Package, Plus, Minus, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -35,16 +36,28 @@ interface SearchResult {
   }[]
 }
 
+interface VariantOption {
+  id: string
+  item_id: string
+  size: string
+  colour?: string
+  total_stock: number
+  available_stock: number
+  price: number
+}
+
 export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStockLimit = false }: Props) {
   const { staff, activeBranch } = useAppStore()
   const branchId = activeBranch?.id || staff?.branch_id
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
 
   // Real-time stock states
   const [overlappingQuantities, setOverlappingQuantities] = useState<Record<string, number>>({})
   const [variantTotalStocks, setVariantTotalStocks] = useState<Record<string, number>>({})
+  const [variantOptions, setVariantOptions] = useState<Record<string, VariantOption[]>>({})
   const [checkingAvailability, setCheckingAvailability] = useState(false)
 
   // Fetch overlapping booking quantities for selected dates
@@ -119,40 +132,92 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       })
       return changed ? next : prev
     })
+
+    setVariantOptions(prev => {
+      const next = { ...prev }
+      results.forEach(item => {
+        next[item.id] = item.item_variants.map(v => ({
+          id: v.id,
+          item_id: item.id,
+          size: v.size,
+          colour: v.colour || undefined,
+          total_stock: v.total_stock,
+          available_stock: v.available_stock,
+          price: Number(v.price_override ?? item.price),
+        }))
+      })
+      return next
+    })
   }, [results])
 
-  // Synchronize missing stocks for items restored from drafts
+  // Synchronize missing stocks and variant choices for items restored from drafts
   useEffect(() => {
     const missingIds = items
       .map(i => i.variant_id)
       .filter(id => variantTotalStocks[id] === undefined)
+    const missingItemIds = Array.from(new Set(
+      items
+        .map(i => i.item_id)
+        .filter(itemId => !variantOptions[itemId])
+    ))
 
-    if (missingIds.length === 0) return
+    if (missingIds.length === 0 && missingItemIds.length === 0) return
 
-    const fetchMissingTotalStocks = async () => {
+    const fetchMissingVariantDetails = async () => {
       try {
         const supabase = createClient()
-        const { data, error } = await supabase
-          .from('item_variants')
-          .select('id, total_stock')
-          .in('id', missingIds)
+        if (missingIds.length > 0) {
+          const { data, error } = await supabase
+            .from('item_variants')
+            .select('id, total_stock')
+            .in('id', missingIds)
         
-        if (error) throw error
+          if (error) throw error
         
-        setVariantTotalStocks(prev => {
-          const next = { ...prev }
-          data?.forEach(v => {
-            next[v.id] = v.total_stock
+          setVariantTotalStocks(prev => {
+            const next = { ...prev }
+            data?.forEach(v => {
+              next[v.id] = v.total_stock
+            })
+            return next
           })
-          return next
-        })
+        }
+
+        if (missingItemIds.length > 0) {
+          const { data, error } = await supabase
+            .from('item_variants')
+            .select('id, item_id, size, colour, total_stock, available_stock, price_override')
+            .in('item_id', missingItemIds)
+            .gt('total_stock', 0)
+
+          if (error) throw error
+
+          setVariantOptions(prev => {
+            const next = { ...prev }
+            missingItemIds.forEach(itemId => {
+              const currentItem = items.find(item => item.item_id === itemId)
+              next[itemId] = (data || [])
+                .filter(v => v.item_id === itemId)
+                .map(v => ({
+                  id: v.id,
+                  item_id: v.item_id,
+                  size: v.size,
+                  colour: v.colour || undefined,
+                  total_stock: v.total_stock,
+                  available_stock: v.available_stock,
+                  price: Number(v.price_override ?? currentItem?.price ?? 0),
+                }))
+            })
+            return next
+          })
+        }
       } catch (err) {
-        console.error('Failed to fetch missing total stocks:', err)
+        console.error('Failed to fetch missing variant details:', err)
       }
     }
 
-    fetchMissingTotalStocks()
-  }, [items, variantTotalStocks])
+    fetchMissingVariantDetails()
+  }, [items, variantTotalStocks, variantOptions])
 
   const handleSearch = async (rawQuery?: string) => {
     if (!staff?.business_id || !branchId) return
@@ -178,7 +243,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       const normalized = ((data as SearchResult[]) || [])
         .map((item) => ({
           ...item,
-          item_variants: (item.item_variants || []).filter((v) => Number((v as any).total_stock || 0) > 0),
+          item_variants: (item.item_variants || []).filter((v) => Number(v.available_stock || 0) > 0),
         }))
         .filter((item) => item.item_variants.length > 0)
 
@@ -217,15 +282,11 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       return
     }
 
-    const dynamicAvailable = variant.total_stock - (overlappingQuantities[variant.id] || 0)
+    const calendarAvailable = variant.total_stock - (overlappingQuantities[variant.id] || 0)
+    const dynamicAvailable = Math.min(variant.available_stock, calendarAvailable)
     if (dynamicAvailable <= 0) {
-      if (enforceStockLimit) {
-        toast.error('This variant is already booked for the selected dates.')
-        return
-      }
-      toast.warning('Booking Conflict: This variant is already booked for the selected dates!', {
-        description: 'Allowed as override. Please verify availability manually.',
-      })
+      toast.error('This size has no stock available right now.')
+      return
     }
 
     setVariantTotalStocks(prev => ({ ...prev, [variant.id]: variant.total_stock }))
@@ -253,22 +314,56 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
     if (delta > 0) {
       const totalStockVal = variantTotalStocks[variantId] ?? 999
       const reservedVal = overlappingQuantities[variantId] || 0
-      const dynamicAvailable = totalStockVal - reservedVal
+      const availableStockVal = Object.values(variantOptions)
+        .flat()
+        .find((variant) => variant.id === variantId)?.available_stock ?? 999
+      const dynamicAvailable = Math.min(availableStockVal, totalStockVal - reservedVal)
 
       if (selectedItem.quantity + delta > dynamicAvailable) {
-        if (enforceStockLimit) {
-          toast.error(`Only ${Math.max(0, dynamicAvailable)} unit${dynamicAvailable === 1 ? '' : 's'} available for these dates.`)
-          return
-        }
-        toast.warning(`Conflict: Quantity exceeds available stock (${dynamicAvailable} available) for these dates.`, {
-          description: 'Override allowed. Please verify manually.',
-        })
+        toast.error(`Only ${Math.max(0, dynamicAvailable)} unit${dynamicAvailable === 1 ? '' : 's'} available for this size.`)
+        return
       }
     }
 
     setItems(
       items.map((i) =>
         i.variant_id === variantId ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i
+      )
+    )
+  }
+
+  const updateItemVariant = (item: BookingItem, nextVariantId: string) => {
+    if (nextVariantId === item.variant_id) return
+
+    const nextVariant = variantOptions[item.item_id]?.find((variant) => variant.id === nextVariantId)
+    if (!nextVariant) return
+
+    if (items.some((selected) => selected.variant_id === nextVariantId)) {
+      toast.warning('This size is already selected for this booking')
+      return
+    }
+
+    const dynamicAvailable = Math.min(
+      nextVariant.available_stock,
+      nextVariant.total_stock - (overlappingQuantities[nextVariantId] || 0)
+    )
+    if (item.quantity > dynamicAvailable) {
+      toast.error(`Only ${Math.max(0, dynamicAvailable)} unit${dynamicAvailable === 1 ? '' : 's'} available for this size.`)
+      return
+    }
+
+    setVariantTotalStocks(prev => ({ ...prev, [nextVariant.id]: nextVariant.total_stock }))
+    setItems(
+      items.map((selected) =>
+        selected.variant_id === item.variant_id
+          ? {
+              ...selected,
+              variant_id: nextVariant.id,
+              size: nextVariant.size,
+              colour: nextVariant.colour,
+              price: nextVariant.price,
+            }
+          : selected
       )
     )
   }
@@ -331,15 +426,26 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                     <p className="text-sm font-semibold truncate text-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">{item.category} · ₹{item.price}/day</p>
                   </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={expandedItemId === item.id ? 'secondary' : 'default'}
+                    className="h-8 shrink-0 px-3 text-xs font-semibold"
+                    onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}
+                  >
+                    {expandedItemId === item.id ? 'Hide sizes' : 'Select'}
+                  </Button>
                 </div>
 
+                {expandedItemId === item.id && (
                 <div className="space-y-2 border-t border-border/60 pt-3">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Available Sizes & Stock</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {item.item_variants
                       ?.map((v) => {
                         const isAdded = items.some((i) => i.variant_id === v.id)
-                        const dynamicAvailable = v.total_stock - (overlappingQuantities[v.id] || 0)
+                        const calendarAvailable = v.total_stock - (overlappingQuantities[v.id] || 0)
+                        const dynamicAvailable = Math.min(v.available_stock, calendarAvailable)
                         const isLowStock = dynamicAvailable <= 2 && dynamicAvailable > 0
                         const isOut = dynamicAvailable <= 0
                         return (
@@ -371,7 +477,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                                     ? 'text-amber-600 dark:text-amber-400' 
                                     : 'text-emerald-600 dark:text-emerald-400'
                               }`}>
-                                {isOut ? '⚠️ Already booked (Conflict alert)' : `${dynamicAvailable} ${dynamicAvailable === 1 ? 'unit' : 'units'} left`}
+                                {isOut ? 'No stock available' : `${dynamicAvailable} ${dynamicAvailable === 1 ? 'unit' : 'units'} left`}
                               </span>
                             </div>
                             <Button
@@ -382,9 +488,9 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                                 isOut && !isAdded ? 'border-amber-500/50 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400' : ''
                               }`}
                               onClick={() => addItem(item, v)}
-                              disabled={isAdded}
+                              disabled={isAdded || isOut}
                             >
-                              {isAdded ? 'Selected' : isOut ? 'Select Anyway' : 'Select'}
+                              {isAdded ? 'Selected' : isOut ? 'No stock' : 'Select'}
                             </Button>
                           </div>
                         )
@@ -394,6 +500,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                     )}
                   </div>
                 </div>
+                )}
               </div>
             ))}
           </div>
@@ -406,24 +513,41 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
             {items.map((item) => (
               <div
                 key={item.variant_id}
-                className="flex items-center justify-between p-3 bg-muted/40 border border-border text-foreground rounded-xl transition-all hover:bg-muted/60"
+                className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-muted/40 p-3 text-foreground transition-all hover:bg-muted/60 sm:grid-cols-[1fr_150px_112px_auto] sm:items-center"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded bg-muted border border-border flex items-center justify-center shrink-0">
-                    {item.cover_image_url ? (
-                      <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-cover rounded" />
-                    ) : (
-                      <Package className="w-5 h-5 text-muted-foreground/60" />
-                    )}
-                  </div>
+                <div className="min-w-0">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                    <p className="sr-only">
                       {item.size}{item.colour ? ` · ${item.colour}` : ''} · ₹{item.price}/day
                     </p>
                   </div>
+                  <p className="text-xs text-muted-foreground">₹{item.price}/day</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <Select
+                  value={item.variant_id}
+                  onValueChange={(variantId) => updateItemVariant(item, variantId)}
+                >
+                  <SelectTrigger className="h-8 w-full bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(variantOptions[item.item_id] || [{
+                      id: item.variant_id,
+                      item_id: item.item_id,
+                      size: item.size,
+                      colour: item.colour,
+                      total_stock: variantTotalStocks[item.variant_id] ?? item.quantity,
+                      available_stock: item.quantity,
+                      price: item.price,
+                    }]).map((variant) => (
+                      <SelectItem key={variant.id} value={variant.id}>
+                        {variant.size}{variant.colour ? ` · ${variant.colour}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex h-8 items-center rounded-full border border-border bg-background">
                   <Button variant="outline" size="sm" className="w-7 h-7 p-0 border-border" onClick={() => updateQuantity(item.variant_id, -1)}>
                     <Minus className="w-3 h-3" />
                   </Button>
@@ -448,4 +572,3 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
     </>
   )
 }
-

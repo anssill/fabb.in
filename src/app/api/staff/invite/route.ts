@@ -8,7 +8,7 @@ const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
   password: z.string().min(8),
-  role: z.enum(['manager', 'staff']),
+  role: z.enum(['owner', 'admin', 'manager', 'staff']),
   phone: z.string().optional(),
   permissions: z.record(z.string(), z.boolean()).optional(),
   branch_id: z.string().uuid().optional().nullable(),

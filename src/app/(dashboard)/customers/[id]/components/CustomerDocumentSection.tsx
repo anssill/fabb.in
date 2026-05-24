@@ -58,6 +58,7 @@ export function CustomerDocumentSection({
               setIdProofUrl(undefined)
               updateCustomer('id_proof_url', null)
             }}
+            enableCameraCapture
           />
         </CardContent>
       </Card>

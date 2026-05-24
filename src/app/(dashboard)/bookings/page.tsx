@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Plus, Search, CalendarArrowUp, CalendarArrowDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Plus, Search, CalendarArrowUp, CalendarArrowDown, ChevronRight, AlertTriangle, CalendarDays, List } from 'lucide-react'
 import Link from 'next/link'
 import { useAppStore } from '@/lib/store'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
@@ -30,12 +30,21 @@ const STATUS_BAR: Record<string, string> = {
 
 type StatusFilter = 'all' | 'booked' | 'out' | 'returned' | 'pending' | 'closed' | 'cancelled'
 
+function formatInputDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function BookingsPage() {
   const { activeBranch } = useAppStore()
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [scheduleDate, setScheduleDate] = useState(() => formatInputDate(new Date()))
 
   useEffect(() => {
     async function fetchBookings() {
@@ -98,6 +107,21 @@ export default function BookingsPage() {
     })
   }, [bookings, search, statusFilter])
 
+  const scheduledBookings = useMemo(() => {
+    return filtered
+      .filter((booking) => !['cancelled', 'closed'].includes(booking.status))
+      .filter((booking) => {
+        if (!scheduleDate) return true
+        return booking.pickup_date <= scheduleDate && scheduleDate <= booking.return_date
+      })
+      .sort((a, b) => String(a.pickup_date || '').localeCompare(String(b.pickup_date || '')))
+  }, [filtered, scheduleDate])
+
+  const scheduledDays = useMemo(
+    () => scheduleDate && scheduledBookings.length > 0 ? [[scheduleDate, scheduledBookings] as const] : [],
+    [scheduleDate, scheduledBookings]
+  )
+
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header */}
@@ -147,8 +171,70 @@ export default function BookingsPage() {
         />
       </div>
 
+      <div className="flex w-full gap-2 sm:w-auto">
+        <Button type="button" variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
+          <List className="mr-2 h-4 w-4" />
+          List
+        </Button>
+        <Button type="button" variant={viewMode === 'calendar' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('calendar')}>
+          <CalendarDays className="mr-2 h-4 w-4" />
+          Schedule
+        </Button>
+      </div>
+
+      {viewMode === 'calendar' && (
+        <div className="grid gap-3 rounded-[1.25rem] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
+          <div className="col-span-full flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-950">Schedule date</p>
+              <p className="text-xs text-slate-500">Shows bookings and items reserved on the selected date.</p>
+            </div>
+            <Input
+              type="date"
+              value={scheduleDate}
+              onChange={(event) => setScheduleDate(event.target.value)}
+              className="w-full sm:w-48"
+            />
+          </div>
+          {scheduledDays.length > 0 ? scheduledDays.map(([date, dayBookings]) => (
+            <div key={date} className="rounded-lg border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-950">
+                {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
+              </p>
+              <div className="mt-3 space-y-2">
+                {dayBookings.map((booking) => {
+                  const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+                  return (
+                    <Link key={booking.id} href={`/bookings/${booking.id}`} className="block rounded-md bg-slate-50 p-2 hover:bg-slate-100">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-xs font-semibold text-slate-800">{(customer as any)?.name || booking.booking_number}</span>
+                        <Badge className={`shrink-0 text-[10px] capitalize ${STATUS_COLORS[booking.status] || ''}`}>{booking.status}</Badge>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        Pickup {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '-'} · Return {booking.return_date ? new Date(booking.return_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '-'}
+                      </p>
+                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                        {((booking.booking_items || []) as any[]).length > 0 ? ((booking.booking_items || []) as any[]).map((item, index) => (
+                          <p key={`${booking.id}-${index}`} className="truncate text-xs font-medium text-slate-700">
+                            {item.item_name} · {item.size} · Qty {item.quantity}
+                          </p>
+                        )) : (
+                          <p className="text-xs text-slate-400">No item details</p>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )) : (
+            <div className="col-span-full py-10 text-center text-sm text-slate-500">No scheduled bookings found.</div>
+          )}
+        </div>
+      )}
+
       {/* Booking Cards */}
-      <div className="space-y-2">
+      {viewMode === 'list' && <div className="space-y-2">
         {loading ? (
           <div className="text-center py-20 text-slate-400 text-sm">Loading bookings...</div>
         ) : filtered.length > 0 ? (
@@ -240,7 +326,7 @@ export default function BookingsPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
