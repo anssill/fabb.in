@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -18,8 +18,10 @@ import {
   ChevronRight,
   Menu,
   X,
+  LogOut,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
+import { createClient } from '@/lib/supabase/client'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -81,6 +83,16 @@ function NavContent({
   unreadNotifications: number
   initials: string
 }) {
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    onNavigate?.()
+    router.push('/login')
+    router.refresh()
+  }
+
   const isVisible = (item: NavItem) => {
     if (!item.roles) {
       // Check individual permissions
@@ -222,6 +234,26 @@ function NavContent({
             </div>
           )}
         </div>
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSignOut}
+                className={`mt-3 h-9 w-full justify-start rounded-2xl px-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 ${
+                  sidebarCollapsed ? 'justify-center' : ''
+                }`}
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {!sidebarCollapsed && <span className="ml-2 text-sm font-medium">Logout</span>}
+              </Button>
+            </TooltipTrigger>
+            {sidebarCollapsed && (
+              <TooltipContent side="right">Logout</TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   )
