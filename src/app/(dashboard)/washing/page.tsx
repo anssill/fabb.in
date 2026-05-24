@@ -24,7 +24,7 @@ export default async function WashingPage() {
     .from('washing_queue')
     .select(`
       *,
-      items(name, sku),
+      items(id, name, sku),
       item_variants(size, colour)
     `, { count: 'exact' })
     .eq('branch_id', staff.branch_id)

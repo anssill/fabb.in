@@ -156,21 +156,29 @@ export async function markAsReady(
   businessId: string,
   condition?: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged'
 ) {
-  const { admin: supabase, staff } = await requireActiveStaff(branchId, businessId)
+  const { admin: supabase, staff } = await requireActiveStaff()
 
-  // 1. Fetch the variant ID from the queue first
+  // 1. Fetch the queue row first and use it as the source of truth.
   const { data: queueEntry, error: queueFetchError } = await supabase
     .from('washing_queue')
     .select('item_variant_id, branch_id, business_id, item_id')
     .eq('id', queueId)
-    .eq('item_id', itemId)
-    .eq('branch_id', branchId)
-    .eq('business_id', businessId)
     .single()
 
   if (queueFetchError || !queueEntry) {
     throw new Error('Washing queue item not found. Please refresh and try again.')
   }
+
+  if (
+    queueEntry.business_id !== staff.business_id ||
+    queueEntry.branch_id !== staff.branch_id
+  ) {
+    throw new Error('Branch mismatch. Please refresh and try again.')
+  }
+
+  const resolvedItemId = itemId || queueEntry.item_id
+  const resolvedBranchId = queueEntry.branch_id
+  const resolvedBusinessId = queueEntry.business_id
 
   // 1. Update washing_queue
   const { error: queueError } = await supabase
@@ -220,7 +228,7 @@ export async function markAsReady(
   const { count: activeQueueCount, error: activeQueueError } = await supabase
     .from('washing_queue')
     .select('id', { count: 'exact', head: true })
-    .eq('item_id', itemId)
+    .eq('item_id', resolvedItemId)
     .neq('stage', 'ready')
 
   if (activeQueueError) throw activeQueueError
@@ -232,19 +240,19 @@ export async function markAsReady(
     const { error: itemError } = await supabase
       .from('items')
       .update(updatePayload)
-      .eq('id', itemId)
-      .eq('branch_id', branchId)
+      .eq('id', resolvedItemId)
+      .eq('branch_id', resolvedBranchId)
 
     if (itemError) throw itemError
   }
 
   // 4. Create a notification for ready status
   await supabase.from('notifications').insert({
-    business_id: businessId,
-    branch_id: branchId,
+    business_id: resolvedBusinessId,
+    branch_id: resolvedBranchId,
     type: 'washing_ready',
     title: 'Item Ready from Wash',
-    body: `Item ${itemId} is now ready and available for inventory.`,
+    body: `Item ${resolvedItemId} is now ready and available for inventory.`,
     action_url: '/inventory'
   })
 
@@ -263,7 +271,6 @@ export async function updateQueueStage(
     .from('washing_queue')
     .select('id, item_id, branch_id, business_id')
     .eq('id', queueId)
-    .eq('item_id', itemId)
     .single()
 
   if (queueFetchError || !queueEntry) {
@@ -273,6 +280,8 @@ export async function updateQueueStage(
   if (queueEntry.business_id !== staff.business_id || queueEntry.branch_id !== staff.branch_id) {
     throw new Error('Branch mismatch. Please refresh and try again.')
   }
+
+  const resolvedItemId = itemId || queueEntry.item_id
 
   // 1. Update washing_queue
   const { error: queueError } = await supabase
@@ -287,7 +296,7 @@ export async function updateQueueStage(
   const { error: itemError } = await supabase
     .from('items')
     .update({ status: itemStatus })
-    .eq('id', itemId)
+    .eq('id', resolvedItemId)
 
   if (itemError) throw itemError
 

@@ -68,6 +68,7 @@ function ItemCard({
 }) {
   const item = log.items
   const variant = log.item_variants
+  const itemId = log.item_id || item?.id
   const isUrgent = log.priority === 'urgent'
   const isReady = log.stage === 'ready'
 
@@ -104,9 +105,9 @@ function ItemCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => onStageChange(log.id, item.id, 'in_washing')}>In Washing</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStageChange(log.id, item.id, 'in_fitting')}>In Fitting</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStageChange(log.id, item.id, 'maintenance')}>Maintenance</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStageChange(log.id, itemId, 'in_washing')}>In Washing</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStageChange(log.id, itemId, 'in_fitting')}>In Fitting</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStageChange(log.id, itemId, 'maintenance')}>Maintenance</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -130,18 +131,18 @@ function ItemCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel className="text-[10px] uppercase text-slate-400">Mark Condition</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onMarkReady(log.id, item.id, log.branch_id, log.business_id, 'excellent')}>
+              <DropdownMenuItem onClick={() => onMarkReady(log.id, itemId, log.branch_id, log.business_id, 'excellent')}>
                 <ShieldCheck className="mr-2 h-4 w-4 text-emerald-500" />Excellent / New
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMarkReady(log.id, item.id, log.branch_id, log.business_id, 'good')}>
+              <DropdownMenuItem onClick={() => onMarkReady(log.id, itemId, log.branch_id, log.business_id, 'good')}>
                 <Activity className="mr-2 h-4 w-4 text-blue-500" />Good / Used
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMarkReady(log.id, item.id, log.branch_id, log.business_id, 'fair')}>
+              <DropdownMenuItem onClick={() => onMarkReady(log.id, itemId, log.branch_id, log.business_id, 'fair')}>
                 <Clock className="mr-2 h-4 w-4 text-amber-500" />Fair (Minor Wear)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase text-slate-400">Issues</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onMarkReady(log.id, item.id, log.branch_id, log.business_id, 'damaged')}>
+              <DropdownMenuItem onClick={() => onMarkReady(log.id, itemId, log.branch_id, log.business_id, 'damaged')}>
                 <AlertCircle className="mr-2 h-4 w-4 text-rose-500" />Damaged / Repair
               </DropdownMenuItem>
             </DropdownMenuContent>
