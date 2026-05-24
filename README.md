@@ -45,38 +45,6 @@
 
 ---
 
-## 🚀 Getting Started
-
-### 1. Prerequisites
-- Node.js 18.x or later.
-- A Supabase project.
-- (Optional) MSG91 account for SMS.
-
-### 2. Environment Setup
-Copy the example environment file and fill in your credentials:
-```bash
-cp .env.example .env.local
-```
-
-### 3. Installation & Database
-Install dependencies and initialize the database via Supabase:
-```bash
-npm install
-# Run your migrations in the Supabase SQL editor using the provided .sql files in /supabase/migrations
-```
-
-### 4. Running the App
-```bash
-npm run dev
-```
-
----
-
-## 📂 Project Structure
-- `/src/app/(dashboard)`: Main application modules (Bookings, Inventory, etc.).
-- `/src/app/(auth)`: Authentication flows.
-- `/src/lib`: Shared utilities, API wrappers (MSG91, Stripe), and state stores.
-- `/src/components/ui`: Reusable UI primitives.
 
 ## 📄 License
 Internal Proprietary Software - (c) 2026 Fabb.booking Team
