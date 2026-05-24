@@ -51,8 +51,8 @@ export function Header({ staff }: Props) {
   const pathSegments = pathname.split('/').filter(Boolean)
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/70 bg-[#e9ebf5]/85 px-4 backdrop-blur-xl transition-all duration-300 lg:left-[17.5rem] lg:px-7 dark:border-slate-800 dark:bg-slate-950/80">
-      <div className="ml-10 flex min-w-0 flex-1 items-center gap-3 lg:ml-0">
+    <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/70 bg-[#e9ebf5]/85 px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 xl:left-[17.5rem] xl:px-7 dark:border-slate-800 dark:bg-slate-950/80">
+      <div className="ml-10 flex min-w-0 flex-1 items-center gap-3 xl:ml-0">
         <div className="hidden h-10 w-10 place-items-center rounded-full bg-white text-slate-600 shadow-sm sm:grid">
           <Search className="h-4 w-4" />
         </div>
@@ -65,7 +65,7 @@ export function Header({ staff }: Props) {
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
@@ -89,7 +89,7 @@ export function Header({ staff }: Props) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-11 gap-2 rounded-full bg-white px-2 pl-2 pr-3 shadow-sm">
+            <Button variant="ghost" size="sm" className="h-10 gap-2 rounded-full bg-white px-2 shadow-sm sm:h-11 sm:pr-3">
               <Avatar className="w-7 h-7">
                 <AvatarFallback className="text-xs bg-blue-100 text-blue-700">{initials}</AvatarFallback>
               </Avatar>

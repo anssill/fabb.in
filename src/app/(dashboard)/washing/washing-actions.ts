@@ -1,7 +1,50 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { toast } from 'sonner'
+
+async function moveVariantOutOfAvailableStock(supabase: ReturnType<typeof createClient>, variantId?: string) {
+  if (!variantId) return null
+
+  const { data: variant, error: variantError } = await supabase
+    .from('item_variants')
+    .select('available_stock, reserved_stock, total_stock')
+    .eq('id', variantId)
+    .single()
+
+  if (variantError) throw variantError
+  if (!variant || Number(variant.available_stock) <= 0) {
+    throw new Error('No available stock for this variant')
+  }
+
+  const nextAvailableStock = Number(variant.available_stock) - 1
+  const { error: stockError } = await supabase
+    .from('item_variants')
+    .update({ available_stock: nextAvailableStock })
+    .eq('id', variantId)
+    .eq('available_stock', variant.available_stock)
+    .select('id')
+    .single()
+
+  if (stockError) {
+    throw new Error('Stock changed while sending this item to wash. Please try again.')
+  }
+
+  return variant
+}
+
+async function restoreVariantAvailableStock(
+  supabase: ReturnType<typeof createClient>,
+  variantId: string | undefined,
+  previousVariant: { available_stock: number; total_stock: number } | null
+) {
+  if (!variantId || !previousVariant) return
+
+  await supabase
+    .from('item_variants')
+    .update({ available_stock: previousVariant.available_stock })
+    .eq('id', variantId)
+    .lte('available_stock', previousVariant.total_stock)
+}
 
 export async function addToWashingQueue(data: {
   itemId: string
@@ -15,9 +58,10 @@ export async function addToWashingQueue(data: {
 }) {
   const supabase = createClient()
   const stage = data.stage || 'in_washing'
+  const previousVariant = await moveVariantOutOfAvailableStock(supabase, data.variantId)
   
   // 1. Insert into washing_queue
-  const { error: queueError } = await supabase
+  const { data: queueEntry, error: queueError } = await supabase
     .from('washing_queue')
     .insert({
       business_id: data.businessId,
@@ -29,8 +73,13 @@ export async function addToWashingQueue(data: {
       added_by: data.staffId,
       stage: stage
     })
+    .select('id')
+    .single()
 
-  if (queueError) throw queueError
+  if (queueError) {
+    await restoreVariantAvailableStock(supabase, data.variantId, previousVariant)
+    throw queueError
+  }
 
   // 2. Update item status
   // For inventory visibility, we map these lifecycle stages to item statuses
@@ -40,7 +89,13 @@ export async function addToWashingQueue(data: {
     .update({ status: itemStatus })
     .eq('id', data.itemId)
 
-  if (itemError) throw itemError
+  if (itemError) {
+    if (queueEntry?.id) {
+      await supabase.from('washing_queue').delete().eq('id', queueEntry.id)
+    }
+    await restoreVariantAvailableStock(supabase, data.variantId, previousVariant)
+    throw itemError
+  }
 
   // 3. If priority is urgent, create a notification
   if (data.priority === 'urgent') {
@@ -99,11 +154,24 @@ export async function markAsReady(
 
   // 3. Increment available stock for the variant (if it's not damaged)
   if (queueEntry?.item_variant_id && condition !== 'damaged') {
-    const { error: stockErr } = await supabase.rpc('complete_washing', {
-      p_variant_id: queueEntry.item_variant_id,
-      p_quantity: 1
-    })
-    if (stockErr) throw stockErr
+    const { data: variant, error: variantError } = await supabase
+      .from('item_variants')
+      .select('available_stock, reserved_stock, total_stock')
+      .eq('id', queueEntry.item_variant_id)
+      .single()
+
+    if (variantError) throw variantError
+
+    const availableCapacity =
+      Number(variant.total_stock) - Number(variant.available_stock) - Number(variant.reserved_stock)
+
+    if (availableCapacity > 0) {
+      const { error: stockErr } = await supabase.rpc('complete_washing', {
+        p_variant_id: queueEntry.item_variant_id,
+        p_quantity: 1
+      })
+      if (stockErr) throw stockErr
+    }
   }
 
   const { count: activeQueueCount, error: activeQueueError } = await supabase

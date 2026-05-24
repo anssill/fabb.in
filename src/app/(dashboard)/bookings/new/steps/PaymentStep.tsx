@@ -17,10 +17,10 @@ interface Props {
 
 export function PaymentStep({ payment, setPayment, totalAmount, minAdvancePct = 30, requirePhysicalBill = false }: Props) {
   const balanceDue = totalAmount - payment.advance_amount - (payment.deposit_amount ?? 0)
-  const minAdvance = Math.round(totalAmount * minAdvancePct / 100)
+  const suggestedAdvance = Math.round(totalAmount * minAdvancePct / 100)
 
   const presets = [
-    { label: `${minAdvancePct}%`, value: minAdvance },
+    { label: `${minAdvancePct}%`, value: suggestedAdvance },
     { label: '50%', value: Math.round(totalAmount * 0.5) },
     { label: 'Full', value: totalAmount },
   ]
@@ -32,7 +32,7 @@ export function PaymentStep({ payment, setPayment, totalAmount, minAdvancePct = 
           <CreditCard className="w-5 h-5 text-primary" />
           Payment
         </CardTitle>
-        <CardDescription>Record the advance payment for this booking</CardDescription>
+        <CardDescription>Record any advance amount collected for this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Total due */}
@@ -43,12 +43,12 @@ export function PaymentStep({ payment, setPayment, totalAmount, minAdvancePct = 
 
         {/* Advance amount */}
         <div className="space-y-2">
-          <Label>Advance amount *</Label>
+          <Label>Advance amount</Label>
           <Input
             type="number"
             value={payment.advance_amount || ''}
-            onChange={(e) => setPayment({ ...payment, advance_amount: Math.min(Number(e.target.value), totalAmount) })}
-            placeholder={`Min ₹${minAdvance}`}
+            onChange={(e) => setPayment({ ...payment, advance_amount: Math.min(Math.max(Number(e.target.value), 0), totalAmount) })}
+            placeholder="0"
             min={0}
             max={totalAmount}
           />

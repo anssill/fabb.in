@@ -40,6 +40,14 @@ const TYPE_LABELS: Record<string, string> = {
   refund: 'Refund',
 }
 
+function revenueValue(payment: { type?: string; amount: number | string; is_voided?: boolean }) {
+  if (payment.is_voided) return 0
+  const amount = Number(payment.amount) || 0
+  if (payment.type === 'refund') return -amount
+  if (['advance', 'balance', 'penalty'].includes(payment.type || '')) return amount
+  return 0
+}
+
 export default function PaymentsPage() {
   const { activeBranch } = useAppStore()
   const [payments, setPayments] = useState<any[]>([])
@@ -92,12 +100,12 @@ export default function PaymentsPage() {
 
   const todayTotal = useMemo(() =>
     payments.filter(p => !p.is_voided && p.created_at?.startsWith(today))
-      .reduce((sum, p) => sum + Number(p.amount), 0), [payments, today])
+      .reduce((sum, p) => sum + revenueValue(p), 0), [payments, today])
 
   const monthTotal = useMemo(() => {
     const month = today.slice(0, 7)
     return payments.filter(p => !p.is_voided && p.created_at?.startsWith(month))
-      .reduce((sum, p) => sum + Number(p.amount), 0)
+      .reduce((sum, p) => sum + revenueValue(p), 0)
   }, [payments, today])
 
   const depositsHeld = useMemo(() =>
@@ -110,7 +118,7 @@ export default function PaymentsPage() {
 
   const cashToday = useMemo(() =>
     payments.filter(p => !p.is_voided && p.method === 'cash' && p.created_at?.startsWith(reconcileDate))
-      .reduce((sum, p) => sum + Number(p.amount), 0), [payments, reconcileDate])
+      .reduce((sum, p) => sum + revenueValue(p), 0), [payments, reconcileDate])
 
   const filtered = useMemo(() => {
     return payments.filter((p) => {
@@ -178,7 +186,7 @@ export default function PaymentsPage() {
           <p className="text-sm text-slate-500">{payments.length} transactions recorded</p>
         </div>
         {isManager && (
-          <Button variant="outline" className="h-10 px-4" onClick={() => setReconcileOpen(true)}>
+          <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" onClick={() => setReconcileOpen(true)}>
             <ClipboardList className="w-4 h-4 mr-2" />
             Reconcile
           </Button>
@@ -187,7 +195,7 @@ export default function PaymentsPage() {
 
       {/* Summary Cards */}
       {isManager && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-slate-500 font-medium uppercase">Revenue Today</p>
@@ -208,8 +216,8 @@ export default function PaymentsPage() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-slate-500 font-medium uppercase">Total Collected</p>
-              <p className="text-2xl font-semibold text-emerald-600 mt-1">₹{payments.filter(p => !p.is_voided).reduce((s, p) => s + Number(p.amount), 0).toLocaleString('en-IN')}</p>
+              <p className="text-xs text-slate-500 font-medium uppercase">Net Revenue</p>
+              <p className="text-2xl font-semibold text-emerald-600 mt-1">₹{payments.reduce((s, p) => s + revenueValue(p), 0).toLocaleString('en-IN')}</p>
             </CardContent>
           </Card>
         </div>
@@ -272,12 +280,12 @@ export default function PaymentsPage() {
                 const staffName = Array.isArray(payment.staff) ? payment.staff[0]?.name : payment.staff?.name
 
                 return (
-                  <div key={payment.id} className={`flex items-center justify-between p-4 hover:bg-slate-50 transition-colors ${payment.is_voided ? 'opacity-50' : ''}`}>
-                    <div className="flex items-center gap-4">
+                  <div key={payment.id} className={`flex flex-col gap-3 p-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between ${payment.is_voided ? 'opacity-50' : ''}`}>
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-lg border border-slate-100">
                         {METHOD_ICONS[payment.method] || '💰'}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-slate-900 font-mono">
                             {booking?.booking_number || 'Payment'}
@@ -286,13 +294,13 @@ export default function PaymentsPage() {
                             {payment.is_voided ? 'VOIDED' : (TYPE_LABELS[payment.type] || payment.type)}
                           </Badge>
                         </div>
-                        <p className="text-xs text-slate-500">
+                        <p className="truncate text-xs text-slate-500">
                           {customerName || 'Customer'} · {payment.method?.replace('_', ' ')}
                           {staffName ? ` · ${staffName}` : ''}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className={`text-sm font-semibold ${payment.type?.includes('refund') ? 'text-red-600' : 'text-emerald-700'}`}>
                         {payment.type?.includes('refund') ? '-' : '+'}₹{Number(payment.amount).toLocaleString('en-IN')}
                       </p>

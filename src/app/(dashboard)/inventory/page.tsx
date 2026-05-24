@@ -43,15 +43,15 @@ export default async function InventoryPage() {
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Inventory</h1>
           <p className="text-sm text-slate-500">Manage your rental assets and live availability</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <SyncInventoryButton />
           <CsvImportDialog />
-          <Button className="h-10 px-4" asChild>
+          <Button className="h-10 w-full px-4 sm:w-auto" asChild>
             <Link href="/inventory/new">
               <Plus className="w-4 h-4 mr-2" />
               Add Item
@@ -62,14 +62,14 @@ export default async function InventoryPage() {
 
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Total Items', value: totalItems, icon: Package, color: 'text-[#4f46e5] bg-indigo-50' },
           { label: 'Available', value: availableItems, icon: Layers, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20' },
           { label: 'On Rent', value: onRentItems, icon: PackageSearch, color: 'text-blue-600 bg-blue-50' },
           { label: 'In Washing', value: inWashingItems, icon: Waves, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="flex items-center gap-3 rounded-[1.65rem] bg-white p-4 shadow-sm">
+          <div key={label} className="flex items-center gap-3 rounded-[1.25rem] bg-white p-4 shadow-sm sm:rounded-[1.65rem]">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${color}`}>
               <Icon className="w-4 h-4" />
             </div>
@@ -83,7 +83,7 @@ export default async function InventoryPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-white p-1 shadow-sm sm:inline-grid sm:w-auto">
           <TabsTrigger value="all">
             <PackageSearch className="w-4 h-4 mr-2" />
             All Items ({totalItems})

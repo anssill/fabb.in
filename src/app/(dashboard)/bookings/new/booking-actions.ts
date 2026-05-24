@@ -158,6 +158,9 @@ export async function createNewBookingFlow(data: BookingData) {
       customerRequests.length > 0 ? `Customer requests: ${customerRequests.join(', ')}` : null,
       data.dates.notes?.trim() || null,
     ].filter(Boolean).join('\n\n') || null
+    const advanceAmount = Math.min(Math.max(Number(data.payment.advance_amount) || 0, 0), Number(data.pricing.total_amount) || 0)
+    const depositAmount = Math.max(Number(data.payment.deposit_amount) || 0, 0)
+    const balanceDue = Math.max(0, data.pricing.total_amount - advanceAmount - depositAmount)
 
     const { data: booking, error: bookingErr } = await supabase
       .from('bookings')
@@ -177,9 +180,9 @@ export async function createNewBookingFlow(data: BookingData) {
           : null,
         tax_amount: data.pricing.tax_amount ?? 0,
         total_amount: data.pricing.total_amount,
-        advance_amount: data.payment.advance_amount,
-        deposit_amount: data.payment.deposit_amount ?? 0,
-        balance_due: Math.max(0, data.pricing.total_amount - data.payment.advance_amount - (data.payment.deposit_amount ?? 0)),
+        advance_amount: advanceAmount,
+        deposit_amount: depositAmount,
+        balance_due: balanceDue,
         occasion: data.dates.occasion || null,
         booking_source: data.dates.booking_source || 'walk_in',
         notes: bookingNotes,
@@ -232,13 +235,13 @@ export async function createNewBookingFlow(data: BookingData) {
     }
 
     // 5. Record advance payment
-    if (data.payment.advance_amount > 0) {
+    if (advanceAmount > 0) {
       await supabase.from('booking_payments').insert({
         booking_id: booking!.id,
         business_id: data.businessId,
         branch_id: data.branchId,
         type: 'advance',
-        amount: data.payment.advance_amount,
+        amount: advanceAmount,
         method: data.payment.method || 'cash',
         collected_by: data.staffId,
         reference_number: data.payment.reference || null,
@@ -247,13 +250,13 @@ export async function createNewBookingFlow(data: BookingData) {
     }
 
     // 5b. Record deposit if collected now
-    if ((data.payment.deposit_amount ?? 0) > 0) {
+    if (depositAmount > 0) {
       await supabase.from('booking_payments').insert({
         booking_id: booking!.id,
         business_id: data.businessId,
         branch_id: data.branchId,
         type: 'deposit',
-        amount: data.payment.deposit_amount,
+        amount: depositAmount,
         method: data.payment.method || 'cash',
         collected_by: data.staffId,
       })
@@ -286,9 +289,9 @@ export async function createNewBookingFlow(data: BookingData) {
         pickupDate: data.dates.pickup_date,
         returnDate: data.dates.return_date,
         totalAmount: data.pricing.total_amount,
-        balanceDue: data.pricing.total_amount - data.payment.advance_amount,
-        advancePaid: data.payment.advance_amount,
-        depositAmount: 0, // Fallback if not specified
+        balanceDue,
+        advancePaid: advanceAmount,
+        depositAmount,
         summary: data.items.map(i => `${i.name} (${i.size})`).join(', ')
       })
 

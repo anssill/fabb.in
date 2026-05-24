@@ -59,14 +59,14 @@ export default function CustomersPage() {
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Customers</h1>
           <p className="text-sm text-slate-500">{customers.length} customer profiles in this branch</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="h-10 px-4" asChild>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
             <Link href="/customers/blacklist">
               <ShieldAlert className="w-4 h-4 mr-2 text-red-500" />
               Blacklist
             </Link>
           </Button>
-          <Button className="h-10 px-4" asChild>
+          <Button className="h-10 w-full px-4 sm:w-auto" asChild>
             <Link href="/customers/new">
               <Plus className="w-4 h-4 mr-2" />
               Add Customer
@@ -99,9 +99,9 @@ export default function CustomersPage() {
                 <Link
                   key={customer.id}
                   href={`/customers/${customer.id}`}
-                  className="flex items-center justify-between gap-3 p-4 transition-colors hover:bg-slate-50"
+                  className="flex flex-col gap-3 p-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex min-w-0 items-center gap-3 self-stretch sm:self-auto">
                     <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold text-indigo-700">
                         {customer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
@@ -120,7 +120,7 @@ export default function CustomersPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 sm:gap-6 text-right shrink-0">
+                  <div className="flex w-full items-center justify-between gap-3 text-right sm:w-auto sm:justify-end sm:gap-6">
                     <div className="hidden sm:block">
                       <p className="text-sm font-medium text-slate-900">{customer.total_bookings}</p>
                       <p className="text-xs text-slate-500">bookings</p>

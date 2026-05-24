@@ -160,7 +160,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
   return (
     <div className="space-y-6">
       {/* Search & Filters */}
-      <Card>
+      <Card className="rounded-[1.25rem] sm:rounded-[1.65rem]">
         <CardContent className="p-4">
           <div className="flex flex-col xl:flex-row gap-4">
             <div className="relative flex-1">
@@ -173,7 +173,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
               />
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {/* Date Range Picker */}
               <div className="flex items-center gap-2">
                 <Popover>
@@ -181,7 +181,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-10 justify-start rounded-full bg-white px-4 text-left font-normal shadow-sm min-w-[240px]",
+                        "h-10 w-full justify-start rounded-full bg-white px-4 text-left font-normal shadow-sm sm:min-w-[240px]",
                         !dateRange && "text-muted-foreground"
                       )}
                     >
@@ -213,14 +213,14 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                           setDateRange({ from: range.from, to: range.from })
                         }
                       }}
-                      numberOfMonths={2}
+                      numberOfMonths={1}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
 
               <select 
-                className="h-10 rounded-full border border-slate-100 bg-white px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 min-w-[150px]"
+                className="h-10 w-full rounded-full border border-slate-100 bg-white px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 sm:min-w-[150px] sm:w-auto"
                 value={selectedCategory || ''}
                 onChange={(e) => setSelectedCategory(e.target.value || null)}
               >
@@ -232,7 +232,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
 
               <Button 
                 variant="outline" 
-                className="h-10 relative group text-foreground"
+                className="relative h-10 w-full text-foreground sm:w-auto"
                 onClick={() => setIsScannerOpen(true)}
               >
                 <QrCode className="w-4 h-4 mr-2 text-primary" />
@@ -241,8 +241,8 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
             </div>
           </div>
           
-          <div className="mt-3 flex items-center justify-between text-[10px] text-muted-foreground font-medium">
-            <div className="flex items-center gap-4">
+          <div className="mt-3 flex flex-col gap-2 text-[10px] font-medium text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <span className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" /> Available
               </span>
@@ -266,7 +266,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
 
       {/* Items Grid */}
       {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 sm:gap-6">
           {filteredItems.map((item) => {
             const totalStock = item.total_stock
             const availableStock = item.dynamic_available

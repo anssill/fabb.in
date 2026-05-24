@@ -213,19 +213,19 @@ export default async function DashboardPage() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
           <section className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
               {statCards.map((stat) => {
                 const Icon = stat.icon
                 return (
                   <Link key={stat.title} href={stat.href} className="block">
                     <Card
-                      className={`min-h-[146px] rounded-[1.65rem] border-0 shadow-sm ring-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                      className={`min-h-[132px] rounded-[1.25rem] border-0 shadow-sm ring-0 transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:min-h-[146px] sm:rounded-[1.65rem] ${
                         stat.featured
                           ? `bg-gradient-to-br ${stat.tone} text-white`
                           : 'bg-white text-slate-950'
                       }`}
                     >
-                      <CardContent className="flex h-full flex-col justify-between p-5">
+                      <CardContent className="flex h-full flex-col justify-between p-4 sm:p-5">
                         <div className="flex items-start justify-between gap-3">
                           <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${stat.featured ? 'bg-white text-slate-950' : 'bg-slate-100 text-slate-700'}`}>
                             <Icon className="h-5 w-5" />
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
                         <div>
                           <p className={`text-xs font-medium ${stat.featured ? 'text-white/75' : 'text-slate-500'}`}>{stat.title}</p>
                           <div className="mt-1 flex items-end gap-2">
-                            <p className="text-3xl font-bold tracking-normal tabular-nums">{stat.value}</p>
+                            <p className="text-2xl font-bold tracking-normal tabular-nums sm:text-3xl">{stat.value}</p>
                           </div>
                           <p className={`mt-1 max-w-[13rem] text-xs ${stat.featured ? 'text-white/65' : 'text-slate-500'}`}>{stat.helper}</p>
                         </div>
@@ -248,9 +248,9 @@ export default async function DashboardPage() {
               })}
             </div>
 
-            <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
-              <CardContent className="p-5">
-                <div className="mb-5 flex items-start justify-between gap-4">
+            <Card className="rounded-[1.25rem] border-0 bg-white shadow-sm ring-0 sm:rounded-[1.65rem]">
+              <CardContent className="p-4 sm:p-5">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-slate-950">Customer Habits</h2>
                     <p className="text-xs text-slate-500">Track revenue and profit by day</p>
@@ -264,7 +264,8 @@ export default async function DashboardPage() {
                   <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-200" /> Revenue</span>
                   <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#4f46e5]" /> Profit</span>
                 </div>
-                <div className="flex h-[230px] items-end gap-3 overflow-hidden sm:gap-5">
+                <div className="overflow-x-auto">
+                <div className="flex h-[230px] min-w-[460px] items-end gap-3 overflow-hidden sm:gap-5">
                   {barData.map((item) => {
                     const revenueHeight = Math.max(18, Math.round((item.revenue / maxRevenue) * 160))
                     const profitHeight = Math.max(14, Math.round((item.profit / maxProfit) * 140))
@@ -279,14 +280,15 @@ export default async function DashboardPage() {
                     )
                   })}
                 </div>
+                </div>
               </CardContent>
             </Card>
           </section>
 
           <aside className="space-y-5">
-            <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
+            <Card className="rounded-[1.25rem] border-0 bg-white shadow-sm ring-0 sm:rounded-[1.65rem]">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-slate-950">Product Statistic</h2>
                     <p className="text-xs text-slate-500">Track your product sales</p>
@@ -321,9 +323,9 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
+            <Card className="rounded-[1.25rem] border-0 bg-white shadow-sm ring-0 sm:rounded-[1.65rem]">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-slate-950">Customer Growth</h2>
                     <p className="text-xs text-slate-500">Track customer locations</p>
@@ -333,7 +335,7 @@ export default async function DashboardPage() {
                     <ChevronDown className="ml-1 h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <div className="mt-5 grid grid-cols-[1fr_120px] items-center gap-4">
+                <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_120px] sm:items-center">
                   <div className="relative h-36">
                     <div className="absolute left-4 top-6 grid h-20 w-20 place-items-center rounded-full bg-[#7c72ff] text-sm font-bold text-white shadow-sm">{totalCustomersCount ?? 0}</div>
                     <div className="absolute left-20 top-2 grid h-24 w-24 place-items-center rounded-full bg-[#4f46e5] text-sm font-bold text-white shadow-sm">{activeBookingsCount ?? 0}</div>
@@ -363,18 +365,18 @@ export default async function DashboardPage() {
         </div>
 
         <Tabs defaultValue="schedule" className="w-full">
-          <TabsList className="grid h-12 w-full grid-cols-3 rounded-2xl bg-white p-1 shadow-sm sm:w-auto sm:inline-grid">
+          <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-white p-1 shadow-sm sm:h-12 sm:w-auto sm:inline-grid">
             <TabsTrigger value="schedule" className="rounded-xl data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">
-              <CalendarCheck className="mr-2 h-4 w-4" />
-              Schedule
+              <CalendarCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Schedule</span>
             </TabsTrigger>
             <TabsTrigger value="bookings" className="rounded-xl data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">
-              <CircleDollarSign className="mr-2 h-4 w-4" />
-              Bookings
+              <CircleDollarSign className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Bookings</span>
             </TabsTrigger>
             <TabsTrigger value="washing" className="rounded-xl data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">
-              <Waves className="mr-2 h-4 w-4" />
-              Washing
+              <Waves className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Washing</span>
             </TabsTrigger>
           </TabsList>
 
@@ -415,7 +417,8 @@ export default async function DashboardPage() {
                     <Link href="/bookings">View all <ChevronRight className="ml-1 h-3 w-3" /></Link>
                   </Button>
                 </div>
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[620px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="pl-5">Booking</TableHead>
@@ -462,6 +465,7 @@ export default async function DashboardPage() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -478,7 +482,8 @@ export default async function DashboardPage() {
                     <Link href="/washing">View all <ChevronRight className="ml-1 h-3 w-3" /></Link>
                   </Button>
                 </div>
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[460px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="pl-5">Item</TableHead>
@@ -522,14 +527,15 @@ export default async function DashboardPage() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
-          <CardContent className="p-5">
-            <div className="mb-4 flex items-center justify-between">
+        <Card className="rounded-[1.25rem] border-0 bg-white shadow-sm ring-0 sm:rounded-[1.65rem]">
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-semibold">Quick Actions</h2>
               <p className="text-xs text-slate-500">Core store workflows</p>
             </div>
@@ -576,9 +582,9 @@ function ScheduleCard({
   getStatusBadge: (status: string) => string
 }) {
   return (
-    <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
+    <Card className="rounded-[1.25rem] border-0 bg-white shadow-sm ring-0 sm:rounded-[1.65rem]">
       <CardContent className="p-0">
-        <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-5">
           <h2 className="flex items-center gap-2 font-semibold">
             <Icon className={`h-4 w-4 ${accent}`} />
             {title}
@@ -586,7 +592,8 @@ function ScheduleCard({
           <Badge variant="secondary" className="rounded-full">{rows.length}</Badge>
         </div>
         {rows.length > 0 ? (
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[520px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="pl-5">Booking</TableHead>
@@ -622,6 +629,7 @@ function ScheduleCard({
               })}
             </TableBody>
           </Table>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-5 py-10 text-center text-slate-500">
             <EmptyIcon className="mb-2 h-8 w-8 text-slate-300" />

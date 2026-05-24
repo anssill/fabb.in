@@ -56,9 +56,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <SidebarWrapper staff={staffWithActiveBranch} branches={visibleBranches} />
       <NotificationRealtime />
       <DataRealtime />
-      <div className="lg:ml-[17.5rem] flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex min-h-screen flex-col transition-all duration-300 xl:ml-[17.5rem]">
         <Header staff={staff} />
-        <main className="flex-1 p-3 pt-16 sm:p-5 sm:pt-18 lg:p-7 lg:pt-20">
+        <main className="flex-1 px-3 pb-24 pt-16 sm:px-5 sm:pt-18 md:pb-28 xl:p-7 xl:pt-20">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

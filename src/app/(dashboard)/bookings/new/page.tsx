@@ -147,13 +147,13 @@ export default function NewBookingPage() {
       case 2: return items.length > 0
       case 3: return pricing.total_amount > 0
       case 4: {
-        const minAdvance = Math.round(pricing.total_amount * minAdvancePct / 100)
-        return payment.advance_amount >= minAdvance
+        return payment.advance_amount >= 0
+          && payment.advance_amount <= pricing.total_amount
           && (!requirePhysicalBill || !!payment.physical_bill_number?.trim())
       }
       default: return true
     }
-  }, [allowSameDayBooking, currentStep, customer, dates, items.length, maxBookingWindow, minAdvancePct, minRentalDays, payment.advance_amount, payment.physical_bill_number, pricing.total_amount, requireCustomerIdProof, requirePhysicalBill])
+  }, [allowSameDayBooking, currentStep, customer, dates, items.length, maxBookingWindow, minRentalDays, payment.advance_amount, payment.physical_bill_number, pricing.total_amount, requireCustomerIdProof, requirePhysicalBill])
 
   const handleNext = () => {
     if (currentStep === 2) {
@@ -167,11 +167,9 @@ export default function NewBookingPage() {
       }))
     }
     if (currentStep === 3) {
-      const defaultAdvance = Math.round(pricing.total_amount * minAdvancePct / 100)
       const defaultDeposit = Math.round(pricing.total_amount * depositDefaultPct / 100)
       setPayment((prev) => ({
         ...prev,
-        advance_amount: prev.advance_amount || defaultAdvance,
         deposit_amount: prev.deposit_amount || defaultDeposit,
       }))
     }

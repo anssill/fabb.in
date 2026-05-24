@@ -68,10 +68,13 @@ export default async function ExpensesPage() {
   const lastMonthTotal = (lastMonthExpenses || []).reduce((s, e) => s + Number(e.amount), 0)
   const expenseChange = lastMonthTotal > 0 ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0
 
-  // Revenue (exclude refunds and deposit_refunds)
+  // Revenue excludes refundable deposits. Refunds reduce revenue.
   const thisMonthRevenue = (thisMonthPayments || [])
-    .filter(p => !['deposit_refund', 'refund'].includes(p.type))
-    .reduce((s, p) => s + Number(p.amount), 0)
+    .reduce((s, p) => {
+      if (p.type === 'refund') return s - Number(p.amount)
+      if (['advance', 'balance', 'penalty'].includes(p.type)) return s + Number(p.amount)
+      return s
+    }, 0)
 
   const profit = thisMonthRevenue - thisMonthTotal
 

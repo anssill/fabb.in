@@ -106,7 +106,7 @@ export default function BookingsPage() {
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Bookings</h1>
           <p className="text-sm text-slate-500">{bookings.length} total bookings across this branch</p>
         </div>
-        <Button className="h-10 px-4" asChild>
+        <Button className="h-10 w-full px-4 sm:w-auto" asChild>
           <Link href="/bookings/new">
             <Plus className="w-4 h-4 mr-2" />
             New Booking
@@ -115,7 +115,7 @@ export default function BookingsPage() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-2 overflow-x-auto rounded-[1.65rem] bg-white p-2 shadow-sm">
+      <div className="flex gap-2 overflow-x-auto rounded-[1.25rem] bg-white p-2 shadow-sm sm:rounded-[1.65rem]">
         {(['all', 'booked', 'out', 'returned', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
@@ -167,16 +167,16 @@ export default function BookingsPage() {
               <Link
                 key={booking.id}
                 href={`/bookings/${booking.id}`}
-                className="flex items-stretch overflow-hidden rounded-[1.65rem] bg-white shadow-sm transition-all group hover:-translate-y-0.5 hover:shadow-md"
+                className="group flex items-stretch overflow-hidden rounded-[1.25rem] bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:rounded-[1.65rem]"
               >
                 {/* Colored left status bar */}
                 <div className={`w-1 flex-shrink-0 ${STATUS_BAR[statusKey] || 'bg-slate-300'}`} />
 
                 {/* Content */}
-                <div className="flex flex-1 items-center gap-4 p-4">
+                <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
                   {/* Column 1: booking info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="mb-0.5 flex flex-wrap items-center gap-2">
                       <span className="text-sm font-mono font-semibold text-slate-700">{booking.booking_number}</span>
                       {booking.physical_bill_number && (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">Bill {booking.physical_bill_number}</span>
@@ -195,7 +195,7 @@ export default function BookingsPage() {
                   </div>
 
                   {/* Column 2: dates */}
-                  <div className="w-44 hidden sm:block">
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 sm:block sm:w-44 sm:bg-transparent sm:p-0">
                     <div className="flex items-center gap-1.5 text-sm text-slate-600">
                       <CalendarArrowUp className="w-3.5 h-3.5 text-blue-500" />
                       {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
@@ -208,7 +208,7 @@ export default function BookingsPage() {
                   </div>
 
                   {/* Column 3: amount */}
-                  <div className="w-28 text-right">
+                  <div className="flex items-center justify-between gap-3 sm:block sm:w-28 sm:text-right">
                     <p className="text-base font-semibold text-slate-900">₹{Number(booking.total_amount ?? 0).toLocaleString('en-IN')}</p>
                     {balanceDue > 0 ? (
                       <p className="text-xs text-red-600 font-medium">Balance ₹{balanceDue.toLocaleString('en-IN')}</p>
@@ -217,13 +217,13 @@ export default function BookingsPage() {
                     )}
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                  <ChevronRight className="hidden h-4 w-4 flex-shrink-0 text-slate-400 group-hover:text-slate-600 sm:block" />
                 </div>
               </Link>
             )
           })
         ) : (
-          <div className="rounded-[1.65rem] border border-dashed border-slate-200 bg-white py-20 text-center shadow-sm">
+          <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-white py-20 text-center shadow-sm sm:rounded-[1.65rem]">
             <div className="w-12 h-12 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
               <Plus className="w-6 h-6 text-slate-400" />
             </div>

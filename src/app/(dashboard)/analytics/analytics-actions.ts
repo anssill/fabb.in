@@ -12,6 +12,21 @@ function formatError(error: any): Error {
 
 export type Period = 'today' | '7d' | '30d' | 'last_month' | '90d'
 
+const RENTAL_INCOME_TYPES = ['advance', 'balance', 'penalty']
+const REFUND_TYPES = ['refund']
+
+type PaymentLike = {
+  amount: number | string
+  type: string | null
+}
+
+function paymentRevenueValue(payment: PaymentLike) {
+  const amount = Number(payment.amount) || 0
+  if (REFUND_TYPES.includes(payment.type || '')) return -amount
+  if (RENTAL_INCOME_TYPES.includes(payment.type || '')) return amount
+  return 0
+}
+
 function getPeriodDates(period: Period): { startDate: Date; endDate: Date; label: string } {
   const now = new Date()
   switch (period) {
@@ -77,18 +92,18 @@ export async function getRevenueStats(period: Period = '30d') {
   const dailyData = interval.map(day => {
     const dayPayments = payments?.filter(p => isSameDay(new Date(p.created_at), day)) || []
     const dayExpenses = expenses?.filter(e => e.expense_date && isSameDay(new Date(e.expense_date), day)) || []
-    const revenue = dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+    const revenue = dayPayments.reduce((sum, p) => sum + paymentRevenueValue(p), 0)
     const expense = dayExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
     return { date: format(day, 'dd MMM'), revenue, expense, profit: revenue - expense }
   })
 
-  const totalRevenue = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+  const totalRevenue = payments?.reduce((sum, p) => sum + paymentRevenueValue(p), 0) || 0
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
 
   const methods = ['cash', 'upi', 'bank_transfer', 'card']
   const methodDistribution = methods.map(method => ({
     name: method === 'bank_transfer' ? 'Bank Transfer' : method.charAt(0).toUpperCase() + method.slice(1),
-    value: payments?.filter(p => p.method === method).reduce((sum, p) => sum + Number(p.amount), 0) || 0
+    value: payments?.filter(p => p.method === method).reduce((sum, p) => sum + paymentRevenueValue(p), 0) || 0
   })).filter(m => m.value > 0)
 
   return {
@@ -98,9 +113,9 @@ export async function getRevenueStats(period: Period = '30d') {
       totalExpenses,
       netProfit: totalRevenue - totalExpenses,
       paymentCount: payments?.length || 0,
-      cashTotal: payments?.filter(p => p.method === 'cash').reduce((s, p) => s + Number(p.amount), 0) || 0,
-      upiTotal: payments?.filter(p => p.method === 'upi').reduce((s, p) => s + Number(p.amount), 0) || 0,
-      bankTotal: payments?.filter(p => p.method === 'bank_transfer').reduce((s, p) => s + Number(p.amount), 0) || 0,
+      cashTotal: payments?.filter(p => p.method === 'cash').reduce((s, p) => s + paymentRevenueValue(p), 0) || 0,
+      upiTotal: payments?.filter(p => p.method === 'upi').reduce((s, p) => s + paymentRevenueValue(p), 0) || 0,
+      bankTotal: payments?.filter(p => p.method === 'bank_transfer').reduce((s, p) => s + paymentRevenueValue(p), 0) || 0,
     },
     methodDistribution,
     sourceDistribution: [
@@ -162,7 +177,7 @@ export async function getStaffPerformance(period: Period = '30d') {
     .select('id, name, role')
     .eq('business_id', myStaff.business_id)
     .eq('branch_id', myStaff.branch_id)
-    .in('status', ['approved'])
+    .eq('status', 'active')
 
   if (!teamMembers) return []
 
@@ -176,7 +191,7 @@ export async function getStaffPerformance(period: Period = '30d') {
 
   const { data: payments } = await supabase
     .from('booking_payments')
-    .select('amount, collected_by')
+    .select('amount, type, collected_by')
     .eq('business_id', myStaff.business_id)
     .eq('branch_id', myStaff.branch_id)
     .gte('created_at', startDate.toISOString())
@@ -186,7 +201,7 @@ export async function getStaffPerformance(period: Period = '30d') {
   return teamMembers.map(member => {
     const memberBookings = bookings?.filter(b => b.created_by === member.id) || []
     const memberPayments = payments?.filter(p => p.collected_by === member.id) || []
-    const revenueHandled = memberPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+    const revenueHandled = memberPayments.reduce((sum, p) => sum + paymentRevenueValue(p), 0)
     return {
       id: member.id,
       name: member.name,
@@ -228,20 +243,23 @@ export async function getPLStatement(period: Period = '30d') {
 
   const { data: deposits } = await supabase
     .from('booking_payments')
-    .select('amount')
+    .select('amount, type')
     .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
-    .eq('type', 'deposit')
+    .in('type', ['deposit', 'deposit_refund'])
     .eq('is_voided', false)
 
-  const rentalIncome = payments?.filter(p => !['deposit', 'deposit_refund', 'refund', 'penalty'].includes(p.type))
+  const rentalIncome = payments?.filter(p => ['advance', 'balance'].includes(p.type))
     .reduce((s, p) => s + Number(p.amount), 0) || 0
   const penalties = payments?.filter(p => p.type === 'penalty')
     .reduce((s, p) => s + Number(p.amount), 0) || 0
-  const refunds = payments?.filter(p => ['deposit_refund', 'refund'].includes(p.type))
+  const refunds = payments?.filter(p => p.type === 'refund')
     .reduce((s, p) => s + Number(p.amount), 0) || 0
-  const totalRevenue = rentalIncome + penalties
-  const depositsHeld = deposits?.reduce((s, p) => s + Number(p.amount), 0) || 0
+  const totalRevenue = rentalIncome + penalties - refunds
+  const depositsHeld = deposits?.reduce((s, p) => {
+    if (p.type === 'deposit_refund') return s - Number(p.amount)
+    return s + Number(p.amount)
+  }, 0) || 0
 
   const expenseByCategory: Record<string, number> = {}
   for (const e of expenses || []) {
@@ -343,23 +361,33 @@ export async function getInventoryPerformance() {
 
   const { data: items, error } = await supabase
     .from('items')
-    .select('id, name, category, total_revenue, purchase_cost, total_rentals')
+    .select('id, name, category, purchase_cost')
     .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
     .eq('is_active', true)
-    .order('total_revenue', { ascending: false })
-    .limit(10)
 
   if (error) throw formatError(error)
 
   const itemIds = items.map(i => i.id)
   let itemExpenses: Record<string, number> = {}
+  const itemRevenue: Record<string, number> = {}
+  const itemRentalCounts: Record<string, number> = {}
 
   if (itemIds.length > 0) {
-    const { data: expensesData } = await supabase
-      .from('expenses')
-      .select('item_id, amount')
-      .in('item_id', itemIds)
+    const [{ data: expensesData }, { data: bookingItemsData }] = await Promise.all([
+      supabase
+        .from('expenses')
+        .select('item_id, amount')
+        .eq('business_id', staff.business_id)
+        .eq('branch_id', staff.branch_id)
+        .in('item_id', itemIds),
+      supabase
+        .from('booking_items')
+        .select('item_id, quantity, price, rental_days, booking:bookings!inner(status, business_id, branch_id)')
+        .eq('booking.business_id', staff.business_id)
+        .eq('booking.branch_id', staff.branch_id)
+        .neq('booking.status', 'cancelled')
+    ])
 
     if (expensesData) {
       itemExpenses = expensesData.reduce((acc, exp) => {
@@ -367,15 +395,35 @@ export async function getInventoryPerformance() {
         return acc
       }, {} as Record<string, number>)
     }
+
+    if (bookingItemsData) {
+      for (const row of bookingItemsData) {
+        if (!row.item_id) continue
+        const quantity = Number(row.quantity) || 0
+        const price = Number(row.price) || 0
+        const rentalDays = Number(row.rental_days) || 1
+        itemRevenue[row.item_id] = (itemRevenue[row.item_id] || 0) + price * quantity * rentalDays
+        itemRentalCounts[row.item_id] = (itemRentalCounts[row.item_id] || 0) + quantity
+      }
+    }
   }
 
   return items.map(item => {
-    const revenue = Number(item.total_revenue) || 0
+    const revenue = itemRevenue[item.id] || 0
     const cost = Number(item.purchase_cost) || 0
     const maintenanceExpenses = itemExpenses[item.id] || 0
     const totalCost = cost + maintenanceExpenses
     const netProfit = revenue - totalCost
     const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
-    return { ...item, roi: Math.round(roi), revenue, cost, maintenanceExpenses, netProfit, totalCost }
-  })
+    return {
+      ...item,
+      total_rentals: itemRentalCounts[item.id] || 0,
+      roi: Math.round(roi),
+      revenue,
+      cost,
+      maintenanceExpenses,
+      netProfit,
+      totalCost
+    }
+  }).sort((a, b) => b.revenue - a.revenue).slice(0, 10)
 }

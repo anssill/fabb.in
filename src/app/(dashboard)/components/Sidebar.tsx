@@ -227,6 +227,51 @@ function NavContent({
   )
 }
 
+function BottomNavigation({
+  items,
+  pathname,
+  unreadNotifications,
+}: {
+  items: NavItem[]
+  pathname: string
+  unreadNotifications: number
+}) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/80 bg-white/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl xl:hidden dark:border-slate-800 dark:bg-slate-950/95">
+      <div className="mx-auto flex max-w-4xl gap-1 overflow-x-auto">
+        {items.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const badgeCount = item.label === 'Notifications' ? unreadNotifications : item.badge
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative flex min-w-[4.75rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition-colors ${
+                isActive
+                  ? 'bg-[#4f46e5] text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900'
+              }`}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="max-w-full truncate">{item.label}</span>
+              {badgeCount ? (
+                <Badge
+                  variant={isActive ? 'secondary' : 'destructive'}
+                  className="absolute right-1.5 top-1 h-4 min-w-4 justify-center rounded-full px-1 text-[10px]"
+                >
+                  {badgeCount}
+                </Badge>
+              ) : null}
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
 interface Props {
   staff: {
     id: string
@@ -258,13 +303,25 @@ export function SidebarWrapper({ staff, branches }: Props) {
     staff: 'Floor Staff',
   }
 
+  const isVisible = (item: NavItem) => {
+    if (!item.roles) {
+      const permKey = ROUTE_PERMISSION_MAP[item.href]
+      return permKey ? hasPermission(role, staff?.permissions, permKey) : true
+    }
+    if (!item.roles.includes(role)) return false
+    const permKey = ROUTE_PERMISSION_MAP[item.href]
+    return permKey ? hasPermission(role, staff?.permissions, permKey) : true
+  }
+
+  const bottomItems = [...NAV_ITEMS, ...BOTTOM_ITEMS].filter(isVisible)
+
   return (
     <>
       {/* Mobile menu button */}
       <Button
         variant="ghost"
         size="sm"
-          className="fixed left-3 top-3 z-50 rounded-full bg-white shadow-sm lg:hidden"
+        className="fixed left-3 top-3 z-[60] rounded-full bg-white shadow-sm xl:hidden"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -273,14 +330,14 @@ export function SidebarWrapper({ staff, branches }: Props) {
       {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 xl:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Mobile sidebar */}
+      {/* Mobile and tablet sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-60 transform bg-[#f7f8fd] transition-transform duration-300 dark:bg-slate-900 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[min(20rem,calc(100vw-2rem))] transform bg-[#f7f8fd] pb-20 transition-transform duration-300 dark:bg-slate-900 xl:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -299,7 +356,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
 
       {/* Desktop sidebar */}
       <aside
-        className={`fixed bottom-5 left-5 top-5 z-40 hidden flex-col rounded-[1.75rem] bg-[#f7f8fd] shadow-sm ring-1 ring-white/80 transition-all duration-300 dark:bg-slate-900 dark:ring-slate-800 lg:flex ${
+        className={`fixed bottom-5 left-5 top-5 z-40 hidden flex-col rounded-[1.75rem] bg-[#f7f8fd] shadow-sm ring-1 ring-white/80 transition-all duration-300 dark:bg-slate-900 dark:ring-slate-800 xl:flex ${
           sidebarCollapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -321,6 +378,12 @@ export function SidebarWrapper({ staff, branches }: Props) {
           {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
         </button>
       </aside>
+
+      <BottomNavigation
+        items={bottomItems}
+        pathname={pathname}
+        unreadNotifications={unreadNotifications}
+      />
     </>
   )
 }
