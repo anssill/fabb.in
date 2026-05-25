@@ -117,6 +117,49 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     setSearchResults([])
   }
 
+  const extraPhoneControls = !showExtraPhones ? (
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full"
+      onClick={() => setShowExtraPhones(true)}
+    >
+      Add another mobile number
+    </Button>
+  ) : (
+    <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Alternate mobile <span className="text-muted-foreground">(optional)</span></Label>
+          <Input
+            value={customer.alternate_phone || ''}
+            onChange={(e) => setCustomer({ ...customer, alternate_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+            placeholder="Second number"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Safety mobile <span className="text-muted-foreground">(optional)</span></Label>
+          <Input
+            value={customer.emergency_phone || ''}
+            onChange={(e) => setCustomer({ ...customer, emergency_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+            placeholder="Family / backup number"
+          />
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => {
+          setCustomer({ ...customer, alternate_phone: '', emergency_phone: '' })
+          setShowExtraPhones(false)
+        }}
+      >
+        Remove extra mobile numbers
+      </Button>
+    </div>
+  )
+
   return (
     <>
       <CardHeader>
@@ -222,15 +265,18 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         {(customer.id || isNew) && (
           <div className="space-y-4">
             {customer.id && (
-              <div className="flex items-center justify-between p-3 bg-muted/40 border border-border text-foreground rounded-lg">
-                <div>
-                  <p className="text-sm font-semibold">{customer.name}</p>
-                  <p className="text-xs font-medium text-muted-foreground">{customer.phone}</p>
+              <>
+                <div className="flex items-center justify-between p-3 bg-muted/40 border border-border text-foreground rounded-lg">
+                  <div>
+                    <p className="text-sm font-semibold">{customer.name}</p>
+                    <p className="text-xs font-medium text-muted-foreground">{customer.phone}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="hover:bg-muted text-primary" onClick={() => { setCustomer({ name: '', phone: '' }); setIsNew(false); setShowExtraPhones(false) }}>
+                    Change
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="hover:bg-muted text-primary" onClick={() => { setCustomer({ name: '', phone: '' }); setIsNew(false) }}>
-                  Change
-                </Button>
-              </div>
+                {extraPhoneControls}
+              </>
             )}
 
             {isNew && (
@@ -253,48 +299,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                     />
                   </div>
                 </div>
-                {!showExtraPhones ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setShowExtraPhones(true)}
-                  >
-                    Add another mobile number
-                  </Button>
-                ) : (
-                  <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Alternate mobile <span className="text-muted-foreground">(optional)</span></Label>
-                        <Input
-                          value={customer.alternate_phone || ''}
-                          onChange={(e) => setCustomer({ ...customer, alternate_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          placeholder="Second number"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Safety mobile <span className="text-muted-foreground">(optional)</span></Label>
-                        <Input
-                          value={customer.emergency_phone || ''}
-                          onChange={(e) => setCustomer({ ...customer, emergency_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          placeholder="Family / backup number"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setCustomer({ ...customer, alternate_phone: '', emergency_phone: '' })
-                        setShowExtraPhones(false)
-                      }}
-                    >
-                      Remove extra mobile numbers
-                    </Button>
-                  </div>
-                )}
+                {extraPhoneControls}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Email <span className="text-muted-foreground">(optional)</span></Label>

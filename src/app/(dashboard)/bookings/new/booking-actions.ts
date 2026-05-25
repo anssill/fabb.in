@@ -34,6 +34,9 @@ export async function createNewBookingFlow(data: BookingData) {
   const supabase = await createClient()
   
   try {
+    const alternatePhone = data.customer.alternate_phone?.trim() || null
+    const emergencyPhone = data.customer.emergency_phone?.trim() || null
+
     const { data: staffContext, error: staffContextErr } = await supabase
       .from('staff')
       .select('id, business_id, branch_id, status')
@@ -98,19 +101,21 @@ export async function createNewBookingFlow(data: BookingData) {
         name: data.customer.name,
         email: data.customer.email || undefined,
         address: data.customer.address || undefined,
-        alternate_phone: data.customer.alternate_phone || undefined,
-        emergency_phone: data.customer.emergency_phone || undefined,
+        alternate_phone: alternatePhone,
+        emergency_phone: emergencyPhone,
         id_type: data.customer.id_type || undefined,
         id_number: data.customer.id_number || undefined,
         id_proof_url: data.customer.id_proof_url || undefined,
       }
 
-      await supabase
+      const { error: updateCustomerErr } = await supabase
         .from('customers')
         .update(customerUpdates)
         .eq('id', customerId)
         .eq('business_id', data.businessId)
         .eq('branch_id', data.branchId)
+
+      if (updateCustomerErr) throw updateCustomerErr
     } else {
       const { data: existingCustomer } = await supabase
         .from('customers')
@@ -124,16 +129,23 @@ export async function createNewBookingFlow(data: BookingData) {
         customerId = existingCustomer.id
         
         // Update the existing customer with any new details they provided
-        await supabase.from('customers').update({
-          name: data.customer.name,
-          email: data.customer.email || undefined,
-          address: data.customer.address || undefined,
-          alternate_phone: data.customer.alternate_phone || undefined,
-          emergency_phone: data.customer.emergency_phone || undefined,
-          id_type: data.customer.id_type || undefined,
-          id_number: data.customer.id_number || undefined,
-          id_proof_url: data.customer.id_proof_url || undefined,
-        }).eq('id', customerId)
+        const { error: updateCustomerErr } = await supabase
+          .from('customers')
+          .update({
+            name: data.customer.name,
+            email: data.customer.email || undefined,
+            address: data.customer.address || undefined,
+            alternate_phone: alternatePhone,
+            emergency_phone: emergencyPhone,
+            id_type: data.customer.id_type || undefined,
+            id_number: data.customer.id_number || undefined,
+            id_proof_url: data.customer.id_proof_url || undefined,
+          })
+          .eq('id', customerId)
+          .eq('business_id', data.businessId)
+          .eq('branch_id', data.branchId)
+
+        if (updateCustomerErr) throw updateCustomerErr
         
       } else {
         const { data: newCustomer, error: custErr } = await supabase
@@ -143,8 +155,8 @@ export async function createNewBookingFlow(data: BookingData) {
             branch_id: data.branchId,
             name: data.customer.name,
             phone: data.customer.phone,
-            alternate_phone: data.customer.alternate_phone || null,
-            emergency_phone: data.customer.emergency_phone || null,
+            alternate_phone: alternatePhone,
+            emergency_phone: emergencyPhone,
             email: data.customer.email || null,
             address: data.customer.address || null,
             id_type: data.customer.id_type || null,

@@ -513,7 +513,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
             {items.map((item) => (
               <div
                 key={item.variant_id}
-                className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-muted/40 p-3 text-foreground transition-all hover:bg-muted/60 sm:grid-cols-[1fr_150px_112px_auto] sm:items-center"
+                className="grid grid-cols-[1fr_auto] gap-3 rounded-xl border border-border bg-muted/40 p-3 text-foreground transition-all hover:bg-muted/60 sm:grid-cols-[1fr_150px_112px_36px] sm:items-center"
               >
                 <div className="min-w-0">
                   <div>
@@ -555,10 +555,16 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                   <Button variant="outline" size="sm" className="w-7 h-7 p-0 border-border" onClick={() => updateQuantity(item.variant_id, 1)}>
                     <Plus className="w-3 h-3" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="w-7 h-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => removeItem(item.variant_id)}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="col-start-2 row-start-1 h-8 w-8 justify-self-end p-0 text-red-500 hover:bg-red-500/10 hover:text-red-600 sm:col-start-auto sm:row-start-auto"
+                  onClick={() => removeItem(item.variant_id)}
+                  aria-label={`Remove ${item.name}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
             ))}
             <div className="text-right pt-1">
