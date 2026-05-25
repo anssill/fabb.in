@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { checklistRowsForBooking, taskRowsForBooking } from '@/lib/operations'
 
 interface BookingData {
   customer: {
@@ -204,6 +205,12 @@ export async function createNewBookingFlow(data: BookingData) {
         created_by: data.staffId,
         booking_number: bookingNumber,
         status: 'booked',
+        operation_status: data.dates.fitting_date ? 'fitting' : 'booking_desk',
+        fitting_at: data.dates.fitting_date ? `${data.dates.fitting_date}T11:00:00+05:30` : null,
+        fitting_status: data.dates.fitting_date ? 'scheduled' : 'not_required',
+        delivery_mode: Number(data.pricing.delivery_fee || 0) > 0 ? 'store_delivery' : 'store_pickup',
+        delivery_status: Number(data.pricing.delivery_fee || 0) > 0 ? 'pending' : 'not_required',
+        delivery_fee: Number(data.pricing.delivery_fee || 0),
         pickup_date: data.dates.pickup_date,
         return_date: data.dates.return_date,
         subtotal: data.pricing.subtotal,
@@ -220,7 +227,7 @@ export async function createNewBookingFlow(data: BookingData) {
         booking_source: data.dates.booking_source || 'walk_in',
         notes: bookingNotes,
         physical_bill_number: data.payment.physical_bill_number?.trim() || null,
-      })
+      } as any)
       .select('id')
       .single()
     if (bookingErr) throw bookingErr
@@ -239,6 +246,39 @@ export async function createNewBookingFlow(data: BookingData) {
     }))
     const { error: itemsErr } = await supabase.from('booking_items').insert(bookingItems)
     if (itemsErr) throw itemsErr
+
+    await (supabase as any)
+      .from('booking_checklist_items')
+      .upsert(checklistRowsForBooking({
+        id: booking!.id,
+        business_id: data.businessId,
+        branch_id: data.branchId,
+      }), { onConflict: 'booking_id,item_key', ignoreDuplicates: true })
+
+    await (supabase as any)
+      .from('booking_tasks')
+      .insert(taskRowsForBooking({
+        id: booking!.id,
+        business_id: data.businessId,
+        branch_id: data.branchId,
+        pickup_date: data.dates.pickup_date,
+        return_date: data.dates.return_date,
+        created_by: data.staffId,
+      }))
+
+    if (Number(data.pricing.delivery_fee || 0) > 0) {
+      await (supabase as any).from('booking_delivery').upsert({
+        business_id: data.businessId,
+        branch_id: data.branchId,
+        booking_id: booking!.id,
+        mode: 'store_delivery',
+        status: 'pending',
+        address: data.customer.address || null,
+        contact_person: data.customer.name,
+        contact_phone: data.customer.phone,
+        delivery_fee: Number(data.pricing.delivery_fee || 0),
+      }, { onConflict: 'booking_id' })
+    }
 
     // 4.1 Update Stock and Sync to Notion
     const lockedItems: Array<{ variantId: string; quantity: number }> = []

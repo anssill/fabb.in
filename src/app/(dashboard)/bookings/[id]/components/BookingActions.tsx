@@ -91,7 +91,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   return (
     <div className="space-y-3">
       {/* Process Pickup — dedicated page */}
-      {booking.status === 'booked' && (
+      {(booking.status === 'booked' || booking.status === 'ready_for_pickup') && (
         <Button
           className="w-full bg-amber-500 hover:bg-amber-600 text-white"
           size="sm"

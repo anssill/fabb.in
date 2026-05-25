@@ -302,3 +302,41 @@ export async function updateQueueStage(
 
   return { success: true }
 }
+
+export async function updateWashingDetails(
+  queueId: string,
+  details: {
+    washingCost?: number
+    damageFound?: boolean
+    damageNotes?: string
+  }
+) {
+  const { admin: supabase, staff } = await requireActiveStaff()
+
+  const { data: queueEntry, error: queueFetchError } = await supabase
+    .from('washing_queue')
+    .select('id, branch_id, business_id')
+    .eq('id', queueId)
+    .single()
+
+  if (queueFetchError || !queueEntry) {
+    throw new Error('Washing queue item not found. Please refresh and try again.')
+  }
+
+  if (queueEntry.business_id !== staff.business_id || queueEntry.branch_id !== staff.branch_id) {
+    throw new Error('Branch mismatch. Please refresh and try again.')
+  }
+
+  const { error } = await (supabase as any)
+    .from('washing_queue')
+    .update({
+      washing_cost: Math.max(0, Number(details.washingCost || 0)),
+      damage_found: Boolean(details.damageFound),
+      damage_notes: details.damageNotes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', queueId)
+
+  if (error) throw error
+  return { success: true }
+}

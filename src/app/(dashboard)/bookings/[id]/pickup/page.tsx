@@ -144,6 +144,8 @@ export default function PickupPage() {
   const [pickupPhotos, setPickupPhotos] = useState<string[]>([])
   const [isEditingDeposit, setIsEditingDeposit] = useState(false)
   const [newDepositTotal, setNewDepositTotal] = useState('')
+  const [itemScanned, setItemScanned] = useState(false)
+  const [signatureName, setSignatureName] = useState('')
 
   const handleConfirmPickup = async () => {
     if (!booking) return
@@ -228,6 +230,19 @@ export default function PickupPage() {
         performed_by: staffId,
       }).then(() => {})  // non-critical
 
+      await fetch(`/api/bookings/${booking.id}/operations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: {
+            type: 'pickup',
+            signer_name: signatureName.trim() || booking.customer?.name || 'Customer',
+            signature_data: signatureName.trim() || booking.customer?.name || 'Customer',
+            agreement_text: 'Customer accepted pickup, item condition, return date, late fees, damage/missing charges, and deposit rules.',
+          },
+        }),
+      }).catch(() => {})
+
       toast.success('Pickup confirmed! Booking is now active.')
       router.push(`/bookings/${booking.id}`)
     } catch (err: any) {
@@ -256,7 +271,7 @@ export default function PickupPage() {
     )
   }
 
-  if (booking.status !== 'booked') {
+  if (booking.status !== 'booked' && booking.status !== 'ready_for_pickup') {
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
@@ -267,7 +282,7 @@ export default function PickupPage() {
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-amber-400" />
             <p className="text-lg font-medium text-slate-900">Pickup not available</p>
             <p className="text-sm text-slate-500 mt-1">
-              This booking is currently <span className="font-semibold capitalize">{booking.status}</span>. Only <span className="font-semibold">Booked</span> bookings can be picked up.
+              This booking is currently <span className="font-semibold capitalize">{booking.status}</span>. Only <span className="font-semibold">Booked/Ready</span> bookings can be picked up.
             </p>
           </CardContent>
         </Card>
@@ -650,6 +665,24 @@ export default function PickupPage() {
                   <p className="text-sm font-medium text-violet-800">{pickupPhotos.length} photos captured</p>
                 </div>
               )}
+
+              <div className="rounded-lg bg-slate-50 p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="item-scan-confirm"
+                    checked={itemScanned}
+                    onCheckedChange={(value) => setItemScanned(Boolean(value))}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="item-scan-confirm" className="text-sm cursor-pointer leading-relaxed">
+                    Exact items have been scanned or physically matched before handover.
+                  </Label>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Customer signature/name</Label>
+                  <Input value={signatureName} onChange={(e) => setSignatureName(e.target.value)} placeholder={customer?.name || 'Customer name'} />
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -657,7 +690,7 @@ export default function PickupPage() {
               <Button
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                 onClick={handleConfirmPickup}
-                disabled={submitting}
+                disabled={submitting || !itemScanned || !signatureName.trim()}
               >
                 {submitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>

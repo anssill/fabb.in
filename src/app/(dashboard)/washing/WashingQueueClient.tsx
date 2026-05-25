@@ -13,9 +13,12 @@ import {
   ChevronDown,
   ShieldCheck,
   Activity,
+  CalendarDays,
   List,
-  LayoutGrid
+  LayoutGrid,
+  Package,
 } from 'lucide-react'
+import Link from 'next/link'
 import { markAsReady, updateQueueStage } from './washing-actions'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -153,6 +156,76 @@ function ItemCard({
   )
 }
 
+function getSingle<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] || null
+  return value || null
+}
+
+function QueueGroup({
+  logs,
+  loadingId,
+  onMarkReady,
+  onStageChange,
+}: {
+  logs: any[]
+  loadingId: string | null
+  onMarkReady: (id: string, itemId: string, branchId: string, businessId: string, condition: string) => void
+  onStageChange: (id: string, itemId: string, stage: string) => void
+}) {
+  const first = logs[0]
+  const booking = getSingle(first.booking)
+  const customer = getSingle(booking?.customer)
+  const readyCount = logs.filter(log => log.stage === 'ready').length
+  const activeCount = logs.length - readyCount
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Package className="h-4 w-4 text-[#4f46e5]" />
+            {booking ? (
+              <Link href={`/bookings/${booking.id}`} className="text-sm font-semibold text-[#4f46e5] hover:underline">
+                {booking.booking_number}
+              </Link>
+            ) : (
+              <span className="text-sm font-semibold text-slate-900">Manual washing entry</span>
+            )}
+            <Badge variant="outline" className="rounded-full text-[10px]">
+              {logs.length} item{logs.length === 1 ? '' : 's'}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {customer?.name || 'No customer linked'}{customer?.phone ? ` · ${customer.phone}` : ''}
+          </p>
+          {booking && (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Pickup {new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} · Return {new Date(booking.return_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Badge className="rounded-full border-0 bg-cyan-50 text-cyan-700">{activeCount} active</Badge>
+          <Badge className="rounded-full border-0 bg-emerald-50 text-emerald-700">{readyCount} ready</Badge>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {logs.map(log => (
+          <ItemCard
+            key={log.id}
+            log={log}
+            loadingId={loadingId}
+            onMarkReady={onMarkReady}
+            onStageChange={onStageChange}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
@@ -185,6 +258,13 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
   }
 
   const KANBAN_STAGES = ['in_washing', 'in_fitting', 'maintenance', 'ready']
+  const groupedLogs = initialLogs.reduce((acc: Record<string, any[]>, log) => {
+    const key = log.booking_id || `manual-${log.item_id || log.id}`
+    acc[key] = acc[key] || []
+    acc[key].push(log)
+    return acc
+  }, {})
+  const queueGroups = Object.values(groupedLogs)
 
   if (initialLogs.length === 0) {
     return (
@@ -226,22 +306,17 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
 
       {viewMode === 'list' ? (
         /* LIST VIEW */
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-              {initialLogs.map((log) => (
-                <div key={log.id} className="p-4">
-                  <ItemCard
-                    log={log}
-                    loadingId={loadingId}
-                    onMarkReady={handleMarkReady}
-                    onStageChange={handleStageChange}
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          {queueGroups.map((logs) => (
+            <QueueGroup
+              key={logs[0].booking_id || logs[0].id}
+              logs={logs}
+              loadingId={loadingId}
+              onMarkReady={handleMarkReady}
+              onStageChange={handleStageChange}
+            />
+          ))}
+        </div>
       ) : (
         /* KANBAN VIEW */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

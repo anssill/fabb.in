@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { BookingCustomer, BookingItem, BookingDates, BookingPricing, BookingPayment } from './page'
 
-interface DraftState {
+export interface DraftState {
   currentStep: number
   customer: BookingCustomer
   items: BookingItem[]
@@ -26,22 +26,31 @@ export function useBookingDraft(state: DraftState, options: UseBookingDraftOptio
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabase = createClient()
 
+  const getSerializableState = useCallback((): DraftState => ({
+    ...state,
+    customer: {
+      ...state.customer,
+      id_proof_file: null,
+    },
+  }), [state])
+
   const saveDraft = useCallback(async () => {
     if (!enabled || !businessId || !branchId || !staffId) return
 
     try {
+      const draftState = getSerializableState()
       const draftData = {
         business_id: businessId,
         branch_id: branchId,
         staff_id: staffId,
-        draft_data: state,
+        draft_data: draftState,
         updated_at: new Date().toISOString(),
       }
 
       if (draftIdRef.current) {
         await supabase
           .from('booking_drafts')
-          .update({ draft_data: state, updated_at: new Date().toISOString() })
+          .update({ draft_data: draftState, updated_at: new Date().toISOString() })
           .eq('id', draftIdRef.current)
       } else {
         const { data } = await supabase
@@ -54,7 +63,7 @@ export function useBookingDraft(state: DraftState, options: UseBookingDraftOptio
     } catch {
       // Non-critical — silent fail
     }
-  }, [enabled, businessId, branchId, staffId, state, supabase])
+  }, [enabled, businessId, branchId, staffId, getSerializableState, supabase])
 
   // Auto-save every 30 seconds
   useEffect(() => {
@@ -62,6 +71,28 @@ export function useBookingDraft(state: DraftState, options: UseBookingDraftOptio
     timerRef.current = setInterval(saveDraft, 30_000)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [enabled, saveDraft])
+
+  useEffect(() => {
+    if (!enabled) return
+
+    const handlePageExit = () => {
+      void saveDraft()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') handlePageExit()
+    }
+
+    window.addEventListener('pagehide', handlePageExit)
+    window.addEventListener('beforeunload', handlePageExit)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageExit)
+      window.removeEventListener('beforeunload', handlePageExit)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [enabled, saveDraft])
 

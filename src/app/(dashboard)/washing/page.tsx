@@ -24,8 +24,10 @@ export default async function WashingPage() {
     .from('washing_queue')
     .select(`
       *,
+      vendor:vendors(name, vendor_type),
       items(id, name, sku),
-      item_variants(size, colour)
+      item_variants(size, colour),
+      booking:bookings(id, booking_number, status, pickup_date, return_date, customer:customers(name, phone))
     `, { count: 'exact' })
     .eq('branch_id', staff.branch_id)
     .order('priority', { ascending: false }) // This is a text sort, but urgent > normal > low alphabetically doesn't work.

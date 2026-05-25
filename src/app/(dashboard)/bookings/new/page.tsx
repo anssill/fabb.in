@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import { createNewBookingFlow } from './booking-actions'
-import { useBookingDraft } from './useBookingDraft'
+import { type DraftState, useBookingDraft } from './useBookingDraft'
 import {
   Users, Package, CalendarDays, Calculator, CreditCard, Receipt,
   ChevronLeft, ChevronRight, CheckCircle, Loader2, X,
@@ -100,6 +100,8 @@ export default function NewBookingPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
+  const [pendingDraft, setPendingDraft] = useState<DraftState | null>(null)
+  const [checkedDraft, setCheckedDraft] = useState(false)
 
   // Step state
   const [customer, setCustomer] = useState<BookingCustomer>({ name: '', phone: '' })
@@ -114,7 +116,7 @@ export default function NewBookingPage() {
   })
 
   // Draft auto-save
-  const { clearDraft } = useBookingDraft(
+  const { clearDraft, loadDraft, saveDraft } = useBookingDraft(
     { currentStep, customer, items, dates, pricing, payment },
     {
       businessId: staff?.business_id ?? undefined,
@@ -123,6 +125,53 @@ export default function NewBookingPage() {
       enabled: currentStep < 5, // Stop auto-saving once receipt shown
     }
   )
+
+  useEffect(() => {
+    if (checkedDraft || !staff?.business_id || !activeBranch?.id || !staff?.id) return
+
+    let cancelled = false
+    async function checkDraft() {
+      const draft = await loadDraft()
+      if (cancelled) return
+      setCheckedDraft(true)
+
+      const hasContent = Boolean(
+        draft?.customer?.name ||
+        draft?.customer?.phone ||
+        draft?.items?.length ||
+        draft?.dates?.pickup_date ||
+        draft?.dates?.return_date ||
+        draft?.pricing?.total_amount ||
+        draft?.payment?.advance_amount
+      )
+      if (draft && hasContent) setPendingDraft(draft)
+    }
+
+    void checkDraft()
+    return () => {
+      cancelled = true
+    }
+  }, [activeBranch?.id, checkedDraft, loadDraft, staff?.business_id, staff?.id])
+
+  function restoreDraft(draft: DraftState) {
+    setCurrentStep(Math.min(Math.max(draft.currentStep || 0, 0), 4))
+    setCustomer({ ...draft.customer, id_proof_file: null })
+    setItems(draft.items || [])
+    setDates(draft.dates || { event_date: '', pickup_date: '', return_date: '' })
+    setPricing(draft.pricing || {
+      subtotal: 0, discount_type: 'flat', discount_value: 0,
+      discount_amount: 0, tax_amount: 0, total_amount: 0, delivery_fee: 0,
+    })
+    setPayment(draft.payment || { advance_amount: 0, deposit_amount: 0, method: 'cash' })
+    setPendingDraft(null)
+    toast.success('Draft restored')
+  }
+
+  async function discardDraft() {
+    await clearDraft()
+    setPendingDraft(null)
+    toast.success('Draft discarded')
+  }
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
@@ -215,16 +264,37 @@ export default function NewBookingPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/bookings')}>
+          <Button variant="ghost" size="sm" onClick={async () => { await saveDraft(); router.push('/bookings') }}>
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back
           </Button>
           <h1 className="text-xl font-semibold text-foreground">New Booking</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => router.push('/bookings')}>
+        <Button variant="ghost" size="sm" onClick={async () => { await saveDraft(); router.push('/bookings') }}>
           <X className="w-4 h-4" />
         </Button>
       </div>
+
+      {pendingDraft && (
+        <Card className="border-amber-200 bg-amber-50 shadow-sm">
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-amber-950">Resume saved booking draft?</p>
+              <p className="text-xs text-amber-800">
+                A booking was saved from this device. Continue from step {Math.min((pendingDraft.currentStep || 0) + 1, 5)} with {pendingDraft.items?.length || 0} item{pendingDraft.items?.length === 1 ? '' : 's'}.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" className="bg-white" onClick={discardDraft}>
+                Discard
+              </Button>
+              <Button type="button" size="sm" onClick={() => restoreDraft(pendingDraft)}>
+                Resume
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Progress bar */}
       <div className="w-full bg-muted rounded-full h-1.5">

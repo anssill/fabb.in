@@ -61,6 +61,12 @@ export default async function DashboardPage() {
 
   const todayObj = new Date()
   const today = todayObj.toISOString().split('T')[0]
+  const calendarStartObj = new Date(todayObj)
+  calendarStartObj.setDate(calendarStartObj.getDate() - 7)
+  const calendarEndObj = new Date(todayObj)
+  calendarEndObj.setDate(calendarEndObj.getDate() + 45)
+  const calendarStart = calendarStartObj.toISOString().split('T')[0]
+  const calendarEnd = calendarEndObj.toISOString().split('T')[0]
 
   const [
     { count: activeBookingsCount },
@@ -76,6 +82,7 @@ export default async function DashboardPage() {
     { data: activitiesData },
     { data: washingQueueData },
     { data: recentBookingsData },
+    { data: calendarBookingsData },
   ] = await Promise.all([
     supabase.from('bookings').select('*', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).in('status', ['booked', 'out']),
@@ -91,9 +98,9 @@ export default async function DashboardPage() {
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .gte('created_at', today + 'T00:00:00')
       .lte('created_at', today + 'T23:59:59'),
-    supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date')
+    supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date, return_date, total_amount, balance_due, booking_items(item_name, size, quantity)')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('pickup_date', today).limit(8),
-    supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, return_date')
+    supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date, return_date, total_amount, balance_due, booking_items(item_name, size, quantity)')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('return_date', today).limit(8),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), return_date')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out').lt('return_date', today).limit(5),
@@ -110,6 +117,13 @@ export default async function DashboardPage() {
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .order('created_at', { ascending: false })
       .limit(6),
+    supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date, return_date, total_amount, balance_due, booking_items(item_name, size, quantity)')
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .neq('status', 'cancelled')
+      .lte('pickup_date', calendarEnd)
+      .gte('return_date', calendarStart)
+      .order('pickup_date', { ascending: true })
+      .limit(80),
   ])
 
   const activities = (activitiesData || []).map((a) => ({ ...a, staff_name: a.staff_name || 'System' }))
@@ -359,6 +373,7 @@ export default async function DashboardPage() {
           <DashboardCalendar
             pickupDates={(todayPickups || []).map((b) => b.pickup_date).filter(Boolean) as string[]}
             returnDates={(todayReturns || []).map((b) => b.return_date).filter(Boolean) as string[]}
+            bookings={(calendarBookingsData || []) as ScheduleBooking[]}
           />
           <DashboardPaymentChart distribution={revenueData.methodDistribution} />
           <DashboardActivity activities={activities} />
@@ -598,6 +613,7 @@ function ScheduleCard({
               <TableRow>
                 <TableHead className="pl-5">Booking</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Details</TableHead>
                 <TableHead className="pr-5 text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -616,8 +632,15 @@ function ScheduleCard({
                         <Avatar className="h-7 w-7">
                           <AvatarFallback className="bg-slate-100 text-xs">{customer?.name?.charAt(0) ?? 'C'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm text-slate-600">{customer?.name ?? 'Customer'}</span>
+                        <div>
+                          <span className="block text-sm text-slate-600">{customer?.name ?? 'Customer'}</span>
+                          {customer?.phone && <span className="block text-[11px] text-slate-400">{customer.phone}</span>}
+                        </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="max-w-[18rem] truncate text-xs text-slate-600">{getItemSummary(booking)}</p>
+                      <p className="text-[11px] font-semibold text-slate-900">{formatMoney(Number(booking.total_amount || 0))}</p>
                     </TableCell>
                     <TableCell className="pr-5 text-right">
                       <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusBadge(booking.status)}`}>
@@ -641,9 +664,22 @@ function ScheduleCard({
   )
 }
 
+function getItemSummary(booking: ScheduleBooking) {
+  const items = booking.booking_items || []
+  if (items.length === 0) return 'No items attached'
+  return items
+    .map(item => `${item.item_name}${item.size ? ` (${item.size})` : ''}${Number(item.quantity || 1) > 1 ? ` x${item.quantity}` : ''}`)
+    .join(', ')
+}
+
 type ScheduleBooking = {
   id: string
   booking_number: string | null
   status: string
-  customer: { name?: string | null } | { name?: string | null }[] | null
+  pickup_date?: string | null
+  return_date?: string | null
+  total_amount?: number | string | null
+  balance_due?: number | string | null
+  booking_items?: Array<{ item_name?: string | null; size?: string | null; quantity?: number | null }>
+  customer: { name?: string | null; phone?: string | null } | { name?: string | null; phone?: string | null }[] | null
 }

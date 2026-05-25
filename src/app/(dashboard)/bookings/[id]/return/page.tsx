@@ -73,6 +73,8 @@ export default function ReturnPage() {
   const [refundMethod, setRefundMethod] = useState('cash')
   const [refundRef, setRefundRef] = useState('')
   const [noDeposit, setNoDeposit] = useState(false)
+  const [lateFee, setLateFee] = useState('0')
+  const [signatureName, setSignatureName] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -143,7 +145,22 @@ export default function ReturnPage() {
         throw new Error(d.error || 'Failed to update booking status')
       }
 
-      // 3. Insert deposit refund payment
+      // 3. Insert late fee and deposit refund payment
+      const lateFeeAmount = parseFloat(lateFee || '0') || 0
+      if (lateFeeAmount > 0) {
+        await supabase.from('booking_payments').insert({
+          booking_id: booking.id,
+          business_id: booking.business_id,
+          branch_id: booking.branch_id,
+          type: 'penalty',
+          amount: lateFeeAmount,
+          method: refundMethod,
+          reference_number: refundRef.trim() || null,
+          notes: 'Late fee collected during return',
+          collected_by: staffId,
+        })
+      }
+
       if (!noDeposit && depositHeld > 0 && refundAmount > 0) {
         await supabase.from('booking_payments').insert({
           booking_id: booking.id,
@@ -168,6 +185,20 @@ export default function ReturnPage() {
         event_description: 'Return processed — items collected from customer',
         performed_by: staffId,
       }).then(() => {})
+
+      await fetch(`/api/bookings/${booking.id}/operations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: {
+            type: 'return',
+            signer_name: signatureName.trim() || booking.customer?.name || 'Customer',
+            signature_data: signatureName.trim() || booking.customer?.name || 'Customer',
+            agreement_text: 'Customer acknowledged return condition, damage/missing charges, late fees, and deposit settlement.',
+          },
+          status: 'in_washing',
+        }),
+      }).catch(() => {})
 
       toast.success('Return completed! Booking marked as returned.')
       router.push(`/bookings/${booking.id}`)
@@ -382,6 +413,18 @@ export default function ReturnPage() {
                   <p className="text-xs text-slate-500">Enter 0 to return full deposit</p>
                 </div>
 
+                <div className="space-y-1.5">
+                  <Label>Late fee (₹)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={lateFee}
+                    onChange={(e) => setLateFee(e.target.value)}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-slate-500">Optional overdue fee collected at return.</p>
+                </div>
+
                 {deduction > 0 && (
                   <div className="space-y-1.5">
                     <Label>Reason for Deduction <span className="text-red-500">*</span></Label>
@@ -500,6 +543,10 @@ export default function ReturnPage() {
                   </div>
                 </div>
               )}
+              <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Return Signature</p>
+                <Input value={signatureName} onChange={(e) => setSignatureName(e.target.value)} placeholder={booking.customer?.name || 'Customer name'} />
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -507,7 +554,7 @@ export default function ReturnPage() {
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
                 onClick={handleConfirmReturn}
-                disabled={submitting}
+                disabled={submitting || !signatureName.trim()}
               >
                 {submitting ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>

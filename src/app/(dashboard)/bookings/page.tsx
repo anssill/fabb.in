@@ -13,7 +13,13 @@ import { calculateBillableRentalDays } from '@/lib/booking-utils'
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-700',
   booked: 'bg-indigo-50 text-indigo-700',
+  fitting_pending: 'bg-fuchsia-50 text-fuchsia-700',
+  alteration_pending: 'bg-purple-50 text-purple-700',
+  ready_for_pickup: 'bg-emerald-50 text-emerald-700',
   out: 'bg-blue-50 text-blue-700',
+  out_for_delivery: 'bg-sky-50 text-sky-700',
+  delivered: 'bg-cyan-50 text-cyan-700',
+  in_washing: 'bg-cyan-50 text-cyan-700',
   returned: 'bg-emerald-50 text-emerald-700',
   closed: 'bg-slate-100 text-slate-700',
   cancelled: 'bg-rose-50 text-rose-700',
@@ -22,13 +28,19 @@ const STATUS_COLORS: Record<string, string> = {
 const STATUS_BAR: Record<string, string> = {
   pending: 'bg-amber-400',
   booked: 'bg-[#4f46e5]',
+  fitting_pending: 'bg-fuchsia-500',
+  alteration_pending: 'bg-purple-500',
+  ready_for_pickup: 'bg-emerald-500',
   out: 'bg-blue-500',
+  out_for_delivery: 'bg-sky-500',
+  delivered: 'bg-cyan-500',
+  in_washing: 'bg-cyan-500',
   returned: 'bg-emerald-500',
   closed: 'bg-slate-400',
   cancelled: 'bg-rose-400',
 }
 
-type StatusFilter = 'all' | 'booked' | 'out' | 'returned' | 'pending' | 'closed' | 'cancelled'
+type StatusFilter = 'all' | 'booked' | 'ready_for_pickup' | 'out' | 'returned' | 'in_washing' | 'pending' | 'closed' | 'cancelled'
 
 function formatInputDate(date: Date) {
   const year = date.getFullYear()
@@ -130,17 +142,22 @@ export default function BookingsPage() {
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Bookings</h1>
           <p className="text-sm text-slate-500">{bookings.length} total bookings across this branch</p>
         </div>
-        <Button className="h-10 w-full px-4 sm:w-auto" asChild>
-          <Link href="/bookings/new">
-            <Plus className="w-4 h-4 mr-2" />
-            New Booking
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
+            <Link href="/bookings/drafts">Drafts</Link>
+          </Button>
+          <Button className="h-10 w-full px-4 sm:w-auto" asChild>
+            <Link href="/bookings/new">
+              <Plus className="w-4 h-4 mr-2" />
+              New Booking
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Status Tabs */}
       <div className="flex gap-2 overflow-x-auto rounded-[1.25rem] bg-white p-2 shadow-sm sm:rounded-[1.65rem]">
-        {(['all', 'booked', 'out', 'returned', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
+        {(['all', 'booked', 'ready_for_pickup', 'out', 'returned', 'in_washing', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -150,7 +167,7 @@ export default function BookingsPage() {
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
           >
-            <span className="capitalize">{status}</span>
+            <span className="capitalize">{status.replace(/_/g, ' ')}</span>
             {counts[status] ? (
               <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${statusFilter === status ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {counts[status]}

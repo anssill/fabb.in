@@ -15,13 +15,23 @@ import { BookingActions } from './components/BookingActions'
 import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
 import { BookingSmsButton } from './components/BookingSmsButton'
 import { BookingItemsEditor } from './components/BookingItemsEditor'
+import { BookingOperationsPanel } from './components/BookingOperationsPanel'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { getOperationStatus, getOperationStatusClass } from '@/lib/operations'
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft:     { color: 'bg-slate-100 text-slate-700',   label: 'Draft' },
   pending:   { color: 'bg-amber-100 text-amber-700',   label: 'Pending' },
   booked:    { color: 'bg-blue-100 text-blue-700',     label: 'Booked' },
+  fitting_pending: { color: 'bg-fuchsia-100 text-fuchsia-700', label: 'Fitting' },
+  alteration_pending: { color: 'bg-purple-100 text-purple-700', label: 'Alteration' },
+  ready_for_pickup: { color: 'bg-emerald-100 text-emerald-700', label: 'Ready' },
   out:       { color: 'bg-violet-100 text-violet-700', label: 'Out' },
+  out_for_delivery: { color: 'bg-sky-100 text-sky-700', label: 'Out for delivery' },
+  delivered: { color: 'bg-cyan-100 text-cyan-700', label: 'Delivered' },
+  return_due: { color: 'bg-orange-100 text-orange-700', label: 'Return due' },
+  overdue: { color: 'bg-red-100 text-red-700', label: 'Overdue' },
+  in_washing: { color: 'bg-cyan-100 text-cyan-700', label: 'Washing' },
   returned:  { color: 'bg-green-100 text-green-700',   label: 'Returned' },
   closed:    { color: 'bg-emerald-100 text-emerald-700', label: 'Closed' },
   cancelled: { color: 'bg-red-100 text-red-700',       label: 'Cancelled' },
@@ -53,7 +63,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
         id, item_id, item_variant_id, quantity, price, rental_days, subtotal, item_name, size,
-        condition_on_return, condition_notes_on_return,
+        condition_on_return, condition_notes_on_return, prep_status, scan_status, alteration_status,
+        accessory_notes, bag_hanger_code, condition_before_pickup,
         item:items(id, name, cover_image_url, sku),
         variant:item_variants(size, colour)
       ),
@@ -75,6 +86,34 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   if (!booking) notFound()
 
+  const [
+    { data: checklistData },
+    { data: taskData },
+    { data: signatureData },
+    { data: deliveryData },
+  ] = await Promise.all([
+    (supabase as any)
+      .from('booking_checklist_items')
+      .select('id, section, item_key, label, is_required, is_blocking, is_completed, sort_order')
+      .eq('booking_id', id)
+      .order('sort_order', { ascending: true }),
+    (supabase as any)
+      .from('booking_tasks')
+      .select('id, task_type, title, status, priority, due_at')
+      .eq('booking_id', id)
+      .order('created_at', { ascending: true }),
+    (supabase as any)
+      .from('booking_signatures')
+      .select('id, signature_type, signer_name, captured_at')
+      .eq('booking_id', id)
+      .order('captured_at', { ascending: false }),
+    (supabase as any)
+      .from('booking_delivery')
+      .select('*')
+      .eq('booking_id', id)
+      .maybeSingle(),
+  ])
+
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
@@ -87,7 +126,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const totalPaid = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
   const balanceDue = Number(booking.total_amount ?? 0) - totalPaid
 
-  const statusSteps = ['pending', 'booked', 'out', 'returned', 'closed']
+  const statusSteps = ['pending', 'booked', 'fitting_pending', 'alteration_pending', 'ready_for_pickup', 'out', 'returned', 'closed']
   const currentStepIdx = statusSteps.indexOf(booking.status)
   const bookingItemRows = ((booking.booking_items || []) as any[]).map((bi: any) => {
     const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
@@ -181,8 +220,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       )}
 
       {/* Main content with tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue="operations">
         <TabsList className="bg-white border border-slate-200">
+          <TabsTrigger value="operations">Operations</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
@@ -192,6 +232,39 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsList>
 
         {/* TAB 1 — OVERVIEW */}
+        <TabsContent value="operations" className="mt-4">
+          <BookingOperationsPanel
+            booking={{
+              id: booking.id,
+              status: booking.status,
+              business_id: booking.business_id,
+              branch_id: booking.branch_id,
+              handoff_notes: (booking as any).handoff_notes,
+              internal_notes: (booking as any).internal_notes,
+              delivery_mode: (booking as any).delivery_mode,
+              delivery_status: (booking as any).delivery_status,
+              delivery_fee: (booking as any).delivery_fee,
+              balance_due: (booking as any).balance_due,
+              deposit_amount: (booking as any).deposit_amount,
+            }}
+            checklist={(checklistData || []) as any[]}
+            tasks={(taskData || []) as any[]}
+            items={((booking.booking_items || []) as any[]).map((bi: any) => ({
+              id: bi.id,
+              item_name: bi.item_name || (Array.isArray(bi.item) ? bi.item[0]?.name : bi.item?.name),
+              size: bi.size,
+              prep_status: bi.prep_status,
+              scan_status: bi.scan_status,
+              alteration_status: bi.alteration_status,
+              accessory_notes: bi.accessory_notes,
+              bag_hanger_code: bi.bag_hanger_code,
+              condition_before_pickup: bi.condition_before_pickup,
+            }))}
+            delivery={(deliveryData || null) as any}
+            signatures={(signatureData || []) as any[]}
+          />
+        </TabsContent>
+
         <TabsContent value="overview" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left col */}
@@ -331,6 +404,18 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <span className="text-slate-500">Booked by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Operation</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${getOperationStatusClass((booking as any).status)}`}>
+                      {getOperationStatus((booking as any).status)}
+                    </span>
+                  </div>
+                  {(booking as any).delivery_mode && (booking as any).delivery_mode !== 'store_pickup' && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Delivery</span>
+                      <span className="font-medium capitalize">{String((booking as any).delivery_mode).replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-slate-500">Booked time</span>
                     <span className="font-medium">

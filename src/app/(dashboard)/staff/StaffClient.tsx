@@ -119,6 +119,16 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
   )
 
   const canManage = ['owner', 'admin', 'manager', 'super_admin'].includes(currentUserRole)
+  const roleSections = [
+    { role: 'owner', label: 'Owners', helper: 'Full business control' },
+    { role: 'admin', label: 'Admins', helper: 'Branch and team control' },
+    { role: 'manager', label: 'Managers', helper: 'Daily operations control' },
+    { role: 'staff', label: 'Staff', helper: 'Counter and floor workflows' },
+  ].map(section => ({
+    ...section,
+    count: staff.filter(member => member.role === section.role).length,
+    active: staff.filter(member => member.role === section.role && member.status === 'active').length,
+  }))
 
   function openInvite() {
     const branchAccess = getInitialBranchAccess({ role: 'staff' }, branches)
@@ -300,6 +310,28 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
             Add Staff
           </Button>
         )}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {roleSections.map(section => (
+          <Card key={section.role} className="border-0 bg-white shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">{section.label}</p>
+                  <p className="mt-1 text-xs text-slate-500">{section.helper}</p>
+                </div>
+                <Badge variant="outline" className={`rounded-full ${ROLE_COLORS[section.role]}`}>
+                  {section.count}
+                </Badge>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                <span>{section.active} active</span>
+                <span>{section.count - section.active} suspended</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
