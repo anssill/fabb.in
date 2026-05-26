@@ -24,6 +24,12 @@ export async function PATCH(req: NextRequest) {
 
     const admin = getSupabaseAdmin()
     const { branchId, settings } = validated.data
+    if (
+      Object.prototype.hasOwnProperty.call(settings, 'operations') &&
+      !['owner', 'admin', 'super_admin'].includes(currentStaff.role)
+    ) {
+      return NextResponse.json({ error: 'Only owners and admins can edit operations settings' }, { status: 403 })
+    }
 
     const { data: branch, error: branchError } = await admin
       .from('branches')

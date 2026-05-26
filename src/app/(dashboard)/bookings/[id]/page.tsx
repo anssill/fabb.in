@@ -151,11 +151,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   void branch
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
             <Link href="/bookings"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
           </Button>
           <div>
@@ -164,12 +165,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               <Badge className={`${statusConfig.color} text-xs`}>{statusConfig.label}</Badge>
               {isOverdue && <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>}
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs text-slate-500">
               Created {new Date(booking.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} by {(createdBy as any)?.name || 'Staff'}
             </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2 xl:justify-end">
           <BookingSmsButton
             phone={(customer as any)?.phone || ''}
             customerName={(customer as any)?.name || 'Customer'}
@@ -197,11 +198,13 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             })),
           }} />
         </div>
+        </div>
       </div>
 
       {/* Status Progress */}
       {!['cancelled', 'draft'].includes(booking.status) && (
-        <div className="flex items-center gap-0 bg-white border border-slate-200 rounded-lg p-4">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
+          <div className="flex min-w-[900px] items-center gap-0">
           {statusSteps.map((step, idx) => (
             <div key={step} className="flex items-center flex-1">
               <div className={`flex items-center gap-1.5 ${idx <= currentStepIdx ? 'text-blue-600' : 'text-slate-400'}`}>
@@ -211,19 +214,20 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     'bg-slate-100 text-slate-400'}`}>
                   {idx < currentStepIdx ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                 </div>
-                <span className="text-xs font-medium capitalize hidden sm:block">{step}</span>
+                <span className="text-xs font-medium capitalize hidden sm:block">{step.replace(/_/g, ' ')}</span>
               </div>
               {idx < statusSteps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-2 ${idx < currentStepIdx ? 'bg-blue-400' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
 
       {/* Main content with tabs */}
-      <Tabs defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
-        <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-white border border-slate-200 p-1">
+      <Tabs className="gap-3" defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-slate-100 bg-white p-1 shadow-sm">
           {operationSettings.enabled && operationSettings.bookingWorkspace && (
             <TabsTrigger value="operations" className="rounded-lg">Operations</TabsTrigger>
           )}
@@ -236,7 +240,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsList>
 
         {operationSettings.enabled && operationSettings.bookingWorkspace && (
-        <TabsContent value="operations" className="mt-4">
+        <TabsContent value="operations" className="mt-0 flex-none">
           <BookingOperationsPanel
             settings={operationSettings}
             booking={{
@@ -271,7 +275,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
         )}
 
-        <TabsContent value="overview" className="mt-4">
+        <TabsContent value="overview" className="mt-0 flex-none">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left col */}
             <div className="lg:col-span-2 space-y-4">
@@ -441,7 +445,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
 
         {/* TAB 2 — PAYMENTS */}
-        <TabsContent value="payments" className="mt-4">
+        <TabsContent value="payments" className="mt-0 flex-none">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -509,7 +513,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
 
         {/* TAB 3 — ITEMS */}
-        <TabsContent value="items" className="mt-4">
+        <TabsContent value="items" className="mt-0 flex-none">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">Items in this Booking</CardTitle>
@@ -527,7 +531,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
 
         {/* TAB 4 — TIMELINE */}
-        <TabsContent value="timeline" className="mt-4">
+        <TabsContent value="timeline" className="mt-0 flex-none">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -587,7 +591,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
 
         {/* TAB 5 — DOCUMENTS */}
-        <TabsContent value="documents" className="mt-4">
+        <TabsContent value="documents" className="mt-0 flex-none">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ID Proof */}
             <Card>
@@ -651,7 +655,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         </TabsContent>
 
         {/* TAB 6 — SMS */}
-        <TabsContent value="sms" className="mt-4">
+        <TabsContent value="sms" className="mt-0 flex-none">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

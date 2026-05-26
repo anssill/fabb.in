@@ -89,11 +89,11 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const canCancel = booking.status === 'booked' || booking.status === 'out'
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {/* Process Pickup — dedicated page */}
       {(booking.status === 'booked' || booking.status === 'ready_for_pickup') && (
         <Button
-          className="bg-amber-500 hover:bg-amber-600 text-white"
+          className="h-8 bg-amber-500 text-white hover:bg-amber-600"
           size="sm"
           asChild
         >
@@ -107,7 +107,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Process Return — dedicated page */}
       {booking.status === 'out' && (
         <Button
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="h-8 bg-green-600 text-white hover:bg-green-700"
           size="sm"
           asChild
         >
@@ -121,7 +121,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Close Booking */}
       {booking.status === 'returned' && (
         <Button
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="h-8 bg-emerald-600 text-white hover:bg-emerald-700"
           size="sm"
           onClick={() => handleManualStatusChange('closed')}
           disabled={isUpdating}
@@ -159,7 +159,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* QR Scanner */}
       <Button
         variant="outline"
-        className="border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"
+        className="h-8 border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
         size="sm"
         onClick={() => setIsScannerOpen(true)}
       >
@@ -170,7 +170,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Reconcile */}
       <Button
         variant="ghost"
-        className="text-slate-400 hover:text-slate-600 hover:bg-slate-50 text-xs"
+        size="sm"
+        className="h-8 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-700"
         onClick={handleSync}
         disabled={isSyncing}
       >

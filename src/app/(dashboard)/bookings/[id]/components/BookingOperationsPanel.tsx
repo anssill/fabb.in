@@ -192,30 +192,36 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
   }
 
   return (
-    <Card className="border-blue-100 bg-white shadow-sm">
-      <CardHeader className="pb-3">
+    <Card className="border-slate-100 bg-white shadow-sm">
+      <CardHeader className="pb-2">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardCheck className="h-5 w-5 text-blue-600" />
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <ClipboardCheck className="h-4 w-4 text-blue-600" />
               Operations Workspace
             </CardTitle>
-            <p className="mt-1 text-xs text-slate-500">Counter checklist, handoff notes, tasks, delivery, and signatures.</p>
+            <p className="mt-1 text-xs text-slate-500">Checklist, item prep, tasks, delivery, notes, and signatures.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className={`${getOperationStatusClass(booking.status)} border-0`}>{getOperationStatus(booking.status)}</Badge>
             <Badge variant="outline">{checklistPct}% checklist</Badge>
+            {settings.checklist && (
+              <Button size="sm" className="h-8" onClick={markReady} disabled={loadingKey === 'ready'}>
+                {loadingKey === 'ready' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Ready
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
         {!hasAnySection ? (
           <div className="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
             Operation sections are turned off for this branch.
           </div>
         ) : (
-        <Tabs defaultValue={firstTab}>
-          <TabsList className="flex h-auto flex-wrap justify-start gap-1 rounded-xl bg-slate-100 p-1">
+        <Tabs className="gap-3" defaultValue={firstTab}>
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-slate-100 p-1">
             {settings.checklist && <TabsTrigger value="checklist" className="rounded-lg">Checklist</TabsTrigger>}
             {settings.itemPrep && <TabsTrigger value="items" className="rounded-lg">Items</TabsTrigger>}
             {settings.tasks && <TabsTrigger value="tasks" className="rounded-lg">Tasks</TabsTrigger>}
@@ -224,25 +230,25 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             {settings.signatures && <TabsTrigger value="sign" className="rounded-lg">Sign</TabsTrigger>}
           </TabsList>
 
-          {settings.checklist && <TabsContent value="checklist" className="mt-4 space-y-4">
+          {settings.checklist && <TabsContent value="checklist" className="mt-0 flex-none space-y-3">
             {blockingMissing.length > 0 && (
               <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{blockingMissing.length} blocking step{blockingMissing.length === 1 ? '' : 's'} pending before ready/pickup.</span>
               </div>
             )}
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {Object.entries(groupedChecklist).map(([section, rows]) => {
                 const Icon = sectionIcons[section] || ClipboardCheck
                 return (
-                  <div key={section} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <div key={section} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
                     <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold capitalize text-slate-900">
                       <Icon className="h-4 w-4 text-blue-600" />
                       {section}
                     </h3>
                     <div className="space-y-2">
                       {rows.map((item) => (
-                        <label key={item.id} className="flex items-start gap-2 rounded-lg bg-white p-2 text-sm">
+                        <label key={item.id} className="flex items-start gap-2 rounded-lg bg-white p-2 text-sm shadow-[0_1px_0_rgba(15,23,42,0.03)]">
                           <Checkbox
                             checked={item.is_completed}
                             disabled={loadingKey === item.id}
@@ -267,7 +273,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
                 )
               })}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
               <Button onClick={markReady} disabled={loadingKey === 'ready'}>
                 {loadingKey === 'ready' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Ready for pickup
@@ -279,7 +285,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             </div>
           </TabsContent>}
 
-          {settings.itemPrep && <TabsContent value="items" className="mt-4 space-y-3">
+          {settings.itemPrep && <TabsContent value="items" className="mt-0 flex-none space-y-3">
             {items.map((item) => (
               <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -341,7 +347,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             ))}
           </TabsContent>}
 
-          {settings.tasks && <TabsContent value="tasks" className="mt-4 space-y-2">
+          {settings.tasks && <TabsContent value="tasks" className="mt-0 flex-none space-y-2">
             {tasks.map((task) => (
               <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -362,7 +368,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             {tasks.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Tasks will appear after the checklist initializes.</p>}
           </TabsContent>}
 
-          {settings.delivery && <TabsContent value="delivery" className="mt-4 space-y-3">
+          {settings.delivery && <TabsContent value="delivery" className="mt-0 flex-none space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>Delivery mode</Label>
@@ -403,7 +409,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             </Button>
           </TabsContent>}
 
-          {settings.staffNotes && <TabsContent value="notes" className="mt-4 space-y-3">
+          {settings.staffNotes && <TabsContent value="notes" className="mt-0 flex-none space-y-3">
             <Textarea value={handoffNotes} onChange={(e) => setHandoffNotes(e.target.value)} placeholder="Handoff notes for next shift..." rows={3} />
             <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal staff notes..." rows={3} />
             <Button onClick={() => patch({ notes: { handoff_notes: handoffNotes, internal_notes: internalNotes } }, 'Notes saved', 'notes')} disabled={loadingKey === 'notes'}>
@@ -412,7 +418,7 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
             </Button>
           </TabsContent>}
 
-          {settings.signatures && <TabsContent value="sign" className="mt-4 space-y-3">
+          {settings.signatures && <TabsContent value="sign" className="mt-0 flex-none space-y-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <p className="text-sm font-semibold">Rental agreement</p>
               <p className="mt-1 text-xs text-slate-500">

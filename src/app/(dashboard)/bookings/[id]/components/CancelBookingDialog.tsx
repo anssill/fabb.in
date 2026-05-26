@@ -77,7 +77,8 @@ export function CancelBookingDialog({ bookingId, onSuccess }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="w-full">
+        <Button variant="destructive" size="sm" className="h-8 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700">
+          <AlertTriangle className="mr-2 h-4 w-4" />
           Cancel Booking
         </Button>
       </DialogTrigger>

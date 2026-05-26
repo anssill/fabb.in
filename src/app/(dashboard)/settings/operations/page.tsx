@@ -8,7 +8,7 @@ export default async function OperationsSettingsPage() {
 
   const { data: staff } = await supabase
     .from('staff')
-    .select('business_id, branch_id')
+    .select('business_id, branch_id, role')
     .eq('id', user.id)
     .single()
 
@@ -32,6 +32,7 @@ export default async function OperationsSettingsPage() {
     <OperationsSettingsClient
       initialBranch={currentBranch}
       initialBranches={branches || []}
+      currentUserRole={staff.role}
     />
   )
 }
