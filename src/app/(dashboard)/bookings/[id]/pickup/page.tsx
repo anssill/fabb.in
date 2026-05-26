@@ -33,6 +33,8 @@ const PAYMENT_METHODS = [
   { value: 'card', label: 'Card' },
 ]
 
+const DEPOSIT_SUGGESTIONS = [500, 1000, 2000, 3000, 5000, 10000]
+
 type BookingItem = { id: string; item_name: string; size: string; quantity: number; price: number }
 
 type Booking = {
@@ -144,6 +146,7 @@ export default function PickupPage() {
   const [pickupPhotos, setPickupPhotos] = useState<string[]>([])
   const [isEditingDeposit, setIsEditingDeposit] = useState(false)
   const [newDepositTotal, setNewDepositTotal] = useState('')
+  const [depositTotalEdited, setDepositTotalEdited] = useState(false)
   const [itemScanned, setItemScanned] = useState(false)
   const [signatureName, setSignatureName] = useState('')
 
@@ -156,7 +159,7 @@ export default function PickupPage() {
       const staffId = user?.id
 
       // 0. Update deposit amount if edited
-      if (isEditingDeposit && newDepositTotal) {
+      if (depositTotalEdited && newDepositTotal) {
         const { error: updError } = await supabase
           .from('bookings')
           .update({ 
@@ -423,6 +426,20 @@ export default function PickupPage() {
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <Label>Amount (₹)</Label>
+                      <div className="flex flex-wrap gap-2 pb-1">
+                        {DEPOSIT_SUGGESTIONS.map(amount => (
+                          <Button
+                            key={amount}
+                            type="button"
+                            size="sm"
+                            variant={Number(depositAmount) === amount ? 'default' : 'outline'}
+                            className="h-8"
+                            onClick={() => setDepositAmount(String(amount))}
+                          >
+                            Rs {amount.toLocaleString('en-IN')}
+                          </Button>
+                        ))}
+                      </div>
                       <Input
                         type="number"
                         value={balanceAmount}
@@ -499,12 +516,29 @@ export default function PickupPage() {
                   <Button onClick={() => {
                     const val = parseFloat(newDepositTotal)
                     if (!isNaN(val)) {
-                      setBooking(b => b ? { ...b, deposit_balance: val } : b)
+                      setBooking(b => b ? { ...b, deposit_amount: val, deposit_balance: val } : b)
                       setDepositAmount(String(val))
+                      setDepositTotalEdited(true)
+                      setDepositAlreadyCollected(false)
+                      setSkipDeposit(false)
                       setIsEditingDeposit(false)
                       toast.success('Deposit amount updated for this session.')
                     }
                   }}>Apply</Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {DEPOSIT_SUGGESTIONS.map(amount => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => setNewDepositTotal(String(amount))}
+                    >
+                      Rs {amount.toLocaleString('en-IN')}
+                    </Button>
+                  ))}
                 </div>
                 <p className="text-xs text-blue-600">This will update the booking record on confirmation.</p>
               </div>

@@ -19,7 +19,7 @@ import {
   Package,
 } from 'lucide-react'
 import Link from 'next/link'
-import { markAsReady, updateQueueStage } from './washing-actions'
+import { markAsReady, markBookingWashingReady, updateQueueStage } from './washing-actions'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import {
@@ -166,11 +166,13 @@ function QueueGroup({
   loadingId,
   onMarkReady,
   onStageChange,
+  onBulkReady,
 }: {
   logs: any[]
   loadingId: string | null
   onMarkReady: (id: string, itemId: string, branchId: string, businessId: string, condition: string) => void
   onStageChange: (id: string, itemId: string, stage: string) => void
+  onBulkReady: (logs: any[], condition: string) => void
 }) {
   const first = logs[0]
   const booking = getSingle(first.booking)
@@ -205,9 +207,27 @@ function QueueGroup({
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Badge className="rounded-full border-0 bg-cyan-50 text-cyan-700">{activeCount} active</Badge>
           <Badge className="rounded-full border-0 bg-emerald-50 text-emerald-700">{readyCount} ready</Badge>
+          {activeCount > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-7 border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50">
+                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                  Bulk ready
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="text-[10px] uppercase text-slate-400">Mark all active as</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => onBulkReady(logs, 'excellent')}>Excellent / New</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onBulkReady(logs, 'good')}>Good / Used</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onBulkReady(logs, 'fair')}>Fair (Minor Wear)</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onBulkReady(logs, 'damaged')} className="text-rose-600">Damaged / Repair</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
@@ -252,6 +272,21 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
       router.refresh()
     } catch (error: any) {
       toast.error(error.message || 'Failed to update stage')
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  async function handleBulkReady(logs: any[], condition: string) {
+    const activeIds = logs.filter(log => log.stage !== 'ready').map(log => log.id)
+    if (activeIds.length === 0) return
+    setLoadingId(`bulk-${logs[0]?.booking_id || logs[0]?.id}`)
+    try {
+      const result = await markBookingWashingReady(activeIds, condition as any)
+      toast.success(`${result.count} item${result.count === 1 ? '' : 's'} marked ready`)
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to bulk update washing')
     } finally {
       setLoadingId(null)
     }
@@ -314,6 +349,7 @@ export function WashingQueueClient({ initialLogs, staffId }: WashingQueueClientP
               loadingId={loadingId}
               onMarkReady={handleMarkReady}
               onStageChange={handleStageChange}
+              onBulkReady={handleBulkReady}
             />
           ))}
         </div>

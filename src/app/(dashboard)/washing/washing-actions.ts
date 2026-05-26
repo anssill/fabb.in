@@ -259,6 +259,36 @@ export async function markAsReady(
   return { success: true }
 }
 
+export async function markBookingWashingReady(
+  queueIds: string[],
+  condition: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged' = 'good'
+) {
+  const ids = Array.from(new Set(queueIds.filter(Boolean)))
+  if (ids.length === 0) throw new Error('No washing items selected')
+
+  const { admin: supabase, staff } = await requireActiveStaff()
+  const { data: rows, error } = await supabase
+    .from('washing_queue')
+    .select('id, item_id, branch_id, business_id, stage')
+    .in('id', ids)
+    .neq('stage', 'ready')
+
+  if (error) throw error
+  if (!rows || rows.length === 0) throw new Error('All selected items are already ready')
+
+  for (const row of rows) {
+    if (row.business_id !== staff.business_id || row.branch_id !== staff.branch_id) {
+      throw new Error('Branch mismatch. Please refresh and try again.')
+    }
+  }
+
+  for (const row of rows) {
+    await markAsReady(row.id, row.item_id, staff.id, row.branch_id, row.business_id, condition)
+  }
+
+  return { success: true, count: rows.length }
+}
+
 
 export async function updateQueueStage(
   queueId: string,

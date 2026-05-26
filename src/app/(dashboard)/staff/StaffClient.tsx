@@ -22,6 +22,7 @@ const ROLE_COLORS: Record<string, string> = {
   owner: 'bg-indigo-50 text-indigo-700 border-indigo-100',
   admin: 'bg-violet-50 text-violet-700 border-violet-100',
   manager: 'bg-blue-50 text-blue-700 border-blue-100',
+  washing_staff: 'bg-cyan-50 text-cyan-700 border-cyan-100',
   staff: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
@@ -69,6 +70,19 @@ function getDefaultBranchId(branches: StaffBranchOption[]) {
   return branches.find(branch => branch.is_default)?.id || branches[0]?.id || null
 }
 
+function getPermissionsForRole(role: string) {
+  const permissions = getDefaultPermissions() as Record<string, boolean>
+  if (role !== 'washing_staff') return permissions
+
+  Object.keys(permissions).forEach(key => {
+    permissions[key] = false
+  })
+  ;['manage_dashboard', 'manage_washing', 'log_washing', 'complete_washing', 'manage_notifications'].forEach(key => {
+    permissions[key] = true
+  })
+  return permissions
+}
+
 function getInitialBranchAccess(member: Partial<StaffMember>, branches: StaffBranchOption[]) {
   const validIds = new Set(branches.map(branch => branch.id))
   const explicitIds = uniqueBranchIds(member.accessible_branch_ids || []).filter(id => validIds.has(id))
@@ -112,7 +126,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
     password: '',
     role: 'staff',
     phone: '',
-    permissions: getDefaultPermissions() as Record<string, boolean>,
+    permissions: getPermissionsForRole('staff'),
     branch_id: getDefaultBranchId(branches),
     accessible_branch_ids: getDefaultBranchId(branches) ? [getDefaultBranchId(branches)!] : [] as string[],
   })
@@ -122,7 +136,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
     phone: '',
     role: '',
     status: '',
-    permissions: getDefaultPermissions() as Record<string, boolean>,
+    permissions: getPermissionsForRole('staff'),
     branch_id: null as string | null,
     accessible_branch_ids: [] as string[],
   })
@@ -154,6 +168,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
     { role: 'owner', label: 'Owners', helper: 'Full business control' },
     { role: 'admin', label: 'Admins', helper: 'Branch and team control' },
     { role: 'manager', label: 'Managers', helper: 'Daily operations control' },
+    { role: 'washing_staff', label: 'Washing Staff', helper: 'Washing queue and ready updates' },
     { role: 'staff', label: 'Staff', helper: 'Counter and floor workflows' },
   ].map(section => ({
     ...section,
@@ -169,7 +184,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
       password: '',
       role: 'staff',
       phone: '',
-      permissions: getDefaultPermissions() as Record<string, boolean>,
+      permissions: getPermissionsForRole('staff'),
       branch_id: branchAccess.primaryBranchId,
       accessible_branch_ids: branchAccess.branchIds,
     })
@@ -740,7 +755,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
             </div>
             <div className="space-y-1.5">
               <Label>Role</Label>
-              <Select value={inviteData.role} onValueChange={v => setInviteData(p => ({...p, role: v}))}>
+              <Select value={inviteData.role} onValueChange={v => setInviteData(p => ({...p, role: v, permissions: getPermissionsForRole(v)}))}>
                 <SelectTrigger className="rounded-xl border-slate-200">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
@@ -748,6 +763,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
                   <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="washing_staff">Washing Staff</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
               </Select>
@@ -808,7 +824,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
             </div>
             <div className="space-y-1.5">
               <Label>Role</Label>
-              <Select value={editData.role} onValueChange={v => setEditData(p => ({...p, role: v}))}>
+              <Select value={editData.role} onValueChange={v => setEditData(p => ({...p, role: v, permissions: getPermissionsForRole(v)}))}>
                 <SelectTrigger className="rounded-xl border-slate-200">
                   <SelectValue />
                 </SelectTrigger>
@@ -816,6 +832,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
                   <SelectItem value="owner">Owner</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="washing_staff">Washing Staff</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
               </Select>

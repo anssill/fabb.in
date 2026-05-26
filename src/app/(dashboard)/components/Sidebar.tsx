@@ -339,7 +339,9 @@ export function SidebarWrapper({ staff, branches }: Props) {
   const roleLabels: Record<string, string> = {
     super_admin: 'Super Admin',
     owner: 'Owner',
+    admin: 'Admin',
     manager: 'Manager',
+    washing_staff: 'Washing Staff',
     staff: 'Floor Staff',
   }
 

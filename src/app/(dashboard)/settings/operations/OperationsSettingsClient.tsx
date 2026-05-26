@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { useAppStore } from '@/lib/store'
 import type { BranchData } from '@/lib/store'
 import { safeJsonParse } from '@/lib/api-utils'
-import { DEFAULT_OPERATION_SETTINGS, getOperationSettings, type OperationSettings } from '@/lib/operation-settings'
+import { DEFAULT_OPERATION_SETTINGS, OPERATION_FEATURE_GROUPS, getOperationSettings, type OperationSettings } from '@/lib/operation-settings'
 import { Power, RotateCcw, Save, Settings2, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -26,6 +26,8 @@ const MODULE_TOGGLES: Array<{ key: ToggleKey; label: string; description: string
   { key: 'staffNotes', label: 'Handoff and internal notes', description: 'Notes for shift handoff and manager-only context.' },
   { key: 'whatsappActions', label: 'WhatsApp quick actions', description: 'Preview/send operational messages from workflow states.' },
   { key: 'draftList', label: 'Booking draft list', description: 'Shows saved booking drafts under Bookings.' },
+  { key: 'realtimeUpdates', label: 'Realtime updates', description: 'Keeps operation screens fresh without manual refresh where realtime is enabled.' },
+  { key: 'pushNotifications', label: 'Push notifications', description: 'Enables browser/app push notification prompts and operation alerts.' },
 ]
 
 export function OperationsSettingsClient({
@@ -56,6 +58,28 @@ export function OperationsSettingsClient({
   function setToggle(key: ToggleKey, checked: boolean) {
     if (!canEdit) return
     setSettings(prev => ({ ...prev, [key]: checked }))
+  }
+
+  function setFeature(key: string, checked: boolean) {
+    if (!canEdit) return
+    setSettings(prev => ({
+      ...prev,
+      featureToggles: {
+        ...prev.featureToggles,
+        [key]: checked,
+      },
+    }))
+  }
+
+  function setFeatureGroup(features: readonly (readonly [string, string])[], checked: boolean) {
+    if (!canEdit) return
+    setSettings(prev => {
+      const nextFeatures = { ...prev.featureToggles }
+      features.forEach(([key]) => {
+        nextFeatures[key] = checked
+      })
+      return { ...prev, featureToggles: nextFeatures }
+    })
   }
 
   async function handleSave() {
@@ -157,6 +181,69 @@ export function OperationsSettingsClient({
               />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold">Feature Control Center</CardTitle>
+              <p className="mt-1 text-xs text-slate-500">100+ operation features can be enabled individually or turned off by group.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canEdit || isSaving}
+                onClick={() => setSettings(prev => ({ ...prev, featureToggles: Object.fromEntries(Object.keys(prev.featureToggles).map(key => [key, true])) }))}
+              >
+                All on
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canEdit || isSaving}
+                onClick={() => setSettings(prev => ({ ...prev, featureToggles: Object.fromEntries(Object.keys(prev.featureToggles).map(key => [key, false])) }))}
+              >
+                All off
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 xl:grid-cols-2">
+          {OPERATION_FEATURE_GROUPS.map(group => {
+            const enabledCount = group.features.filter(([key]) => settings.featureToggles[key] !== false).length
+            return (
+              <div key={group.id} className="rounded-xl border border-slate-100 bg-white p-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-950">{group.label}</p>
+                    <p className="text-xs text-slate-500">{enabledCount}/{group.features.length} enabled</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={!canEdit} onClick={() => setFeatureGroup(group.features, true)}>On</Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={!canEdit} onClick={() => setFeatureGroup(group.features, false)}>Off</Button>
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {group.features.map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
+                      <span className="min-w-0 truncate text-xs text-slate-700">{label}</span>
+                      <Switch
+                        className="shrink-0 scale-75"
+                        checked={settings.featureToggles[key] !== false}
+                        disabled={!canEdit || !settings.enabled}
+                        onCheckedChange={(checked) => setFeature(key, checked)}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     </div>

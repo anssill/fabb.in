@@ -4,10 +4,12 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 export function DataRealtime() {
   const router = useRouter()
   const { business, activeBranch } = useAppStore()
+  const operationSettings = getOperationSettings(activeBranch?.settings)
   // Use a ref to persist the timeout between renders without triggering them
   const timeoutId = useRef<NodeJS.Timeout | null>(null)
 
@@ -27,7 +29,7 @@ export function DataRealtime() {
       }, 1000)
     })
 
-    if (!business?.id || !activeBranch?.id) {
+    if (!business?.id || !activeBranch?.id || !operationSettings.realtimeUpdates) {
       return () => {
         authSubscription.unsubscribe()
       }
@@ -79,7 +81,7 @@ export function DataRealtime() {
       authSubscription.unsubscribe()
       channels.forEach(channel => supabase.removeChannel(channel))
     }
-  }, [business?.id, activeBranch?.id, router])
+  }, [business?.id, activeBranch?.id, operationSettings.realtimeUpdates, router])
 
   return null
 }

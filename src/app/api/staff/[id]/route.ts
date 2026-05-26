@@ -7,7 +7,7 @@ import { z } from 'zod'
 const updateStaffSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().nullable().optional(),
-  role: z.enum(['owner', 'admin', 'manager', 'staff']).optional(),
+  role: z.enum(['owner', 'admin', 'manager', 'staff', 'washing_staff']).optional(),
   status: z.enum(['active', 'suspended']).optional(),
   permissions: z.record(z.string(), z.boolean()).optional(),
   branch_id: z.string().uuid().nullable().optional(),

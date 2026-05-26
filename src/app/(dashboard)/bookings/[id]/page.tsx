@@ -43,7 +43,7 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   deposit_refund: 'Deposit Refund', penalty: 'Penalty', refund: 'Refund',
 }
 
-const BOOKING_TAB_BUTTON_CLASS = 'h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-950 data-active:border-slate-300 data-active:bg-white data-active:text-slate-950 data-active:shadow-md'
+const BOOKING_TAB_BUTTON_CLASS = 'h-9 w-full justify-start rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-950 data-active:border-slate-300 data-active:bg-white data-active:text-slate-950 data-active:shadow-md'
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -228,8 +228,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       )}
 
       {/* Main content with tabs */}
-      <Tabs className="gap-3" defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
-        <TabsList className="flex h-auto w-auto flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none">
+      <Tabs orientation="vertical" className="grid gap-3 lg:grid-cols-[168px_minmax(0,1fr)]" defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
+        <TabsList className="flex h-auto w-full flex-row flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none lg:flex-col lg:flex-nowrap">
           {operationSettings.enabled && operationSettings.bookingWorkspace && (
             <TabsTrigger value="operations" className={BOOKING_TAB_BUTTON_CLASS}>Operations</TabsTrigger>
           )}

@@ -57,7 +57,7 @@ export async function POST(
       .single()
 
     if (bookingErr) throw new Error(formatError(bookingErr))
-    if (booking.status !== 'booked') {
+    if (!['booked', 'ready_for_pickup'].includes(booking.status)) {
       return NextResponse.json({ error: 'Products can only be added before pickup.' }, { status: 400 })
     }
 

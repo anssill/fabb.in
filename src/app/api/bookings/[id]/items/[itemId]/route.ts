@@ -75,8 +75,8 @@ async function getBookingAndItem(supabaseAdmin: ReturnType<typeof getAdmin>, boo
     .single()
 
   if (bookingErr) throw new Error(formatError(bookingErr))
-  if (booking.status !== 'booked') {
-    throw new Error('Items can only be edited before pickup.')
+  if (!['booked', 'ready_for_pickup', 'out'].includes(booking.status)) {
+    throw new Error('Items can only be edited before pickup or while the booking is out.')
   }
 
   const { data: bookingItem, error: itemErr } = await supabaseAdmin

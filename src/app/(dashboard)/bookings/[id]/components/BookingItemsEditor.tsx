@@ -62,7 +62,8 @@ const ADD_ITEM_ID = '__add_item__'
 
 export function BookingItemsEditor({ bookingId, status, businessId, branchId, items }: Props) {
   const router = useRouter()
-  const canEdit = status === 'booked'
+  const canEdit = ['booked', 'ready_for_pickup', 'out'].includes(status)
+  const canAdd = ['booked', 'ready_for_pickup'].includes(status)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ProductResult[]>([])
@@ -237,7 +238,7 @@ export function BookingItemsEditor({ bookingId, status, businessId, branchId, it
 
   return (
     <div className="space-y-3">
-      {canEdit && (
+      {canAdd && (
         <div className="flex justify-end">
           <Button
             type="button"
@@ -355,9 +356,9 @@ export function BookingItemsEditor({ bookingId, status, businessId, branchId, it
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel this item?</AlertDialogTitle>
+                      <AlertDialogTitle>{status === 'out' ? 'Cancel this picked-up item?' : 'Cancel this item?'}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This removes only {item.item_name} ({item.size}) from the booking and releases its reserved stock.
+                        This removes only {item.item_name} ({item.size}) from the booking, releases its stock, and recalculates the booking total.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
