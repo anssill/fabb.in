@@ -227,16 +227,16 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
       {/* Main content with tabs */}
       <Tabs className="gap-3" defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-slate-100 bg-white p-1 shadow-sm">
+        <TabsList className="flex h-auto w-auto flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none">
           {operationSettings.enabled && operationSettings.bookingWorkspace && (
-            <TabsTrigger value="operations" className="rounded-lg">Operations</TabsTrigger>
+            <TabsTrigger value="operations" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Operations</TabsTrigger>
           )}
-          <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
-          <TabsTrigger value="payments" className="rounded-lg">Payments</TabsTrigger>
-          <TabsTrigger value="items" className="rounded-lg">Items</TabsTrigger>
-          <TabsTrigger value="timeline" className="rounded-lg">Timeline</TabsTrigger>
-          <TabsTrigger value="documents" className="rounded-lg">Documents</TabsTrigger>
-          <TabsTrigger value="sms" className="rounded-lg">SMS</TabsTrigger>
+          <TabsTrigger value="overview" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Overview</TabsTrigger>
+          <TabsTrigger value="payments" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Payments</TabsTrigger>
+          <TabsTrigger value="items" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Items</TabsTrigger>
+          <TabsTrigger value="timeline" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Timeline</TabsTrigger>
+          <TabsTrigger value="documents" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Documents</TabsTrigger>
+          <TabsTrigger value="sms" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">SMS</TabsTrigger>
         </TabsList>
 
         {operationSettings.enabled && operationSettings.bookingWorkspace && (

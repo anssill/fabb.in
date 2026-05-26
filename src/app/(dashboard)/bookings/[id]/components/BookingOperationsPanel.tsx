@@ -221,13 +221,13 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
           </div>
         ) : (
         <Tabs className="gap-3" defaultValue={firstTab}>
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl bg-slate-100 p-1">
-            {settings.checklist && <TabsTrigger value="checklist" className="rounded-lg">Checklist</TabsTrigger>}
-            {settings.itemPrep && <TabsTrigger value="items" className="rounded-lg">Items</TabsTrigger>}
-            {settings.tasks && <TabsTrigger value="tasks" className="rounded-lg">Tasks</TabsTrigger>}
-            {settings.delivery && <TabsTrigger value="delivery" className="rounded-lg">Delivery</TabsTrigger>}
-            {settings.staffNotes && <TabsTrigger value="notes" className="rounded-lg">Notes</TabsTrigger>}
-            {settings.signatures && <TabsTrigger value="sign" className="rounded-lg">Sign</TabsTrigger>}
+          <TabsList className="flex h-auto w-auto flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none">
+            {settings.checklist && <TabsTrigger value="checklist" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Checklist</TabsTrigger>}
+            {settings.itemPrep && <TabsTrigger value="items" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Items</TabsTrigger>}
+            {settings.tasks && <TabsTrigger value="tasks" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Tasks</TabsTrigger>}
+            {settings.delivery && <TabsTrigger value="delivery" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Delivery</TabsTrigger>}
+            {settings.staffNotes && <TabsTrigger value="notes" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Notes</TabsTrigger>}
+            {settings.signatures && <TabsTrigger value="sign" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Sign</TabsTrigger>}
           </TabsList>
 
           {settings.checklist && <TabsContent value="checklist" className="mt-0 flex-none space-y-3">
