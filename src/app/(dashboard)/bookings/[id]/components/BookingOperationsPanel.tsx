@@ -116,6 +116,8 @@ const deliveryStatuses = [
   ['failed_delivery', 'Failed delivery'],
 ]
 
+const OPERATIONS_TAB_BUTTON_CLASS = 'h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-950 data-active:border-slate-300 data-active:bg-white data-active:text-slate-950 data-active:shadow-md'
+
 export function BookingOperationsPanel({ settings, booking, checklist, tasks, items, delivery, signatures }: Props) {
   const router = useRouter()
   const [loadingKey, setLoadingKey] = useState<string | null>(null)
@@ -222,12 +224,12 @@ export function BookingOperationsPanel({ settings, booking, checklist, tasks, it
         ) : (
         <Tabs className="gap-3" defaultValue={firstTab}>
           <TabsList className="flex h-auto w-auto flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none">
-            {settings.checklist && <TabsTrigger value="checklist" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Checklist</TabsTrigger>}
-            {settings.itemPrep && <TabsTrigger value="items" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Items</TabsTrigger>}
-            {settings.tasks && <TabsTrigger value="tasks" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Tasks</TabsTrigger>}
-            {settings.delivery && <TabsTrigger value="delivery" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Delivery</TabsTrigger>}
-            {settings.staffNotes && <TabsTrigger value="notes" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Notes</TabsTrigger>}
-            {settings.signatures && <TabsTrigger value="sign" className="h-8 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-xs shadow-sm data-active:border-[#4f46e5]">Sign</TabsTrigger>}
+            {settings.checklist && <TabsTrigger value="checklist" className={OPERATIONS_TAB_BUTTON_CLASS}>Checklist</TabsTrigger>}
+            {settings.itemPrep && <TabsTrigger value="items" className={OPERATIONS_TAB_BUTTON_CLASS}>Items</TabsTrigger>}
+            {settings.tasks && <TabsTrigger value="tasks" className={OPERATIONS_TAB_BUTTON_CLASS}>Tasks</TabsTrigger>}
+            {settings.delivery && <TabsTrigger value="delivery" className={OPERATIONS_TAB_BUTTON_CLASS}>Delivery</TabsTrigger>}
+            {settings.staffNotes && <TabsTrigger value="notes" className={OPERATIONS_TAB_BUTTON_CLASS}>Notes</TabsTrigger>}
+            {settings.signatures && <TabsTrigger value="sign" className={OPERATIONS_TAB_BUTTON_CLASS}>Sign</TabsTrigger>}
           </TabsList>
 
           {settings.checklist && <TabsContent value="checklist" className="mt-0 flex-none space-y-3">

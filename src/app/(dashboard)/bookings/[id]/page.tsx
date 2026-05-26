@@ -43,6 +43,8 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   deposit_refund: 'Deposit Refund', penalty: 'Penalty', refund: 'Refund',
 }
 
+const BOOKING_TAB_BUTTON_CLASS = 'h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-950 data-active:border-slate-300 data-active:bg-white data-active:text-slate-950 data-active:shadow-md'
+
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!isValidUuid(id)) {
@@ -229,14 +231,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       <Tabs className="gap-3" defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
         <TabsList className="flex h-auto w-auto flex-wrap justify-start gap-2 bg-transparent p-0 shadow-none">
           {operationSettings.enabled && operationSettings.bookingWorkspace && (
-            <TabsTrigger value="operations" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Operations</TabsTrigger>
+            <TabsTrigger value="operations" className={BOOKING_TAB_BUTTON_CLASS}>Operations</TabsTrigger>
           )}
-          <TabsTrigger value="overview" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Overview</TabsTrigger>
-          <TabsTrigger value="payments" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Payments</TabsTrigger>
-          <TabsTrigger value="items" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Items</TabsTrigger>
-          <TabsTrigger value="timeline" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Timeline</TabsTrigger>
-          <TabsTrigger value="documents" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">Documents</TabsTrigger>
-          <TabsTrigger value="sms" className="h-9 flex-none rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm shadow-sm data-active:border-[#4f46e5]">SMS</TabsTrigger>
+          <TabsTrigger value="overview" className={BOOKING_TAB_BUTTON_CLASS}>Overview</TabsTrigger>
+          <TabsTrigger value="payments" className={BOOKING_TAB_BUTTON_CLASS}>Payments</TabsTrigger>
+          <TabsTrigger value="items" className={BOOKING_TAB_BUTTON_CLASS}>Items</TabsTrigger>
+          <TabsTrigger value="timeline" className={BOOKING_TAB_BUTTON_CLASS}>Timeline</TabsTrigger>
+          <TabsTrigger value="documents" className={BOOKING_TAB_BUTTON_CLASS}>Documents</TabsTrigger>
+          <TabsTrigger value="sms" className={BOOKING_TAB_BUTTON_CLASS}>SMS</TabsTrigger>
         </TabsList>
 
         {operationSettings.enabled && operationSettings.bookingWorkspace && (
