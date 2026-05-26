@@ -54,10 +54,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Customers', href: '/customers', icon: Users },
   { label: 'Payments', href: '/payments', icon: CreditCard },
   { label: 'Operations', href: '/operations', icon: ClipboardCheck },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['owner', 'manager', 'super_admin'] },
+  { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['owner', 'admin', 'manager', 'super_admin'] },
   { label: 'Washing', href: '/washing', icon: Waves },
-  { label: 'Staff', href: '/staff', icon: UserCog, roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Expenses', href: '/expenses', icon: Wallet, roles: ['owner', 'manager', 'super_admin'] },
+  { label: 'Staff', href: '/staff', icon: UserCog, roles: ['owner', 'admin', 'manager', 'super_admin'] },
+  { label: 'Expenses', href: '/expenses', icon: Wallet, roles: ['owner', 'admin', 'manager', 'super_admin'] },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [

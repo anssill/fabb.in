@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils'
 
 const SETTINGS_SECTIONS = [
   { label: 'Company Profile', icon: Building2, href: '/settings/company', roles: ['owner', 'super_admin'] },
-  { label: 'Branches', icon: MapPin, href: '/settings/branches', roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Staff', icon: Users, href: '/staff', roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Booking Rules', icon: Settings, href: '/settings/booking-rules', roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Operations', icon: ClipboardCheck, href: '/settings/operations', roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Invoice Settings', icon: Receipt, href: '/settings/invoice', roles: ['owner', 'manager', 'super_admin'] },
+  { label: 'Branches', icon: MapPin, href: '/settings/branches', roles: ['owner', 'admin', 'manager', 'super_admin'] },
+  { label: 'Staff', icon: Users, href: '/staff', roles: ['owner', 'admin', 'manager', 'super_admin'] },
+  { label: 'Booking Rules', icon: Settings, href: '/settings/booking-rules', roles: ['owner', 'admin', 'manager', 'super_admin'] },
+  { label: 'Operations', icon: ClipboardCheck, href: '/settings/operations', roles: ['owner', 'admin', 'manager', 'super_admin'] },
+  { label: 'Invoice Settings', icon: Receipt, href: '/settings/invoice', roles: ['owner', 'admin', 'manager', 'super_admin'] },
   { label: 'SMS Notifications', icon: MessageSquare, href: '/settings/sms', roles: ['owner', 'super_admin'] },
-  { label: 'Inventory Settings', icon: Package, href: '/settings/inventory', roles: ['owner', 'manager', 'super_admin'] },
+  { label: 'Inventory Settings', icon: Package, href: '/settings/inventory', roles: ['owner', 'admin', 'manager', 'super_admin'] },
   { label: 'Display Preferences', icon: Monitor, href: '/settings/display', roles: ['all'] },
   { label: 'Billing', icon: CreditCard, href: '/settings/billing', roles: ['owner', 'super_admin'] },
   { label: 'My Account', icon: User, href: '/settings/account', roles: ['all'] },
-  { label: 'Audit Log', icon: ShieldCheck, href: '/settings/audit-log', roles: ['owner', 'super_admin'] },
+  { label: 'Audit Log', icon: ShieldCheck, href: '/settings/audit-log', roles: ['owner', 'admin', 'manager', 'super_admin'] },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {

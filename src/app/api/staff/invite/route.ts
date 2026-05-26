@@ -105,6 +105,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: staffError.message }, { status: 500 })
     }
 
+    await supabaseAdmin.from('audit_log').insert({
+      business_id: bizId,
+      branch_id: currentStaff.branch_id,
+      staff_id: currentStaff.id,
+      staff_name: currentStaff.name,
+      action: 'CREATE_STAFF',
+      table_name: 'staff',
+      record_id: staffRecord.id,
+      new_value: {
+        name: staffRecord.name,
+        email: staffRecord.email,
+        role: staffRecord.role,
+        branch_id: staffRecord.branch_id,
+      },
+    })
+
     return NextResponse.json({ 
       success: true, 
       staff: staffRecord,

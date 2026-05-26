@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Plus, UserCog, Search, Mail, Phone, MoreVertical, Pencil, UserMinus, Shield, Building2 } from 'lucide-react'
+import { Plus, UserCog, Search, Mail, Phone, MoreVertical, Pencil, UserMinus, Shield, Building2, ClipboardList, CheckCircle2 } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -37,8 +38,24 @@ interface StaffMember {
   permissions?: Record<string, boolean> | null
 }
 
+interface StaffTask {
+  id: string
+  title: string
+  description: string | null
+  status: 'pending' | 'doing' | 'done' | 'blocked'
+  priority: 'urgent' | 'normal' | 'low'
+  due_at: string | null
+  created_at: string
+  assigned_to: string | null
+  created_by: string | null
+  assignee?: { id: string; name: string | null; email: string; role: string } | { id: string; name: string | null; email: string; role: string }[] | null
+  creator?: { id: string; name: string | null; email: string; role: string } | { id: string; name: string | null; email: string; role: string }[] | null
+  booking?: { id: string; booking_number: string | null } | { id: string; booking_number: string | null }[] | null
+}
+
 interface StaffClientProps {
   initialStaff: StaffMember[]
+  initialTasks: StaffTask[]
   branches: StaffBranchOption[]
   currentUserId: string
   currentUserRole: string
@@ -78,12 +95,14 @@ function getInitialBranchAccess(member: Partial<StaffMember>, branches: StaffBra
   }
 }
 
-export function StaffClient({ initialStaff, branches, currentUserId, currentUserRole }: StaffClientProps) {
+export function StaffClient({ initialStaff, initialTasks, branches, currentUserId, currentUserRole }: StaffClientProps) {
   const router = useRouter()
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
+  const [tasks, setTasks] = useState<StaffTask[]>(initialTasks)
   const [searchQuery, setSearchQuery] = useState('')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isTaskOpen, setIsTaskOpen] = useState(false)
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -107,11 +126,22 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
     branch_id: null as string | null,
     accessible_branch_ids: [] as string[],
   })
+  const [taskData, setTaskData] = useState({
+    title: '',
+    description: '',
+    assigned_to: '',
+    priority: 'normal',
+    due_at: '',
+  })
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false)
 
   useEffect(() => {
     setStaff(initialStaff)
   }, [initialStaff])
+
+  useEffect(() => {
+    setTasks(initialTasks)
+  }, [initialTasks])
 
   const filteredStaff = staff.filter(m => 
     m.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -119,6 +149,7 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
   )
 
   const canManage = ['owner', 'admin', 'manager', 'super_admin'].includes(currentUserRole)
+  const activeTasks = tasks.filter(task => task.status !== 'done')
   const roleSections = [
     { role: 'owner', label: 'Owners', helper: 'Full business control' },
     { role: 'admin', label: 'Admins', helper: 'Branch and team control' },
@@ -270,6 +301,72 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
     }
   }
 
+  function getRelatedRecord<T>(record: T | T[] | null | undefined): T | null {
+    if (!record) return null
+    return Array.isArray(record) ? record[0] || null : record
+  }
+
+  function openTask(member?: StaffMember) {
+    setTaskData({
+      title: '',
+      description: '',
+      assigned_to: member?.id || staff.find(item => item.status === 'active')?.id || '',
+      priority: 'normal',
+      due_at: '',
+    })
+    setIsTaskOpen(true)
+  }
+
+  async function handleCreateTask() {
+    if (!taskData.title.trim() || !taskData.assigned_to) {
+      toast.error('Add a task title and select a staff member')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch('/api/staff/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      })
+      const result = await safeJsonParse(res)
+      if (!res.ok) throw new Error(result.error || 'Failed to assign task')
+
+      toast.success('Task assigned')
+      if (result.task) {
+        setTasks(prev => [result.task, ...prev])
+      }
+      setIsTaskOpen(false)
+      router.refresh()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleTaskStatus(taskId: string, status: StaffTask['status']) {
+    const previousTasks = tasks
+    setTasks(prev => prev.map(task => task.id === taskId ? { ...task, status } : task))
+    try {
+      const res = await fetch('/api/staff/tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, status }),
+      })
+      const result = await safeJsonParse(res)
+      if (!res.ok) throw new Error(result.error || 'Failed to update task')
+      if (result.task) {
+        setTasks(prev => prev.map(task => task.id === taskId ? result.task : task))
+      }
+      toast.success('Task updated')
+    } catch (error: any) {
+      setTasks(previousTasks)
+      toast.error(error.message)
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!window.confirm('Are you sure you want to delete this staff member? This action cannot be undone.')) return
     
@@ -305,10 +402,16 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
         </div>
         
         {canManage && (
-          <Button onClick={openInvite} className="h-10 px-6">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Staff
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => openTask()} className="h-10 px-5">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Assign Task
+            </Button>
+            <Button onClick={openInvite} className="h-10 px-6">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Staff
+            </Button>
+          </div>
         )}
       </div>
 
@@ -333,6 +436,87 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
           </Card>
         ))}
       </div>
+
+      <Card className="border-0 bg-white shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">Staff Tasks</h2>
+              <p className="text-xs text-slate-500">Admins, owners, and managers can assign and track daily staff work.</p>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <Badge variant="outline" className="rounded-full bg-slate-50">{activeTasks.length} open</Badge>
+              <Badge variant="outline" className="rounded-full bg-red-50 text-red-700">{tasks.filter(task => task.status === 'blocked').length} blocked</Badge>
+            </div>
+          </div>
+          {tasks.length > 0 ? (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
+                    <th className="py-2 pr-3 font-medium">Task</th>
+                    <th className="py-2 pr-3 font-medium">Staff</th>
+                    <th className="py-2 pr-3 font-medium">Due</th>
+                    <th className="py-2 pr-3 font-medium">Priority</th>
+                    <th className="py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {tasks.slice(0, 8).map(task => {
+                    const assignee = getRelatedRecord(task.assignee)
+                    const booking = getRelatedRecord(task.booking)
+                    return (
+                      <tr key={task.id} className="align-top">
+                        <td className="py-3 pr-3">
+                          <p className="font-medium text-slate-900">{task.title}</p>
+                          <p className="mt-1 max-w-md truncate text-xs text-slate-500">
+                            {booking?.booking_number ? `${booking.booking_number} - ` : ''}{task.description || 'No description'}
+                          </p>
+                        </td>
+                        <td className="py-3 pr-3">
+                          <p className="text-xs font-medium text-slate-800">{assignee?.name || assignee?.email || 'Unassigned'}</p>
+                          <p className="text-[11px] capitalize text-slate-400">{assignee?.role || 'staff'}</p>
+                        </td>
+                        <td className="py-3 pr-3 text-xs text-slate-500 whitespace-nowrap">
+                          {task.due_at ? new Date(task.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'No due date'}
+                        </td>
+                        <td className="py-3 pr-3">
+                          <Badge variant="outline" className={`rounded-full text-[11px] capitalize ${task.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-100' : task.priority === 'low' ? 'bg-slate-50 text-slate-600' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                            {task.priority}
+                          </Badge>
+                        </td>
+                        <td className="py-3">
+                          {canManage ? (
+                            <Select value={task.status} onValueChange={(value) => handleTaskStatus(task.id, value as StaffTask['status'])}>
+                              <SelectTrigger className="h-8 w-32 rounded-xl border-slate-200 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="doing">Doing</SelectItem>
+                                <SelectItem value="done">Done</SelectItem>
+                                <SelectItem value="blocked">Blocked</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="outline" className="rounded-full capitalize">{task.status}</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+              <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+              <p className="text-sm font-medium text-slate-700">No staff tasks yet</p>
+              <p className="mt-1 text-xs text-slate-500">Assign preparation, calling, pickup, return, or custom tasks from here.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStaff.map((member) => {
@@ -371,6 +555,9 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openPermissions(member)} className="text-sm rounded-lg cursor-pointer">
                           <Shield className="w-4 h-4 mr-2 text-slate-500" /> Manage Permissions
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openTask(member)} className="text-sm rounded-lg cursor-pointer">
+                          <ClipboardList className="w-4 h-4 mr-2 text-slate-500" /> Assign Task
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDelete(member.id)} className="text-sm rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
@@ -417,6 +604,86 @@ export function StaffClient({ initialStaff, branches, currentUserId, currentUser
           </div>
         )}
       </div>
+
+      {/* Task Modal */}
+      <Dialog open={isTaskOpen} onOpenChange={setIsTaskOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Assign Staff Task</DialogTitle>
+            <DialogDescription>
+              Create a task that admins, owners, and managers can track from staff and audit screens.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="task-title">Task Title</Label>
+              <Input
+                id="task-title"
+                placeholder="Call customer / prepare item / collect balance"
+                value={taskData.title}
+                onChange={e => setTaskData(prev => ({ ...prev, title: e.target.value }))}
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Assign To</Label>
+              <Select value={taskData.assigned_to} onValueChange={value => setTaskData(prev => ({ ...prev, assigned_to: value }))}>
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {staff.filter(member => member.status === 'active').map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name || member.email} ({member.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Priority</Label>
+                <Select value={taskData.priority} onValueChange={value => setTaskData(prev => ({ ...prev, priority: value }))}>
+                  <SelectTrigger className="rounded-xl border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="task-due">Due Date</Label>
+                <Input
+                  id="task-due"
+                  type="datetime-local"
+                  value={taskData.due_at}
+                  onChange={e => setTaskData(prev => ({ ...prev, due_at: e.target.value }))}
+                  className="rounded-xl border-slate-200"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="task-description">Notes</Label>
+              <Textarea
+                id="task-description"
+                placeholder="Add any handoff note or instruction"
+                value={taskData.description}
+                onChange={e => setTaskData(prev => ({ ...prev, description: e.target.value }))}
+                className="min-h-24 rounded-xl border-slate-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsTaskOpen(false)} className="rounded-xl flex-1 sm:flex-none">Cancel</Button>
+            <Button onClick={handleCreateTask} disabled={isSubmitting} className="flex-1 sm:flex-none">
+              {isSubmitting ? 'Assigning...' : 'Assign Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Invite Modal */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>

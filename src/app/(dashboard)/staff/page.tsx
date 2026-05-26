@@ -29,6 +29,18 @@ export default async function StaffPage() {
     .order('is_default', { ascending: false })
     .order('created_at', { ascending: true })
 
+  const { data: tasks } = await (supabase as any)
+    .from('booking_tasks')
+    .select(`
+      id, title, description, status, priority, due_at, created_at, assigned_to, created_by,
+      assignee:staff!booking_tasks_assigned_to_fkey(id, name, email, role),
+      creator:staff!booking_tasks_created_by_fkey(id, name, email, role),
+      booking:bookings(id, booking_number)
+    `)
+    .eq('business_id', currentStaff.business_id)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
       <div>
@@ -38,6 +50,7 @@ export default async function StaffPage() {
 
       <StaffClient 
         initialStaff={staffMembers || []} 
+        initialTasks={tasks || []}
         branches={branches || []}
         currentUserId={user.id}
         currentUserRole={currentStaff.role}

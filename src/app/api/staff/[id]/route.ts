@@ -37,7 +37,7 @@ export async function PATCH(
 
     const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('staff')
-      .select('id, business_id, branch_id')
+      .select('id, business_id, branch_id, name, email, role, status, permissions, accessible_branch_ids')
       .eq('id', id)
       .single()
 
@@ -104,6 +104,18 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    await supabaseAdmin.from('audit_log').insert({
+      business_id: currentStaff.business_id,
+      branch_id: currentStaff.branch_id,
+      staff_id: currentStaff.id,
+      staff_name: currentStaff.name,
+      action: 'UPDATE_STAFF',
+      table_name: 'staff',
+      record_id: staff.id,
+      old_value: targetStaff,
+      new_value: updatePayload,
+    })
+
     return NextResponse.json({ success: true, staff })
   } catch (error: any) {
     console.error('Staff update error:', error)
@@ -133,7 +145,7 @@ export async function DELETE(
 
     const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('staff')
-      .select('id, business_id')
+      .select('id, business_id, name, email, role, status')
       .eq('id', id)
       .single()
 
@@ -149,6 +161,17 @@ export async function DELETE(
       console.error('Error deleting auth user:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await supabaseAdmin.from('audit_log').insert({
+      business_id: currentStaff.business_id,
+      branch_id: currentStaff.branch_id,
+      staff_id: currentStaff.id,
+      staff_name: currentStaff.name,
+      action: 'DELETE_STAFF',
+      table_name: 'staff',
+      record_id: id,
+      old_value: targetStaff,
+    })
 
     return NextResponse.json({ success: true, message: 'Staff deleted successfully' })
   } catch (error: any) {
