@@ -18,6 +18,7 @@ import { BookingItemsEditor } from './components/BookingItemsEditor'
 import { BookingOperationsPanel } from './components/BookingOperationsPanel'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 import { getOperationStatus, getOperationStatusClass } from '@/lib/operations'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft:     { color: 'bg-slate-100 text-slate-700',   label: 'Draft' },
@@ -59,7 +60,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     .select(`
       *,
       customer:customers(*),
-      branch:branches(name, city),
+      branch:branches(name, city, settings),
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
         id, item_id, item_variant_id, quantity, price, rental_days, subtotal, item_name, size,
@@ -116,6 +117,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
+  const operationSettings = getOperationSettings((branch as any)?.settings)
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.draft
 
@@ -220,20 +222,23 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       )}
 
       {/* Main content with tabs */}
-      <Tabs defaultValue="operations">
-        <TabsList className="bg-white border border-slate-200">
-          <TabsTrigger value="operations">Operations</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="items">Items</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="sms">SMS</TabsTrigger>
+      <Tabs defaultValue={operationSettings.enabled && operationSettings.bookingWorkspace ? 'operations' : 'overview'}>
+        <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-white border border-slate-200 p-1">
+          {operationSettings.enabled && operationSettings.bookingWorkspace && (
+            <TabsTrigger value="operations" className="rounded-lg">Operations</TabsTrigger>
+          )}
+          <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
+          <TabsTrigger value="payments" className="rounded-lg">Payments</TabsTrigger>
+          <TabsTrigger value="items" className="rounded-lg">Items</TabsTrigger>
+          <TabsTrigger value="timeline" className="rounded-lg">Timeline</TabsTrigger>
+          <TabsTrigger value="documents" className="rounded-lg">Documents</TabsTrigger>
+          <TabsTrigger value="sms" className="rounded-lg">SMS</TabsTrigger>
         </TabsList>
 
-        {/* TAB 1 — OVERVIEW */}
+        {operationSettings.enabled && operationSettings.bookingWorkspace && (
         <TabsContent value="operations" className="mt-4">
           <BookingOperationsPanel
+            settings={operationSettings}
             booking={{
               id: booking.id,
               status: booking.status,
@@ -264,6 +269,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             signatures={(signatureData || []) as any[]}
           />
         </TabsContent>
+        )}
 
         <TabsContent value="overview" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

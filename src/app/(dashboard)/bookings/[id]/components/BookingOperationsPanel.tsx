@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getOperationStatus, getOperationStatusClass } from '@/lib/operations'
+import type { OperationSettings } from '@/lib/operation-settings'
 
 type ChecklistItem = {
   id: string
@@ -69,6 +70,7 @@ type Delivery = {
 }
 
 interface Props {
+  settings: OperationSettings
   booking: {
     id: string
     status: string
@@ -114,7 +116,7 @@ const deliveryStatuses = [
   ['failed_delivery', 'Failed delivery'],
 ]
 
-export function BookingOperationsPanel({ booking, checklist, tasks, items, delivery, signatures }: Props) {
+export function BookingOperationsPanel({ settings, booking, checklist, tasks, items, delivery, signatures }: Props) {
   const router = useRouter()
   const [loadingKey, setLoadingKey] = useState<string | null>(null)
   const [handoffNotes, setHandoffNotes] = useState(booking.handoff_notes || '')
@@ -149,6 +151,14 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
   const blockingMissing = checklist.filter(item => item.is_blocking && !item.is_completed)
   const completedCount = checklist.filter(item => item.is_completed).length
   const checklistPct = checklist.length ? Math.round((completedCount / checklist.length) * 100) : 0
+  const firstTab =
+    settings.checklist ? 'checklist'
+      : settings.itemPrep ? 'items'
+        : settings.tasks ? 'tasks'
+          : settings.delivery ? 'delivery'
+            : settings.staffNotes ? 'notes'
+              : 'sign'
+  const hasAnySection = settings.checklist || settings.itemPrep || settings.tasks || settings.delivery || settings.staffNotes || settings.signatures
 
   async function patch(body: Record<string, unknown>, successMessage: string, key: string) {
     setLoadingKey(key)
@@ -199,17 +209,22 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="checklist">
-          <TabsList className="grid h-auto grid-cols-3 rounded-2xl bg-slate-100 p-1 lg:grid-cols-6">
-            <TabsTrigger value="checklist">Checklist</TabsTrigger>
-            <TabsTrigger value="items">Items</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="delivery">Delivery</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="sign">Sign</TabsTrigger>
+        {!hasAnySection ? (
+          <div className="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+            Operation sections are turned off for this branch.
+          </div>
+        ) : (
+        <Tabs defaultValue={firstTab}>
+          <TabsList className="flex h-auto flex-wrap justify-start gap-1 rounded-xl bg-slate-100 p-1">
+            {settings.checklist && <TabsTrigger value="checklist" className="rounded-lg">Checklist</TabsTrigger>}
+            {settings.itemPrep && <TabsTrigger value="items" className="rounded-lg">Items</TabsTrigger>}
+            {settings.tasks && <TabsTrigger value="tasks" className="rounded-lg">Tasks</TabsTrigger>}
+            {settings.delivery && <TabsTrigger value="delivery" className="rounded-lg">Delivery</TabsTrigger>}
+            {settings.staffNotes && <TabsTrigger value="notes" className="rounded-lg">Notes</TabsTrigger>}
+            {settings.signatures && <TabsTrigger value="sign" className="rounded-lg">Sign</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="checklist" className="mt-4 space-y-4">
+          {settings.checklist && <TabsContent value="checklist" className="mt-4 space-y-4">
             {blockingMissing.length > 0 && (
               <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -257,14 +272,14 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
                 {loadingKey === 'ready' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Ready for pickup
               </Button>
-              <Button variant="outline" onClick={() => sendWhatsApp('booking_ready')}>
+              {settings.whatsappActions && <Button variant="outline" onClick={() => sendWhatsApp('booking_ready')}>
                 <MessageCircle className="mr-2 h-4 w-4" />
                 WhatsApp ready
-              </Button>
+              </Button>}
             </div>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="items" className="mt-4 space-y-3">
+          {settings.itemPrep && <TabsContent value="items" className="mt-4 space-y-3">
             {items.map((item) => (
               <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -324,9 +339,9 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
                 </div>
               </div>
             ))}
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="tasks" className="mt-4 space-y-2">
+          {settings.tasks && <TabsContent value="tasks" className="mt-4 space-y-2">
             {tasks.map((task) => (
               <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -345,9 +360,9 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
               </div>
             ))}
             {tasks.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Tasks will appear after the checklist initializes.</p>}
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="delivery" className="mt-4 space-y-3">
+          {settings.delivery && <TabsContent value="delivery" className="mt-4 space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>Delivery mode</Label>
@@ -386,18 +401,18 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
               {loadingKey === 'delivery' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />}
               Save delivery
             </Button>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="notes" className="mt-4 space-y-3">
+          {settings.staffNotes && <TabsContent value="notes" className="mt-4 space-y-3">
             <Textarea value={handoffNotes} onChange={(e) => setHandoffNotes(e.target.value)} placeholder="Handoff notes for next shift..." rows={3} />
             <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal staff notes..." rows={3} />
             <Button onClick={() => patch({ notes: { handoff_notes: handoffNotes, internal_notes: internalNotes } }, 'Notes saved', 'notes')} disabled={loadingKey === 'notes'}>
               {loadingKey === 'notes' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PenLine className="mr-2 h-4 w-4" />}
               Save notes
             </Button>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="sign" className="mt-4 space-y-3">
+          {settings.signatures && <TabsContent value="sign" className="mt-4 space-y-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <p className="text-sm font-semibold">Rental agreement</p>
               <p className="mt-1 text-xs text-slate-500">
@@ -440,8 +455,9 @@ export function BookingOperationsPanel({ booking, checklist, tasks, items, deliv
                 </div>
               ))}
             </div>
-          </TabsContent>
+          </TabsContent>}
         </Tabs>
+        )}
       </CardContent>
     </Card>
   )

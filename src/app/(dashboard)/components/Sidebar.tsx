@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { BranchSwitcher } from './BranchSwitcher'
 import { hasPermission, ROUTE_PERMISSION_MAP } from '@/lib/permissions'
 import { BrandLogo } from '@/components/brand/BrandLogo'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 interface NavItem {
   label: string
@@ -96,6 +97,11 @@ function NavContent({
   }
 
   const isVisible = (item: NavItem) => {
+    if (item.href === '/operations') {
+      const currentBranch = branches.find(branch => branch.id === staff.branch_id)
+      const operationSettings = getOperationSettings(currentBranch?.settings)
+      if (!operationSettings.enabled || !operationSettings.showInSidebar) return false
+    }
     if (!item.roles) {
       // Check individual permissions
       const permKey = ROUTE_PERMISSION_MAP[item.href]

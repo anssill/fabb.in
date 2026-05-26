@@ -9,6 +9,7 @@ import { Plus, Search, CalendarArrowUp, CalendarArrowDown, ChevronRight, AlertTr
 import Link from 'next/link'
 import { useAppStore } from '@/lib/store'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-700',
@@ -57,6 +58,7 @@ export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [scheduleDate, setScheduleDate] = useState(() => formatInputDate(new Date()))
+  const operationSettings = getOperationSettings(activeBranch?.settings)
 
   useEffect(() => {
     async function fetchBookings() {
@@ -143,9 +145,9 @@ export default function BookingsPage() {
           <p className="text-sm text-slate-500">{bookings.length} total bookings across this branch</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
+          {operationSettings.enabled && operationSettings.draftList && <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
             <Link href="/bookings/drafts">Drafts</Link>
-          </Button>
+          </Button>}
           <Button className="h-10 w-full px-4 sm:w-auto" asChild>
             <Link href="/bookings/new">
               <Plus className="w-4 h-4 mr-2" />
@@ -156,12 +158,12 @@ export default function BookingsPage() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-2 overflow-x-auto rounded-[1.25rem] bg-white p-2 shadow-sm sm:rounded-[1.65rem]">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-white p-1.5 shadow-sm">
         {(['all', 'booked', 'ready_for_pickup', 'out', 'returned', 'in_washing', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors
               ${statusFilter === status
                 ? 'bg-[#4f46e5] text-white shadow-sm'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -177,26 +179,27 @@ export default function BookingsPage() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search by booking ID, bill number, or customer..."
-          className="pl-10"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="flex w-full gap-2 sm:w-auto">
-        <Button type="button" variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
-          <List className="mr-2 h-4 w-4" />
-          List
-        </Button>
-        <Button type="button" variant={viewMode === 'calendar' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('calendar')}>
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Schedule
-        </Button>
+      {/* Search and view controls */}
+      <div className="flex flex-col gap-2 rounded-xl bg-white p-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder="Search booking, bill, customer..."
+            className="h-10 border-slate-100 bg-slate-50 pl-10 shadow-none"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:w-56">
+          <Button type="button" variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" className="h-8 rounded-md" onClick={() => setViewMode('list')}>
+            <List className="mr-1.5 h-4 w-4" />
+            List
+          </Button>
+          <Button type="button" variant={viewMode === 'calendar' ? 'default' : 'ghost'} size="sm" className="h-8 rounded-md" onClick={() => setViewMode('calendar')}>
+            <CalendarDays className="mr-1.5 h-4 w-4" />
+            Schedule
+          </Button>
+        </div>
       </div>
 
       {viewMode === 'calendar' && (
@@ -270,13 +273,13 @@ export default function BookingsPage() {
               <Link
                 key={booking.id}
                 href={`/bookings/${booking.id}`}
-                className="group flex items-stretch overflow-hidden rounded-[1.25rem] bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:rounded-[1.65rem]"
+                className="group flex items-stretch overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 {/* Colored left status bar */}
                 <div className={`w-1 flex-shrink-0 ${STATUS_BAR[statusKey] || 'bg-slate-300'}`} />
 
                 {/* Content */}
-                <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-4">
                   {/* Column 1: booking info */}
                   <div className="flex-1 min-w-0">
                     <div className="mb-0.5 flex flex-wrap items-center gap-2">
@@ -290,20 +293,20 @@ export default function BookingsPage() {
                         <Badge className={`text-xs capitalize ${STATUS_COLORS[booking.status] || ''}`}>{booking.status}</Badge>
                       )}
                     </div>
-                    <p className="text-base font-semibold text-slate-900 truncate">{(customer as any)?.name || 'Unknown'}</p>
-                    <p className="text-sm text-slate-500 truncate">
+                    <p className="truncate text-sm font-semibold text-slate-900">{(customer as any)?.name || 'Unknown'}</p>
+                    <p className="truncate text-xs text-slate-500">
                       {(customer as any)?.phone || ''}
                       {itemSummary ? ` · ${itemSummary.slice(0, 50)}${itemSummary.length > 50 ? '…' : ''}` : ''}
                     </p>
                   </div>
 
                   {/* Column 2: dates */}
-                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 sm:block sm:w-44 sm:bg-transparent sm:p-0">
-                    <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2 sm:block sm:w-40 sm:bg-transparent sm:p-0">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
                       <CalendarArrowUp className="w-3.5 h-3.5 text-blue-500" />
                       {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-0.5">
+                    <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-600">
                       <CalendarArrowDown className="w-3.5 h-3.5 text-amber-500" />
                       {booking.return_date ? new Date(booking.return_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
                     </div>
@@ -312,7 +315,7 @@ export default function BookingsPage() {
 
                   {/* Column 3: amount */}
                   <div className="flex items-center justify-between gap-3 sm:block sm:w-28 sm:text-right">
-                    <p className="text-base font-semibold text-slate-900">₹{Number(booking.total_amount ?? 0).toLocaleString('en-IN')}</p>
+                    <p className="text-sm font-semibold text-slate-900">₹{Number(booking.total_amount ?? 0).toLocaleString('en-IN')}</p>
                     {balanceDue > 0 ? (
                       <p className="text-xs text-red-600 font-medium">Balance ₹{balanceDue.toLocaleString('en-IN')}</p>
                     ) : (

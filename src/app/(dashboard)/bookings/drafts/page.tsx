@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { FilePenLine, Plus } from 'lucide-react'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 export default async function BookingDraftsPage() {
   const supabase = await createClient()
@@ -17,6 +19,15 @@ export default async function BookingDraftsPage() {
     .single()
 
   if (!staff) return null
+
+  const { data: branch } = await supabase
+    .from('branches')
+    .select('settings')
+    .eq('id', staff.branch_id)
+    .single()
+
+  const operationSettings = getOperationSettings(branch?.settings)
+  if (!operationSettings.enabled || !operationSettings.draftList) redirect('/bookings')
 
   const { data: drafts } = await supabase
     .from('booking_drafts')

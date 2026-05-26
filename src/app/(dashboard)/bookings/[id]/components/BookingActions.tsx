@@ -89,11 +89,11 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const canCancel = booking.status === 'booked' || booking.status === 'out'
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-wrap gap-2">
       {/* Process Pickup — dedicated page */}
       {(booking.status === 'booked' || booking.status === 'ready_for_pickup') && (
         <Button
-          className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+          className="bg-amber-500 hover:bg-amber-600 text-white"
           size="sm"
           asChild
         >
@@ -107,7 +107,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Process Return — dedicated page */}
       {booking.status === 'out' && (
         <Button
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white"
           size="sm"
           asChild
         >
@@ -121,7 +121,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Close Booking */}
       {booking.status === 'returned' && (
         <Button
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
           size="sm"
           onClick={() => handleManualStatusChange('closed')}
           disabled={isUpdating}
@@ -159,7 +159,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* QR Scanner */}
       <Button
         variant="outline"
-        className="w-full border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"
+        className="border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"
         size="sm"
         onClick={() => setIsScannerOpen(true)}
       >
@@ -170,7 +170,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {/* Reconcile */}
       <Button
         variant="ghost"
-        className="w-full text-slate-400 hover:text-slate-600 hover:bg-slate-50 text-xs py-1 h-auto"
+        className="text-slate-400 hover:text-slate-600 hover:bg-slate-50 text-xs"
         onClick={handleSync}
         disabled={isSyncing}
       >

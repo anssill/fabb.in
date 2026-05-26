@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { OperationsClient } from './OperationsClient'
 import { CalendarCheck, Plus } from 'lucide-react'
+import { getOperationSettings } from '@/lib/operation-settings'
 
 export default async function OperationsPage() {
   const supabase = await createClient()
@@ -17,6 +19,15 @@ export default async function OperationsPage() {
     .single()
 
   if (!staff) return null
+
+  const { data: activeBranch } = await supabase
+    .from('branches')
+    .select('settings')
+    .eq('id', staff.branch_id)
+    .single()
+
+  const operationSettings = getOperationSettings(activeBranch?.settings)
+  if (!operationSettings.enabled) redirect('/dashboard')
 
   const today = new Date().toISOString().slice(0, 10)
   const bookingSelect = `
@@ -127,6 +138,7 @@ export default async function OperationsPage() {
       </div>
 
       <OperationsClient
+        settings={operationSettings}
         pickups={(pickups || []) as any[]}
         returns={(returns || []) as any[]}
         fittings={(fittings || []) as any[]}

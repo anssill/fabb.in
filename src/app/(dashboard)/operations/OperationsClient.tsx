@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarClock, CheckCircle2, ClipboardCheck, CreditCard, Loader2, Package, RefreshCcw, Truck, Waves } from 'lucide-react'
 import { toast } from 'sonner'
 import { getOperationStatusClass, getOperationStatus } from '@/lib/operations'
+import type { OperationSettings } from '@/lib/operation-settings'
 
 interface Props {
+  settings: OperationSettings
   pickups: any[]
   returns: any[]
   fittings: any[]
@@ -76,7 +78,7 @@ function EmptyState({ label }: { label: string }) {
   )
 }
 
-export function OperationsClient({ pickups, returns, fittings, washing, payments, deliveries, tasks }: Props) {
+export function OperationsClient({ settings, pickups, returns, fittings, washing, payments, deliveries, tasks }: Props) {
   const router = useRouter()
   const [loadingTask, setLoadingTask] = useState<string | null>(null)
 
@@ -103,7 +105,12 @@ export function OperationsClient({ pickups, returns, fittings, washing, payments
   return (
     <Tabs defaultValue="pickups" className="space-y-4">
       <TabsList className="grid h-auto grid-cols-2 rounded-2xl bg-white p-1 shadow-sm sm:grid-cols-4 lg:grid-cols-7">
-        {tabs.map(([value, label, Icon]) => (
+        {tabs.filter(([value]) => {
+          if (value === 'fittings') return settings.fittingAlterations
+          if (value === 'delivery') return settings.delivery
+          if (value === 'tasks') return settings.tasks
+          return true
+        }).map(([value, label, Icon]) => (
           <TabsTrigger key={value} value={value} className="rounded-xl data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">
             <Icon className="mr-1.5 h-4 w-4" />
             {label}
