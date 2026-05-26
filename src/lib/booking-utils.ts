@@ -16,3 +16,16 @@ export function calculateBillableRentalDays(pickupDate?: string | null, returnDa
   const calendarDays = Math.ceil((returnDay.getTime() - pickup.getTime()) / MS_PER_DAY)
   return Math.max(1, calendarDays - 1)
 }
+
+export function resolveRentalDays(
+  pickupDate?: string | null,
+  returnDate?: string | null,
+  manualRentalDays?: number | string | null
+): number {
+  const manual = Number(manualRentalDays)
+  if (Number.isFinite(manual) && manual > 0) {
+    return Math.max(1, Math.round(manual))
+  }
+
+  return calculateBillableRentalDays(pickupDate, returnDate)
+}

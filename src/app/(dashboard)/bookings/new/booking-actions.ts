@@ -6,7 +6,7 @@ import { createInternalNotification } from '../../notifications/notification-act
 import { revalidatePath } from 'next/cache'
 import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { resolveRentalDays } from '@/lib/booking-utils'
 import { checklistRowsForBooking, taskRowsForBooking } from '@/lib/operations'
 
 interface BookingData {
@@ -184,7 +184,7 @@ export async function createNewBookingFlow(data: BookingData) {
     const bookingNumber = `${prefix}-${dateStr}-${randomSuffix}`
 
     // 3. Create booking
-    const rentalDays = calculateBillableRentalDays(data.dates.pickup_date, data.dates.return_date)
+    const rentalDays = resolveRentalDays(data.dates.pickup_date, data.dates.return_date, data.dates.rental_days_override)
     const customerRequests = Array.isArray(data.dates.customer_requests)
       ? data.dates.customer_requests.map((request: string) => request.trim()).filter(Boolean)
       : []
@@ -213,6 +213,7 @@ export async function createNewBookingFlow(data: BookingData) {
         delivery_fee: Number(data.pricing.delivery_fee || 0),
         pickup_date: data.dates.pickup_date,
         return_date: data.dates.return_date,
+        rental_days: rentalDays,
         subtotal: data.pricing.subtotal,
         discount_amount: data.pricing.discount_amount ?? 0,
         discount_reason: data.pricing.discount_value > 0

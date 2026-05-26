@@ -17,7 +17,17 @@ export default function NewCustomerPage() {
   const router = useRouter()
   const { staff, activeBranch } = useAppStore()
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', id_type: '', id_number: '', notes: '' })
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    alternate_phone: '',
+    emergency_phone: '',
+    email: '',
+    address: '',
+    id_type: '',
+    id_number: '',
+    notes: '',
+  })
 
   const update = (f: string, v: string) => setForm((p) => ({ ...p, [f]: v }))
 
@@ -72,6 +82,9 @@ export default function NewCustomerPage() {
       if (existing) {
         const { error } = await supabase.from('customers').update({
           name: form.name, email: form.email || null,
+          phone: form.phone,
+          alternate_phone: form.alternate_phone || null,
+          emergency_phone: form.emergency_phone || null,
           address: form.address || null, id_type: form.id_type || null,
           id_number: form.id_number || null, notes: form.notes || null,
         }).eq('id', existing.id)
@@ -82,6 +95,8 @@ export default function NewCustomerPage() {
           business_id: staff.business_id,
           branch_id: activeBranch?.id || staff.branch_id,
           name: form.name, phone: form.phone, email: form.email || null,
+          alternate_phone: form.alternate_phone || null,
+          emergency_phone: form.emergency_phone || null,
           address: form.address || null, id_type: form.id_type || null,
           id_number: form.id_number || null, notes: form.notes || null,
         }).select('id').single()
@@ -109,6 +124,10 @@ export default function NewCustomerPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Full name *</Label><Input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="Arun Kumar" /></div>
             <div className="space-y-2"><Label>Phone *</Label><Input value={form.phone} onChange={(e) => update('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="9876543210" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Alternate phone</Label><Input value={form.alternate_phone} onChange={(e) => update('alternate_phone', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="Optional" /></div>
+            <div className="space-y-2"><Label>Emergency phone</Label><Input value={form.emergency_phone} onChange={(e) => update('emergency_phone', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="Optional" /></div>
           </div>
           <div className="space-y-2"><Label>Email</Label><Input value={form.email} onChange={(e) => update('email', e.target.value)} type="email" /></div>
           <div className="space-y-2"><Label>Address</Label><Input value={form.address} onChange={(e) => update('address', e.target.value)} /></div>

@@ -18,7 +18,7 @@ import { DatesStep } from './steps/DatesStep'
 import { PricingStep } from './steps/PricingStep'
 import { PaymentStep } from './steps/PaymentStep'
 import { ReceiptStep } from './steps/ReceiptStep'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { resolveRentalDays } from '@/lib/booking-utils'
 
 export interface BookingCustomer {
   id?: string
@@ -50,6 +50,7 @@ export interface BookingDates {
   event_date: string
   pickup_date: string
   return_date: string
+  rental_days_override?: number
   fitting_date?: string
   occasion?: string
   booking_source?: 'walk_in' | 'phone' | 'whatsapp' | 'referral' | 'repeat'
@@ -182,7 +183,7 @@ export default function NewBookingPage() {
           && (!requireCustomerIdProof || !!customer.id_proof_url || !!customer.id_proof_file)
       case 1: {
         if (!dates.event_date || !dates.pickup_date || !dates.return_date) return false
-        const rentalDays = calculateBillableRentalDays(dates.pickup_date, dates.return_date)
+        const rentalDays = resolveRentalDays(dates.pickup_date, dates.return_date, dates.rental_days_override)
         if (rentalDays < minRentalDays) return false
         const today = new Date()
         today.setHours(0, 0, 0, 0)
@@ -208,7 +209,7 @@ export default function NewBookingPage() {
   const handleNext = () => {
     if (currentStep === 2) {
       // Auto-calculate pricing when moving from dates
-      const rentalDays = calculateBillableRentalDays(dates.pickup_date, dates.return_date)
+      const rentalDays = resolveRentalDays(dates.pickup_date, dates.return_date, dates.rental_days_override)
       const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity * rentalDays, 0)
       setPricing((prev) => ({
         ...prev,

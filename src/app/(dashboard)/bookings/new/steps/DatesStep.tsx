@@ -12,7 +12,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { calculateBillableRentalDays, resolveRentalDays } from '@/lib/booking-utils'
 
 interface Props {
   dates: BookingDates
@@ -112,9 +112,14 @@ export function DatesStep({ dates, setDates }: Props) {
     return !minDate || date < minDate
   }
 
-  const rentalDays = dates.pickup_date && dates.return_date
+  const calendarRentalDays = dates.pickup_date && dates.return_date
     ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
     : 0
+  const rentalDays = dates.pickup_date && dates.return_date
+    ? resolveRentalDays(dates.pickup_date, dates.return_date, dates.rental_days_override)
+    : 0
+  const hasCustomRentalDays = Number(dates.rental_days_override) > 0
+  const rentalDayOptions = Array.from(new Set([calendarRentalDays, 1, 2, 3, 4, 5, 7].filter((days) => days > 0)))
   const pickupBeforeEvent = dates.pickup_date && dates.event_date
     ? parseLocalDate(dates.pickup_date)!.getTime() < parseLocalDate(dates.event_date)!.getTime()
     : false
@@ -293,11 +298,61 @@ export function DatesStep({ dates, setDates }: Props) {
           </div>
         </div>
 
-        {rentalDays > 0 && (
-          <div className="p-3 bg-muted border border-border text-foreground rounded-lg">
-            <p className="text-sm font-medium">
-              <span className="font-semibold text-primary">{rentalDays} day{rentalDays !== 1 ? 's' : ''}</span> rental period
-            </p>
+        {calendarRentalDays > 0 && (
+          <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Billable rental days</p>
+                <p className="text-xs text-muted-foreground">
+                  Physical pickup can be early. This controls the days used for price calculation.
+                </p>
+              </div>
+              <div className="rounded-md bg-background px-2 py-1 text-xs font-semibold text-primary ring-1 ring-border">
+                Charging {rentalDays} day{rentalDays !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr] sm:items-end">
+              <div className="space-y-2">
+                <Label>Charge days</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={dates.rental_days_override ?? ''}
+                  onChange={(e) => {
+                    const value = Number(e.target.value)
+                    setDates({
+                      ...dates,
+                      rental_days_override: Number.isFinite(value) && value > 0 ? Math.round(value) : undefined,
+                    })
+                  }}
+                  placeholder={String(calendarRentalDays)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {rentalDayOptions.map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant={rentalDays === days ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDates({ ...dates, rental_days_override: days })}
+                  >
+                    {days}d
+                  </Button>
+                ))}
+                {hasCustomRentalDays && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDates({ ...dates, rental_days_override: undefined })}
+                  >
+                    Use calendar ({calendarRentalDays}d)
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

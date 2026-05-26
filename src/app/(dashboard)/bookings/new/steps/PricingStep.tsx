@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calculator } from 'lucide-react'
 import type { BookingPricing, BookingItem, BookingDates } from '../page'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { resolveRentalDays } from '@/lib/booking-utils'
 
 interface Props {
   pricing: BookingPricing
@@ -19,7 +19,7 @@ interface Props {
 
 export function PricingStep({ pricing, setPricing, items, setItems, dates }: Props) {
   const rentalDays = dates.pickup_date && dates.return_date
-    ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
+    ? resolveRentalDays(dates.pickup_date, dates.return_date, dates.rental_days_override)
     : 1
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity * rentalDays, 0)

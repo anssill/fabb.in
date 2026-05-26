@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { ChevronLeft, User, Phone, Mail, MapPin, CreditCard, CalendarCheck, IndianRupee, Edit, AlertTriangle, Shield, Clock } from 'lucide-react'
+import { ChevronLeft, Phone, Mail, MapPin, CalendarCheck, AlertTriangle, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { CustomerSmsButton } from './components/CustomerSmsButton'
+import { CustomerPhonesEditor } from './components/CustomerPhonesEditor'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -49,7 +50,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <Button variant="ghost" size="sm" asChild><Link href="/customers"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link></Button>
           <h1 className="text-xl font-semibold text-slate-900">Customer Profile</h1>
         </div>
-        <Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" />Edit</Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -71,6 +71,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   </div>
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-slate-600 flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" />{customer.phone}</p>
+                    {customer.alternate_phone && <p className="text-sm text-slate-600 flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" />Alternate: {customer.alternate_phone}</p>}
+                    {customer.emergency_phone && <p className="text-sm text-slate-600 flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" />Emergency: {customer.emergency_phone}</p>}
                     {customer.email && <p className="text-sm text-slate-600 flex items-center gap-2"><Mail className="w-4 h-4 text-slate-400" />{customer.email}</p>}
                     {customer.address && <p className="text-sm text-slate-600 flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-400" />{customer.address}</p>}
                     {customer.id_type && <p className="text-sm text-slate-600 flex items-center gap-2"><Shield className="w-4 h-4 text-slate-400" />{customer.id_type}: {customer.id_number}</p>}
@@ -132,6 +134,13 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <Button variant="outline" className="w-full" size="sm" asChild><a href={`https://wa.me/91${customer.phone}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></Button>
             </CardContent>
           </Card>
+
+          <CustomerPhonesEditor
+            customerId={customer.id}
+            initialPhone={customer.phone}
+            initialAlternatePhone={customer.alternate_phone}
+            initialEmergencyPhone={customer.emergency_phone}
+          />
         </div>
       </div>
     </div>
