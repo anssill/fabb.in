@@ -16,6 +16,7 @@ import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
 import { BookingSmsButton } from './components/BookingSmsButton'
 import { BookingItemsEditor } from './components/BookingItemsEditor'
 import { BookingOperationsPanel } from './components/BookingOperationsPanel'
+import { BillNumberDialog } from './components/BillNumberDialog'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 import { getOperationStatus, getOperationStatusClass } from '@/lib/operations'
 import { getOperationSettings } from '@/lib/operation-settings'
@@ -124,7 +125,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.draft
 
   const isOverdue = booking.status === 'out' && new Date(booking.return_date) < new Date()
-  const rentalDays = (booking as any).rental_days ?? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
+  const bookingItems = (booking.booking_items || []) as any[]
+  const firstItemRentalDays = Number(bookingItems.find((item: any) => Number(item.rental_days) > 0)?.rental_days)
+  const rentalDays = Number.isFinite(firstItemRentalDays) && firstItemRentalDays > 0
+    ? firstItemRentalDays
+    : calculateBillableRentalDays(booking.pickup_date, booking.return_date)
 
   const payments = ((booking.booking_payments || []) as any[]).filter((p: any) => !p.is_voided)
   const totalPaid = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
@@ -132,7 +137,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   const statusSteps = ['pending', 'booked', 'fitting_pending', 'alteration_pending', 'ready_for_pickup', 'out', 'returned', 'closed']
   const currentStepIdx = statusSteps.indexOf(booking.status)
-  const bookingItemRows = ((booking.booking_items || []) as any[]).map((bi: any) => {
+  const bookingItemRows = bookingItems.map((bi: any) => {
     const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
     const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
     return {
@@ -397,21 +402,26 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               {/* Booking Info */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-600" />Booking Info
-                  </CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-blue-600" />Booking Info
+                    </CardTitle>
+                    <BillNumberDialog
+                      bookingId={booking.id}
+                      billNumber={(booking as any).physical_bill_number}
+                      triggerClassName="h-8"
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Booking ID</span>
                     <span className="font-mono text-xs font-medium">{booking.id.slice(0, 8)}…</span>
                   </div>
-                  {(booking as any).physical_bill_number && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Physical bill</span>
-                      <span className="font-mono text-xs font-medium">{(booking as any).physical_bill_number}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Physical bill</span>
+                    <span className="font-mono text-xs font-medium">{(booking as any).physical_bill_number || 'Not added'}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Booked by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>

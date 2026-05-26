@@ -128,6 +128,27 @@ export async function PATCH(
       if (error) throw error
     }
 
+    if (body.billNumber !== undefined) {
+      const billNumber = String(body.billNumber || '').trim().toUpperCase().slice(0, 40) || null
+      const { error } = await admin
+        .from('bookings')
+        .update({
+          physical_bill_number: billNumber,
+          last_updated_by: staff.id,
+        })
+        .eq('id', booking.id)
+      if (error) throw error
+
+      await admin.from('audit_log').insert({
+        business_id: booking.business_id,
+        staff_id: staff.id,
+        action: 'UPDATE_BOOKING_BILL_NUMBER',
+        table_name: 'bookings',
+        record_id: booking.id,
+        new_value: { physical_bill_number: billNumber },
+      })
+    }
+
     if (body.itemId && body.itemUpdate) {
       const allowedFields = [
         'prep_status',

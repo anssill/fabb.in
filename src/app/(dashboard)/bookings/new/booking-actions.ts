@@ -213,7 +213,6 @@ export async function createNewBookingFlow(data: BookingData) {
         delivery_fee: Number(data.pricing.delivery_fee || 0),
         pickup_date: data.dates.pickup_date,
         return_date: data.dates.return_date,
-        rental_days: rentalDays,
         subtotal: data.pricing.subtotal,
         discount_amount: data.pricing.discount_amount ?? 0,
         discount_reason: data.pricing.discount_value > 0
