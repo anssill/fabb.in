@@ -1,13 +1,29 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import { getOperationSettings } from '@/lib/operation-settings'
 
+const DEFAULT_TABLES = ['bookings', 'booking_payments', 'customers', 'items', 'expenses', 'washing_queue', 'staff_attendance']
+
+function getRelevantTables(pathname: string) {
+  if (pathname.startsWith('/bookings')) return ['bookings', 'booking_payments', 'customers', 'items']
+  if (pathname.startsWith('/inventory')) return ['items', 'bookings']
+  if (pathname.startsWith('/customers')) return ['customers', 'bookings']
+  if (pathname.startsWith('/payments')) return ['booking_payments', 'bookings']
+  if (pathname.startsWith('/washing')) return ['washing_queue', 'items']
+  if (pathname.startsWith('/expenses')) return ['expenses']
+  if (pathname.startsWith('/staff')) return ['staff_attendance']
+  if (pathname.startsWith('/operations')) return ['bookings', 'washing_queue', 'staff_attendance']
+  if (pathname.startsWith('/dashboard')) return ['bookings', 'booking_payments', 'expenses', 'washing_queue']
+  return DEFAULT_TABLES
+}
+
 export function DataRealtime() {
   const router = useRouter()
+  const pathname = usePathname()
   const { business, activeBranch } = useAppStore()
   const operationSettings = getOperationSettings(activeBranch?.settings)
   // Use a ref to persist the timeout between renders without triggering them
@@ -19,7 +35,9 @@ export function DataRealtime() {
     // 1. Setup Auth state change listener
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
+
       if (timeoutId.current) {
         clearTimeout(timeoutId.current)
       }
@@ -55,19 +73,11 @@ export function DataRealtime() {
       }, 1000)
     }
 
-    const branchScopedTables = [
-      'bookings',
-      'booking_payments',
-      'customers',
-      'items',
-      'expenses',
-      'washing_queue',
-      'staff_attendance',
-    ]
+    const branchScopedTables = getRelevantTables(pathname)
 
     const channels = branchScopedTables.map(table => 
       supabase
-        .channel(`realtime-branch-${activeBranch.id}-${table}`)
+        .channel(`realtime-branch-${activeBranch.id}-${pathname.replace(/[^a-z0-9-]/gi, '-')}-${table}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter: `branch_id=eq.${activeBranch.id}` },
@@ -81,7 +91,7 @@ export function DataRealtime() {
       authSubscription.unsubscribe()
       channels.forEach(channel => supabase.removeChannel(channel))
     }
-  }, [business?.id, activeBranch?.id, operationSettings.realtimeUpdates, router])
+  }, [business?.id, activeBranch?.id, operationSettings.realtimeUpdates, pathname, router])
 
   return null
 }

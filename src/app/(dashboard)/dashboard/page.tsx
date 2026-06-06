@@ -39,12 +39,61 @@ import {
   Waves,
 } from 'lucide-react'
 import Link from 'next/link'
-import { getRevenueStats } from '../analytics/analytics-actions'
 import { DashboardCalendar } from './components/DashboardCalendar'
 import { DashboardPaymentChart } from './components/DashboardPaymentChart'
 import { DashboardActivity } from './components/DashboardActivity'
 
 const formatMoney = (value: number) => `Rs ${value.toLocaleString('en-IN')}`
+
+const RENTAL_INCOME_TYPES = ['advance', 'balance', 'penalty']
+const REFUND_TYPES = ['refund']
+
+function paymentRevenueValue(payment: { amount: number | string | null; type: string | null }) {
+  const amount = Number(payment.amount) || 0
+  if (REFUND_TYPES.includes(payment.type || '')) return -amount
+  if (RENTAL_INCOME_TYPES.includes(payment.type || '')) return amount
+  return 0
+}
+
+function getWeeklyRevenueData(
+  payments: Array<{ amount: number | string | null; created_at: string; method: string | null; type: string | null }>,
+  expenses: Array<{ amount: number | string | null; expense_date: string | null }>,
+  startDate: Date,
+) {
+  const dailyData = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + index)
+    return {
+      key: date.toISOString().split('T')[0],
+      date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      revenue: 0,
+      expense: 0,
+      profit: 0,
+    }
+  })
+  const dayMap = new Map(dailyData.map(day => [day.key, day]))
+
+  for (const payment of payments) {
+    const day = dayMap.get(payment.created_at.split('T')[0])
+    if (day) day.revenue += paymentRevenueValue(payment)
+  }
+
+  for (const expense of expenses) {
+    if (!expense.expense_date) continue
+    const day = dayMap.get(expense.expense_date)
+    if (day) day.expense += Number(expense.amount) || 0
+  }
+
+  for (const day of dailyData) day.profit = day.revenue - day.expense
+
+  const methods = ['cash', 'upi', 'bank_transfer', 'card']
+  const methodDistribution = methods.map(method => ({
+    name: method === 'bank_transfer' ? 'Bank Transfer' : method.charAt(0).toUpperCase() + method.slice(1),
+    value: payments.filter(payment => payment.method === method).reduce((sum, payment) => sum + paymentRevenueValue(payment), 0),
+  })).filter(method => method.value > 0)
+
+  return { dailyData, methodDistribution }
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -65,8 +114,11 @@ export default async function DashboardPage() {
   calendarStartObj.setDate(calendarStartObj.getDate() - 7)
   const calendarEndObj = new Date(todayObj)
   calendarEndObj.setDate(calendarEndObj.getDate() + 45)
+  const weekStartObj = new Date(todayObj)
+  weekStartObj.setDate(weekStartObj.getDate() - 6)
   const calendarStart = calendarStartObj.toISOString().split('T')[0]
   const calendarEnd = calendarEndObj.toISOString().split('T')[0]
+  const weekStart = weekStartObj.toISOString().split('T')[0]
 
   const [
     { count: activeBookingsCount },
@@ -74,37 +126,42 @@ export default async function DashboardPage() {
     { count: overdueCount },
     { count: totalItemsCount },
     { count: totalCustomersCount },
-    { data: revenueTodayData },
+    { data: weeklyPayments },
+    { data: weeklyExpenses },
     { data: todayPickups },
     { data: todayReturns },
     { data: overdueBookings },
-    revenueData,
     { data: activitiesData },
     { data: washingQueueData },
     { data: recentBookingsData },
     { data: calendarBookingsData },
   ] = await Promise.all([
-    supabase.from('bookings').select('*', { count: 'exact', head: true })
+    supabase.from('bookings').select('id', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).in('status', ['booked', 'out']),
-    supabase.from('bookings').select('*', { count: 'exact', head: true })
+    supabase.from('bookings').select('id', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out'),
-    supabase.from('bookings').select('*', { count: 'exact', head: true })
+    supabase.from('bookings').select('id', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out').lt('return_date', today),
-    supabase.from('items').select('*', { count: 'exact', head: true })
+    supabase.from('items').select('id', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('is_active', true),
-    supabase.from('customers').select('*', { count: 'exact', head: true })
+    supabase.from('customers').select('id', { count: 'exact', head: true })
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id),
-    supabase.from('booking_payments').select('amount')
+    supabase.from('booking_payments').select('amount, created_at, method, type')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
-      .gte('created_at', today + 'T00:00:00')
-      .lte('created_at', today + 'T23:59:59'),
+      .gte('created_at', weekStart + 'T00:00:00')
+      .lte('created_at', today + 'T23:59:59')
+      .eq('is_voided', false)
+      .order('created_at', { ascending: true }),
+    supabase.from('expenses').select('amount, expense_date')
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .gte('expense_date', weekStart)
+      .lte('expense_date', today),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date, return_date, total_amount, balance_due, booking_items(item_name, size, quantity)')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('pickup_date', today).limit(8),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), status, pickup_date, return_date, total_amount, balance_due, booking_items(item_name, size, quantity)')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('return_date', today).limit(8),
     supabase.from('bookings').select('id, booking_number, customer:customers(name, phone), return_date')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('status', 'out').lt('return_date', today).limit(5),
-    getRevenueStats('7d'),
     supabase.from('audit_log').select('id, action, entity_type, staff_name, created_at')
       .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
       .order('created_at', { ascending: false })
@@ -127,7 +184,10 @@ export default async function DashboardPage() {
   ])
 
   const activities = (activitiesData || []).map((a) => ({ ...a, staff_name: a.staff_name || 'System' }))
-  const revenueToday = revenueTodayData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+  const revenueToday = (weeklyPayments || [])
+    .filter(payment => payment.created_at.startsWith(today))
+    .reduce((sum, payment) => sum + paymentRevenueValue(payment), 0)
+  const revenueData = getWeeklyRevenueData(weeklyPayments || [], weeklyExpenses || [], weekStartObj)
   const statCards = [
     {
       title: 'Today Revenue',
