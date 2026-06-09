@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  MoreHorizontal,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +29,14 @@ import { BranchSwitcher } from './BranchSwitcher'
 import { hasPermission, ROUTE_PERMISSION_MAP } from '@/lib/permissions'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { getOperationSettings } from '@/lib/operation-settings'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
 
 interface NavItem {
   label: string
@@ -61,7 +70,7 @@ const BOTTOM_ITEMS: NavItem[] = [
   { label: 'More', href: '/settings', icon: Settings },
 ]
 
-const MOBILE_BOTTOM_HREFS = new Set(['/dashboard', '/bookings', '/inventory', '/customers', '/settings'])
+const MOBILE_PRIMARY_HREFS = new Set(['/dashboard', '/bookings', '/inventory', '/customers'])
 
 function NavContent({ 
   sidebarCollapsed, 
@@ -267,13 +276,25 @@ function NavContent({
 
 function BottomNavigation({
   items,
+  moreItems,
   pathname,
   unreadNotifications,
 }: {
   items: NavItem[]
+  moreItems: NavItem[]
   pathname: string
   unreadNotifications: number
 }) {
+  const router = useRouter()
+  const moreIsActive = moreItems.some(item => pathname === item.href || pathname.startsWith(item.href + '/'))
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 h-16 border-t border-white/80 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden dark:border-slate-800 dark:bg-slate-950/95">
       <div className="mx-auto grid h-full max-w-md grid-cols-5 gap-1">
@@ -305,6 +326,73 @@ function BottomNavigation({
             </Link>
           )
         })}
+        <Sheet>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-xs font-medium transition-all active:scale-95 ${
+                moreIsActive
+                  ? 'bg-[#4f46e5] text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900'
+              }`}
+              aria-label="Open more navigation"
+            >
+              <MoreHorizontal className="h-6 w-6 shrink-0" />
+              <span className="max-w-full truncate">More</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="bottom"
+            className="max-h-[85vh] rounded-t-3xl border-white/80 px-0 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2"
+          >
+            <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200" />
+            <SheetHeader className="px-4 pb-2 pt-3">
+              <SheetTitle>More options</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-2 gap-2 overflow-y-auto px-4 pb-2">
+              {moreItems.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                const badgeCount = item.label === 'Notifications' ? unreadNotifications : item.badge
+
+                return (
+                  <SheetClose asChild key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`relative flex min-h-14 items-center gap-3 rounded-2xl border px-3 text-sm font-medium transition-all active:scale-95 ${
+                        isActive
+                          ? 'border-indigo-200 bg-[#4f46e5] text-white shadow-sm'
+                          : 'border-slate-100 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span className="min-w-0 truncate">{item.label}</span>
+                      {badgeCount ? (
+                        <Badge
+                          variant={isActive ? 'secondary' : 'destructive'}
+                          className="ml-auto h-5 min-w-5 justify-center rounded-full px-1 text-[10px]"
+                        >
+                          {badgeCount}
+                        </Badge>
+                      ) : null}
+                    </Link>
+                  </SheetClose>
+                )
+              })}
+            </div>
+            <div className="border-t border-slate-100 px-4 pt-3 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleSignOut}
+                className="h-12 w-full justify-start rounded-2xl text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="ml-2">Logout</span>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   )
@@ -353,7 +441,9 @@ export function SidebarWrapper({ staff, branches }: Props) {
     return permKey ? hasPermission(role, staff?.permissions, permKey) : true
   }
 
-  const bottomItems = [...NAV_ITEMS, ...BOTTOM_ITEMS].filter(isVisible)
+  const visibleItems = [...NAV_ITEMS, ...BOTTOM_ITEMS].filter(isVisible)
+  const bottomItems = visibleItems.filter(item => MOBILE_PRIMARY_HREFS.has(item.href))
+  const moreItems = visibleItems.filter(item => !MOBILE_PRIMARY_HREFS.has(item.href))
 
   return (
     <>
@@ -412,7 +502,8 @@ export function SidebarWrapper({ staff, branches }: Props) {
       </aside>
 
       <BottomNavigation
-        items={bottomItems.filter(item => MOBILE_BOTTOM_HREFS.has(item.href)).slice(0, 5)}
+        items={bottomItems}
+        moreItems={moreItems}
         pathname={pathname}
         unreadNotifications={unreadNotifications}
       />

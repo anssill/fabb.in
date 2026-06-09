@@ -32,28 +32,12 @@ export function DataRealtime() {
   useEffect(() => {
     const supabase = createClient()
 
-    // 1. Setup Auth state change listener
-    const {
-      data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return
-
-      if (timeoutId.current) {
-        clearTimeout(timeoutId.current)
-      }
-      
-      timeoutId.current = setTimeout(() => {
-        router.refresh()
-      }, 1000)
-    })
-
     if (!business?.id || !activeBranch?.id || !operationSettings.realtimeUpdates) {
       return () => {
-        authSubscription.unsubscribe()
+        if (timeoutId.current) clearTimeout(timeoutId.current)
       }
     }
 
-    // 2. Setup Postgres realtime listener
     const handleUpdate = (payload: any) => {
       // Basic filtering: if the record has a business_id, check if it matches the current business.
       if (payload.new && 'business_id' in payload.new && payload.new.business_id) {
@@ -88,7 +72,6 @@ export function DataRealtime() {
 
     return () => {
       if (timeoutId.current) clearTimeout(timeoutId.current)
-      authSubscription.unsubscribe()
       channels.forEach(channel => supabase.removeChannel(channel))
     }
   }, [business?.id, activeBranch?.id, operationSettings.realtimeUpdates, pathname, router])

@@ -11,15 +11,27 @@ export const getCurrentStaff = cache(async () => {
     return { user: null, staff: null }
   }
 
-  const { data: staff, error } = await supabase
-    .from('staff')
-    .select('id, business_id, branch_id, accessible_branch_ids, role, email, name, permissions, status')
-    .eq('id', user.id)
-    .single()
+  const staffSelect = '*, permissions'
 
-  if (error || !staff) {
+  const { data: staffById, error: idError } = await supabase
+    .from('staff')
+    .select(staffSelect)
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (staffById) {
+    return { user, staff: staffById }
+  }
+
+  if (idError || !user.email) {
     return { user, staff: null }
   }
 
-  return { user, staff }
+  const { data: staffByEmail } = await supabase
+    .from('staff')
+    .select(staffSelect)
+    .eq('email', user.email)
+    .maybeSingle()
+
+  return { user, staff: staffByEmail ?? null }
 })

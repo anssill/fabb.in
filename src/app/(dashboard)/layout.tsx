@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth/current-user'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { SidebarWrapper } from './components/Sidebar'
 import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
@@ -10,16 +10,9 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const user = await getCurrentUser()
+  const { user, staff } = await getCurrentStaff()
 
   if (!user) redirect('/login')
-
-  const { data: staff } = await supabase
-    .from('staff')
-    .select('*, permissions')
-    .eq('id', user.id)
-    .single()
-
   if (!staff) redirect('/login')
   
   // Mandatory setup check
