@@ -14,11 +14,8 @@ import {
   UserCog,
   Wallet,
   Settings,
-  Bell,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  X,
   LogOut,
 } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
@@ -61,9 +58,10 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: Settings },
-  { label: 'Notifications', href: '/notifications', icon: Bell },
+  { label: 'More', href: '/settings', icon: Settings },
 ]
+
+const MOBILE_BOTTOM_HREFS = new Set(['/dashboard', '/bookings', '/inventory', '/customers', '/settings'])
 
 function NavContent({ 
   sidebarCollapsed, 
@@ -158,7 +156,7 @@ function NavContent({
                         href={item.href}
                         className={`relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-colors ${
                           isActive
-                            ? 'bg-[#4f46e5] text-white shadow-sm'
+                            ? 'bg-[#4f46e5] text-white shadow-sm ring-2 ring-indigo-200'
                             : 'text-slate-500 hover:bg-white hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                         }`}
                         onClick={onNavigate}
@@ -277,8 +275,8 @@ function BottomNavigation({
   unreadNotifications: number
 }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/80 bg-white/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl xl:hidden dark:border-slate-800 dark:bg-slate-950/95">
-      <div className="mx-auto flex max-w-4xl gap-1 overflow-x-auto">
+    <nav className="fixed inset-x-0 bottom-0 z-50 h-16 border-t border-white/80 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden dark:border-slate-800 dark:bg-slate-950/95">
+      <div className="mx-auto grid h-full max-w-md grid-cols-5 gap-1">
         {items.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -288,13 +286,13 @@ function BottomNavigation({
             <Link
               key={item.href}
               href={item.href}
-              className={`relative flex min-w-[4.75rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition-colors ${
+              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-xs font-medium transition-all active:scale-95 ${
                 isActive
                   ? 'bg-[#4f46e5] text-white shadow-sm'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900'
               }`}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <Icon className="h-6 w-6 shrink-0" />
               <span className="max-w-full truncate">{item.label}</span>
               {badgeCount ? (
                 <Badge
@@ -359,27 +357,19 @@ export function SidebarWrapper({ staff, branches }: Props) {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="fixed left-3 top-3 z-[60] rounded-full bg-white shadow-sm xl:hidden"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      >
-        {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </Button>
+      {/* Tablet menu button */}
 
-      {/* Mobile overlay */}
+      {/* Tablet overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 xl:hidden"
+          className="fixed inset-0 z-40 hidden bg-black/50 md:block xl:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Mobile and tablet sidebar */}
+      {/* Tablet sidebar drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[min(20rem,calc(100vw-2rem))] transform bg-[#f7f8fd] pb-20 transition-transform duration-300 dark:bg-slate-900 xl:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 hidden w-[min(20rem,calc(100vw-2rem))] transform bg-[#f7f8fd] pb-20 transition-transform duration-300 dark:bg-slate-900 md:block xl:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -422,7 +412,7 @@ export function SidebarWrapper({ staff, branches }: Props) {
       </aside>
 
       <BottomNavigation
-        items={bottomItems}
+        items={bottomItems.filter(item => MOBILE_BOTTOM_HREFS.has(item.href)).slice(0, 5)}
         pathname={pathname}
         unreadNotifications={unreadNotifications}
       />

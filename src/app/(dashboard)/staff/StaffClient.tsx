@@ -465,7 +465,42 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
             </div>
           </div>
           {tasks.length > 0 ? (
-            <div className="mt-4 overflow-x-auto">
+            <>
+            <div className="mt-4 space-y-3 md:hidden">
+              {tasks.slice(0, 8).map(task => {
+                const assignee = getRelatedRecord(task.assignee)
+                const booking = getRelatedRecord(task.booking)
+                return (
+                  <div key={task.id} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
+                        <p className="line-clamp-2 text-xs text-slate-500">{booking?.booking_number ? `${booking.booking_number} - ` : ''}{task.description || 'No description'}</p>
+                      </div>
+                      <Badge variant="outline" className={`rounded-full text-[11px] capitalize ${task.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-100' : task.priority === 'low' ? 'bg-slate-50 text-slate-600' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{task.priority}</Badge>
+                    </div>
+                    <div className="mt-3 flex min-h-12 items-center justify-between gap-2">
+                      <div className="text-xs text-slate-500">
+                        <p>{assignee?.name || assignee?.email || 'Unassigned'}</p>
+                        <p>{task.due_at ? new Date(task.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'No due date'}</p>
+                      </div>
+                      {canManage ? (
+                        <Select value={task.status} onValueChange={(value) => handleTaskStatus(task.id, value as StaffTask['status'])}>
+                          <SelectTrigger className="h-12 w-32 rounded-xl border-slate-200 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="doing">Doing</SelectItem>
+                            <SelectItem value="done">Done</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : <Badge variant="outline" className="rounded-full capitalize">{task.status}</Badge>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-4 hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
@@ -523,6 +558,7 @@ export function StaffClient({ initialStaff, initialTasks, branches, currentUserI
                 </tbody>
               </table>
             </div>
+            </>
           ) : (
             <div className="mt-4 rounded-2xl border border-dashed border-slate-200 p-6 text-center">
               <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-slate-300" />

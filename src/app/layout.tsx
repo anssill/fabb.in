@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
@@ -9,13 +9,24 @@ const inter = Inter({
   variable: '--font-sans',
 })
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#000000',
+}
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://fabbin-xi.vercel.app'),
+  metadataBase: new URL('https://fabbclothing.com'),
   title: 'Fabb — Clothing Rental Management',
   description:
     'India\'s #1 SaaS for clothing rental businesses. Manage inventory, bookings, customers, and payments in one place.',
   keywords: ['clothing rental', 'rental management', 'SaaS', 'India', 'booking software', 'kerala fashion'],
   authors: [{ name: 'Fabb Team' }],
+  manifest: '/manifest.json',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Fabb' },
   icons: {
     icon: [
       { url: '/brand/fabb-icon-32.png', sizes: '32x32', type: 'image/png' },
@@ -26,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Fabb — Clothing Rental Management',
     description: 'Transform your clothing rental business with professional management software.',
-    url: 'https://fabbin-xi.vercel.app',
+    url: 'https://fabbclothing.com',
     siteName: 'Fabb',
     images: [
       {

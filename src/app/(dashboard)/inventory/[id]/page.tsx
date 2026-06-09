@@ -134,7 +134,30 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
               <CardTitle className="text-base font-medium">Size & Stock Variants</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="space-y-3 md:hidden">
+                {(item.item_variants || []).map((v: Record<string, unknown>) => (
+                  <div key={v.id as string} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Size {v.size as string}</p>
+                        <p className="text-xs text-slate-500">{(v.colour as string) || 'No colour'}</p>
+                      </div>
+                      <Badge variant={(v.available_stock as number) === 0 ? 'destructive' : 'secondary'}>
+                        {(v.available_stock as number) === 0 ? 'Out' : 'Available'}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                      <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Total</span><p className="font-semibold">{v.total_stock as number}</p></div>
+                      <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Available</span><p className="font-semibold text-green-600">{v.available_stock as number}</p></div>
+                      <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Reserved</span><p className="font-semibold text-amber-600">{v.reserved_stock as number}</p></div>
+                    </div>
+                    <p className="mt-2 text-right text-sm font-semibold">
+                      Rs {Number((v.price_override as number) || item.price).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-slate-500 border-b">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -61,8 +62,6 @@ export default function PickupPage() {
   const router = useRouter()
   const id = params.id as string
 
-  const [booking, setBooking] = useState<Booking | null>(null)
-  const [loading, setLoading] = useState(true)
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
 
@@ -84,14 +83,14 @@ export default function PickupPage() {
   const [skipDeposit, setSkipDeposit] = useState(false)
   const [depositAlreadyCollected, setDepositAlreadyCollected] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      if (!isValidUuid(id)) {
-        setLoading(false)
-        return
-      }
+  const { data: bookingData, isLoading } = useQuery({
+    queryKey: ['booking-pickup', id],
+    enabled: isValidUuid(id),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
         .select(`
           id, booking_number, status, total_amount, advance_amount,
@@ -104,6 +103,7 @@ export default function PickupPage() {
         .eq('id', id)
         .single()
 
+      if (error) throw error
       if (data) {
         const bk = data as any
         const customer = Array.isArray(bk.customer) ? bk.customer[0] : bk.customer
@@ -122,22 +122,29 @@ export default function PickupPage() {
         const rentalBalance = Math.max(0, Number(bk.total_amount) - rentalPaid)
         const depositBalance = Math.max(0, Number(bk.deposit_amount ?? 0) - depositPaid)
 
-        setBooking({ 
+        return {
           ...bk, 
           customer, 
           rental_balance: rentalBalance, 
           deposit_balance: depositBalance 
-        })
-        setBalanceAmount(String(rentalBalance))
-        setDepositAmount(String(depositBalance))
-        const collected = depositBalance <= 0
-        setDepositAlreadyCollected(collected)
-        if (collected) setSkipDeposit(true)
+        } as Booking
       }
-      setLoading(false)
-    }
-    load()
-  }, [id])
+      return null
+    },
+  })
+
+  const [bookingOverride, setBookingOverride] = useState<Booking | null>(null)
+  const booking = bookingOverride || bookingData || null
+
+  useEffect(() => {
+    if (!bookingData) return
+    setBookingOverride(null)
+    setBalanceAmount(String(bookingData.rental_balance))
+    setDepositAmount(String(bookingData.deposit_balance))
+    const collected = bookingData.deposit_balance <= 0
+    setDepositAlreadyCollected(collected)
+    if (collected) setSkipDeposit(true)
+  }, [bookingData])
 
   const balanceDue = booking ? booking.rental_balance : 0
   const depositNeeded = booking ? booking.deposit_balance : 0
@@ -255,7 +262,7 @@ export default function PickupPage() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -516,7 +523,7 @@ export default function PickupPage() {
                   <Button onClick={() => {
                     const val = parseFloat(newDepositTotal)
                     if (!isNaN(val)) {
-                      setBooking(b => b ? { ...b, deposit_amount: val, deposit_balance: val } : b)
+                      setBookingOverride((b) => (b || booking) ? { ...(b || booking)!, deposit_amount: val, deposit_balance: val } : b)
                       setDepositAmount(String(val))
                       setDepositTotalEdited(true)
                       setDepositAlreadyCollected(false)

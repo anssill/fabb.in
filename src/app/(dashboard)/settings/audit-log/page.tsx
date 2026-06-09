@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, ClipboardList, Users, Clock3 } from 'lucide-react'
@@ -42,10 +43,7 @@ export const metadata = { title: 'Audit Log | Fabb.booking' }
 
 export default async function AuditLogPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: staff } = await supabase.from('staff').select('business_id, role').eq('id', user.id).single()
+  const { staff } = await getCurrentStaff()
   if (!staff) return null
 
   const canViewFullTrack = ['owner', 'admin', 'manager', 'super_admin'].includes(staff.role)
@@ -153,7 +151,31 @@ export default async function AuditLogPage() {
         </CardHeader>
         <CardContent className="p-0">
           {tasks && tasks.length > 0 ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {tasks.slice(0, 20).map((task: any) => {
+                const assignee = Array.isArray(task.assignee) ? task.assignee[0] : task.assignee
+                const creator = Array.isArray(task.creator) ? task.creator[0] : task.creator
+                const booking = Array.isArray(task.booking) ? task.booking[0] : task.booking
+                return (
+                  <div key={task.id} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{task.title}</p>
+                        <p className="text-xs text-slate-500">{booking?.booking_number || task.description || 'Staff task'}</p>
+                      </div>
+                      <Badge variant="outline" className="rounded-full capitalize">{task.status}</Badge>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                      <p><span className="text-slate-400">Assigned:</span> {assignee?.name || assignee?.email || 'Unassigned'}</p>
+                      <p><span className="text-slate-400">By:</span> {creator?.name || creator?.email || 'System'}</p>
+                      <p className="sm:col-span-2"><span className="text-slate-400">Due:</span> {formatDate(task.due_at)}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs text-slate-500">
@@ -187,6 +209,7 @@ export default async function AuditLogPage() {
                 </tbody>
               </table>
             </div>
+            </>
           ) : (
             <div className="p-8 text-center text-sm text-slate-500">No staff tasks yet.</div>
           )}
@@ -202,7 +225,27 @@ export default async function AuditLogPage() {
         </CardHeader>
         <CardContent className="p-0">
           {logs && logs.length > 0 ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {logs.map((log: any) => {
+                const staffRecord = Array.isArray(log.staff) ? log.staff[0] : log.staff
+                const details = previewJson(log.new_value) || previewJson(log.old_value)
+                return (
+                  <div key={log.id} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{staffRecord?.name || log.staff_name || 'System'}</p>
+                        <p className="text-xs text-slate-500">{formatDate(log.timestamp)}</p>
+                      </div>
+                      <Badge className={`text-xs font-medium ${getActionColor(log.action)}`}>{log.action.replace(/_/g, ' ')}</Badge>
+                    </div>
+                    <p className="mt-2 text-xs font-medium capitalize text-slate-700">{log.table_name?.replace(/_/g, ' ')}</p>
+                    {details ? <p className="mt-1 line-clamp-2 text-xs text-slate-500">{details}</p> : null}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs text-slate-500">
@@ -246,6 +289,7 @@ export default async function AuditLogPage() {
                 </tbody>
               </table>
             </div>
+            </>
           ) : (
             <div className="py-16 text-center">
               <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-slate-200" />
@@ -265,7 +309,31 @@ export default async function AuditLogPage() {
         </CardHeader>
         <CardContent className="p-0">
           {attendance && attendance.length > 0 ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="space-y-3 p-3 md:hidden">
+              {attendance.slice(0, 20).map((row: any) => {
+                const person = Array.isArray(row.staff) ? row.staff[0] : row.staff
+                return (
+                  <div key={row.id} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{person?.name || person?.email || 'Staff'}</p>
+                        <p className="text-xs text-slate-500">{row.date}</p>
+                      </div>
+                      <Badge variant="outline" className={`rounded-full ${row.is_valid_location === false ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                        {row.is_valid_location === false ? 'Check' : 'Valid'}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                      <p><span className="text-slate-400">In:</span> {formatDate(row.clock_in_at)}</p>
+                      <p><span className="text-slate-400">Out:</span> {formatDate(row.clock_out_at)}</p>
+                      <p><span className="text-slate-400">Hours:</span> {row.hours_worked ?? '-'}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs text-slate-500">
@@ -298,6 +366,7 @@ export default async function AuditLogPage() {
                 </tbody>
               </table>
             </div>
+            </>
           ) : (
             <div className="p-8 text-center text-sm text-slate-500">No attendance records yet.</div>
           )}

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { getCurrentUser } from './current-user'
 
 export interface CurrentStaffContext {
   userId: string
@@ -14,10 +15,8 @@ export interface CurrentStaffContext {
 }
 
 export async function getCurrentStaffContext(): Promise<CurrentStaffContext> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  await createClient()
+  const user = await getCurrentUser()
 
   if (!user) {
     throw new Error('Not authenticated')

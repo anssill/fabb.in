@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +11,7 @@ import Link from 'next/link'
 import { useAppStore } from '@/lib/store'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 import { getOperationSettings } from '@/lib/operation-settings'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-700',
@@ -51,29 +53,21 @@ function formatInputDate(date: Date) {
 }
 
 export default function BookingsPage() {
-  const { activeBranch } = useAppStore()
-  const [bookings, setBookings] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { activeBranch, staff } = useAppStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [scheduleDate, setScheduleDate] = useState(() => formatInputDate(new Date()))
   const operationSettings = getOperationSettings(activeBranch?.settings)
+  const branchId = activeBranch?.id || staff?.branch_id
 
-  useEffect(() => {
-    async function fetchBookings() {
+  const { data: bookings = [], isLoading } = useQuery({
+    queryKey: ['bookings', staff?.business_id, branchId],
+    enabled: Boolean(staff?.business_id && branchId),
+    staleTime: 60_000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('business_id, branch_id')
-        .eq('id', user.id)
-        .single()
-      if (!staff) return
-
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
         .select(`
           id, booking_number, physical_bill_number, status, pickup_date, return_date, total_amount, balance_due, advance_amount, created_at,
@@ -81,16 +75,15 @@ export default function BookingsPage() {
           customer:customers(id, name, phone),
           booking_items(item_name, size, quantity)
         `)
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', staff.branch_id)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
         .order('created_at', { ascending: false })
         .limit(200)
 
-      setBookings(data || [])
-      setLoading(false)
-    }
-    fetchBookings()
-  }, [activeBranch?.id])
+      if (error) throw error
+      return data || []
+    },
+  })
 
   // Count per status
   const counts = useMemo(() => {
@@ -145,10 +138,10 @@ export default function BookingsPage() {
           <p className="text-sm text-slate-500">{bookings.length} total bookings across this branch</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          {operationSettings.enabled && operationSettings.draftList && <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
+          {operationSettings.enabled && operationSettings.draftList && <Button variant="outline" className="w-full px-4 sm:w-auto md:h-10" asChild>
             <Link href="/bookings/drafts">Drafts</Link>
           </Button>}
-          <Button className="h-10 w-full px-4 sm:w-auto" asChild>
+          <Button className="w-full px-4 sm:w-auto md:h-10" asChild>
             <Link href="/bookings/new">
               <Plus className="w-4 h-4 mr-2" />
               New Booking
@@ -158,12 +151,12 @@ export default function BookingsPage() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-white p-1.5 shadow-sm">
+      <div className="grid grid-cols-1 gap-1 rounded-xl sm:grid-cols-2 bg-white p-1.5 shadow-sm sm:flex sm:flex-wrap">
         {(['all', 'booked', 'ready_for_pickup', 'out', 'returned', 'in_washing', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors
+            className={`min-h-10 rounded-lg px-3 py-2 text-xs font-semibold transition-colors sm:min-h-0 sm:py-1.5
               ${statusFilter === status
                 ? 'bg-[#4f46e5] text-white shadow-sm'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -185,17 +178,17 @@ export default function BookingsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Search booking, bill, customer..."
-            className="h-10 border-slate-100 bg-slate-50 pl-10 shadow-none"
+            className="h-11 border-slate-100 bg-slate-50 pl-10 shadow-none md:h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:w-56">
-          <Button type="button" variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" className="h-8 rounded-md" onClick={() => setViewMode('list')}>
+        <div className="grid grid-cols-1 gap-1 rounded-lg sm:grid-cols-2 bg-slate-100 p-1 sm:w-56">
+          <Button type="button" variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" className="rounded-md md:h-8" onClick={() => setViewMode('list')}>
             <List className="mr-1.5 h-4 w-4" />
             List
           </Button>
-          <Button type="button" variant={viewMode === 'calendar' ? 'default' : 'ghost'} size="sm" className="h-8 rounded-md" onClick={() => setViewMode('calendar')}>
+          <Button type="button" variant={viewMode === 'calendar' ? 'default' : 'ghost'} size="sm" className="rounded-md md:h-8" onClick={() => setViewMode('calendar')}>
             <CalendarDays className="mr-1.5 h-4 w-4" />
             Schedule
           </Button>
@@ -213,7 +206,7 @@ export default function BookingsPage() {
               type="date"
               value={scheduleDate}
               onChange={(event) => setScheduleDate(event.target.value)}
-              className="w-full sm:w-48"
+              className="h-11 w-full sm:w-48 md:h-10"
             />
           </div>
           {scheduledDays.length > 0 ? scheduledDays.map(([date, dayBookings]) => (
@@ -255,8 +248,8 @@ export default function BookingsPage() {
 
       {/* Booking Cards */}
       {viewMode === 'list' && <div className="space-y-2">
-        {loading ? (
-          <div className="text-center py-20 text-slate-400 text-sm">Loading bookings...</div>
+        {isLoading ? (
+          <BookingsSkeleton />
         ) : filtered.length > 0 ? (
           filtered.map((booking) => {
             const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
@@ -301,7 +294,7 @@ export default function BookingsPage() {
                   </div>
 
                   {/* Column 2: dates */}
-                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2 sm:block sm:w-40 sm:bg-transparent sm:p-0">
+                  <div className="grid grid-cols-1 gap-2 rounded-lg sm:grid-cols-2 bg-slate-50 p-2 sm:block sm:w-40 sm:bg-transparent sm:p-0">
                     <div className="flex items-center gap-1.5 text-xs text-slate-600">
                       <CalendarArrowUp className="w-3.5 h-3.5 text-blue-500" />
                       {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
@@ -347,6 +340,23 @@ export default function BookingsPage() {
           </div>
         )}
       </div>}
+    </div>
+  )
+}
+
+function BookingsSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-sm">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-full max-w-md" />
+          </div>
+          <Skeleton className="hidden h-10 w-28 sm:block" />
+        </div>
+      ))}
     </div>
   )
 }

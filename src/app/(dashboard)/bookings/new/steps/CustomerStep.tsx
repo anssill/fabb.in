@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,103 +19,59 @@ interface Props {
 export function CustomerStep({ customer, setCustomer }: Props) {
   const { staff, activeBranch } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<BookingCustomer[]>([])
-  const [recentCustomers, setRecentCustomers] = useState<BookingCustomer[]>([])
   const [isNew, setIsNew] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const [loadingRecent, setLoadingRecent] = useState(false)
   const [showExtraPhones, setShowExtraPhones] = useState(false)
+  const branchId = activeBranch?.id || staff?.branch_id
+  const trimmedSearch = searchQuery.trim()
 
-  // Fetch recent customers on mount / when business ID is ready
-  useEffect(() => {
-    async function fetchRecentCustomers() {
-      if (!staff?.business_id) return
-      setLoadingRecent(true)
-      try {
-        const supabase = createClient()
-        const { data } = await supabase
-          .from('customers')
-          .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
-          .eq('business_id', staff.business_id)
-          .eq('branch_id', activeBranch?.id || staff.branch_id)
-          .order('created_at', { ascending: false })
-          .limit(5)
-        setRecentCustomers(data || [])
-      } catch (err) {
-        console.error('Failed to fetch recent customers:', err)
-      } finally {
-        setLoadingRecent(false)
-      }
-    }
-    fetchRecentCustomers()
-  }, [staff?.business_id, staff?.branch_id, activeBranch?.id])
-
-  // Live search debounced query
-  useEffect(() => {
-    const query = searchQuery.trim()
-    if (!query || !staff?.business_id) {
-      setSearchResults([])
-      return
-    }
-
-    const delayDebounce = setTimeout(async () => {
-      setSearching(true)
-      try {
-        const supabase = createClient()
-        const { data } = await supabase
-          .from('customers')
-          .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
-          .eq('business_id', staff.business_id)
-          .eq('branch_id', activeBranch?.id || staff.branch_id)
-          .or(`name.ilike.%${query}%,phone.ilike.%${query}%,alternate_phone.ilike.%${query}%,emergency_phone.ilike.%${query}%,email.ilike.%${query}%`)
-          .order('name', { ascending: true })
-          .limit(5)
-        setSearchResults(data || [])
-      } catch {
-        setSearchResults([])
-      } finally {
-        setSearching(false)
-      }
-    }, 300)
-
-    return () => clearTimeout(delayDebounce)
-  }, [searchQuery, staff?.business_id, staff?.branch_id, activeBranch?.id])
-
-  const handleSearch = async () => {
-    const query = searchQuery.trim()
-    if (!query || !staff?.business_id) return
-    setSearching(true)
-    try {
+  const customerSelect = 'id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings'
+  const { data: recentCustomers = [], isLoading: loadingRecent } = useQuery({
+    queryKey: ['booking-recent-customers', staff?.business_id, branchId],
+    enabled: Boolean(staff?.business_id && branchId && !trimmedSearch),
+    staleTime: 60_000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('customers')
-        .select('id, name, phone, alternate_phone, emergency_phone, email, address, id_type, id_number, blacklisted, total_bookings')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,alternate_phone.ilike.%${query}%,emergency_phone.ilike.%${query}%,email.ilike.%${query}%`)
+        .select(customerSelect)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return data || []
+    },
+  })
+
+  const { data: searchResults = [], isFetching: searching, refetch: refetchSearch } = useQuery({
+    queryKey: ['booking-customer-search', staff?.business_id, branchId, trimmedSearch],
+    enabled: Boolean(staff?.business_id && branchId && trimmedSearch),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('customers')
+        .select(customerSelect)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
+        .or(`name.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%,alternate_phone.ilike.%${trimmedSearch}%,emergency_phone.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%`)
         .order('name', { ascending: true })
         .limit(5)
-
-      setSearchResults(data || [])
-    } catch {
-      setSearchResults([])
-    } finally {
-      setSearching(false)
-    }
-  }
+      if (error) throw error
+      return data || []
+    },
+  })
 
   const selectCustomer = (c: BookingCustomer) => {
     setCustomer(c)
     setIsNew(false)
     setShowExtraPhones(Boolean(c.alternate_phone || c.emergency_phone))
-    setSearchResults([])
   }
 
   const startNew = () => {
     setIsNew(true)
     setCustomer({ name: '', phone: searchQuery.match(/\d{10}/) ? searchQuery : '' })
     setShowExtraPhones(false)
-    setSearchResults([])
   }
 
   const extraPhoneControls = !showExtraPhones ? (
@@ -185,10 +142,13 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
-              <Button variant="outline" onClick={handleSearch} disabled={searching || searchQuery.trim().length < 1}>
+              <Button
+                variant="outline"
+                onClick={() => refetchSearch()}
+                disabled={searching || searchQuery.trim().length < 1}
+              >
                 Search
               </Button>
             </div>

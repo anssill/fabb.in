@@ -147,7 +147,7 @@ export default async function AnalyticsPage({
       </div>
 
       {/* Booking stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
           { label: 'Total Bookings', value: bookingStats.total },
           { label: 'New Customers', value: bookingStats.newCustomers },

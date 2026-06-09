@@ -28,7 +28,7 @@ export function SyncInventoryButton() {
     <Button 
       variant="outline" 
       size="sm" 
-      className="border-slate-200 text-slate-600 hover:bg-slate-50"
+      className="w-full border-slate-200 text-slate-600 hover:bg-slate-50 sm:w-auto"
       onClick={handleSync}
       disabled={isSyncing}
     >

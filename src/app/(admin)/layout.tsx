@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import { AdminSidebar } from './components/AdminSidebar'
 import { AdminHeader } from './components/AdminHeader'
 import { StoreInitializer } from '../(dashboard)/components/StoreInitializer'
@@ -7,7 +8,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   if (!user) redirect('/login')
 

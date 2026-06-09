@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { Search, CreditCard, ClipboardList, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const METHOD_ICONS: Record<string, string> = {
   cash: '💵',
@@ -49,13 +51,10 @@ function revenueValue(payment: { type?: string; amount: number | string; is_void
 }
 
 export default function PaymentsPage() {
-  const { activeBranch } = useAppStore()
-  const [payments, setPayments] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { activeBranch, staff } = useAppStore()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [methodFilter, setMethodFilter] = useState('all')
-  const [role, setRole] = useState('')
 
   // Reconciliation sheet state
   const [reconcileOpen, setReconcileOpen] = useState(false)
@@ -64,37 +63,29 @@ export default function PaymentsPage() {
   const [reconcileNotes, setReconcileNotes] = useState('')
   const [reconcileSaving, setReconcileSaving] = useState(false)
 
-  useEffect(() => {
-    async function fetchPayments() {
+  const branchId = activeBranch?.id || staff?.branch_id
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ['payments', staff?.business_id, branchId],
+    enabled: Boolean(staff?.business_id && branchId),
+    staleTime: 60_000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('business_id, branch_id, role')
-        .eq('id', user.id)
-        .single()
-      if (!staff) return
-      setRole(staff.role)
-
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('booking_payments')
         .select(`
           id, type, amount, method, notes, created_at, is_voided, collected_by,
           booking:bookings(id, booking_number, customer:customers(name, phone)),
           staff:staff!booking_payments_collected_by_fkey(name)
         `)
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
         .order('created_at', { ascending: false })
         .limit(200)
 
-      setPayments(data || [])
-      setLoading(false)
-    }
-    fetchPayments()
-  }, [activeBranch?.id])
+      if (error) throw error
+      return data || []
+    },
+  })
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -176,7 +167,7 @@ export default function PaymentsPage() {
     }
   }
 
-  const isManager = ['owner', 'manager', 'super_admin'].includes(role)
+  const isManager = ['owner', 'manager', 'super_admin'].includes(staff?.role || '')
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
@@ -269,15 +260,16 @@ export default function PaymentsPage() {
       {/* Payment list */}
       <Card>
         <CardContent className="p-0">
-          {loading ? (
-            <div className="text-center py-16 text-slate-400 text-sm">Loading payments...</div>
+          {isLoading ? (
+            <PaymentsSkeleton />
           ) : filtered.length > 0 ? (
             <div className="divide-y divide-slate-100">
               {filtered.map((payment) => {
                 const booking = Array.isArray(payment.booking) ? payment.booking[0] : payment.booking
                 const customer: any = booking?.customer
                 const customerName = Array.isArray(customer) ? customer[0]?.name : customer?.name
-                const staffName = Array.isArray(payment.staff) ? payment.staff[0]?.name : payment.staff?.name
+                const paymentStaff = payment.staff as { name?: string | null } | { name?: string | null }[] | null
+                const staffName = Array.isArray(paymentStaff) ? paymentStaff[0]?.name : paymentStaff?.name
 
                 return (
                   <div key={payment.id} className={`flex flex-col gap-3 p-4 transition-colors hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between ${payment.is_voided ? 'opacity-50' : ''}`}>
@@ -400,6 +392,23 @@ export default function PaymentsPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+    </div>
+  )
+}
+
+function PaymentsSkeleton() {
+  return (
+    <div className="divide-y divide-slate-100">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-4 p-4">
+          <Skeleton className="h-10 w-10 rounded-2xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <Skeleton className="h-8 w-24" />
+        </div>
+      ))}
     </div>
   )
 }

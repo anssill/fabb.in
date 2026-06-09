@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
@@ -7,15 +8,7 @@ import { WashLogDialog } from './WashLogDialog'
 
 export default async function WashingPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: staff } = await supabase
-    .from('staff')
-    .select('id, business_id, branch_id')
-    .eq('id', user.id)
-    .single()
-
+  const { staff } = await getCurrentStaff()
   if (!staff) return null
 
   // Fetch pending items in washing_queue

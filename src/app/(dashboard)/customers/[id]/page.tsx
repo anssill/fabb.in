@@ -1,5 +1,6 @@
 import { CustomerDocumentSection } from './components/CustomerDocumentSection'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { notFound } from 'next/navigation'
 import { isValidUuid } from '@/lib/api-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,27 +20,25 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) notFound()
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
+  const { staff } = await getCurrentStaff()
   if (!staff?.branch_id) notFound()
 
-  const { data: customer } = await supabase
-    .from('customers')
-    .select('*')
-    .eq('id', id)
-    .eq('branch_id', staff.branch_id)
-    .single()
+  const [{ data: customer }, { data: bookings }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .eq('branch_id', staff.branch_id)
+      .single(),
+    supabase
+      .from('bookings')
+      .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due')
+      .eq('customer_id', id)
+      .eq('branch_id', staff.branch_id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ])
   if (!customer) notFound()
-
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due')
-    .eq('customer_id', id)
-    .eq('branch_id', staff.branch_id)
-    .order('created_at', { ascending: false })
-    .limit(20)
 
   const initials = customer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
 

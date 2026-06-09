@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -57,8 +58,6 @@ export default function ReturnPage() {
   const router = useRouter()
   const id = params.id as string
 
-  const [booking, setBooking] = useState<Booking | null>(null)
-  const [loading, setLoading] = useState(true)
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
 
@@ -76,14 +75,14 @@ export default function ReturnPage() {
   const [lateFee, setLateFee] = useState('0')
   const [signatureName, setSignatureName] = useState('')
 
-  useEffect(() => {
-    async function load() {
-      if (!isValidUuid(id)) {
-        setLoading(false)
-        return
-      }
+  const { data: bookingData, isLoading } = useQuery({
+    queryKey: ['booking-return', id],
+    enabled: isValidUuid(id),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('bookings')
         .select(`
           id, booking_number, status, deposit_amount,
@@ -94,25 +93,30 @@ export default function ReturnPage() {
         .eq('id', id)
         .single()
 
+      if (error) throw error
       if (data) {
         const bk = data as any
         const customer = Array.isArray(bk.customer) ? bk.customer[0] : bk.customer
-        setBooking({ ...bk, customer })
-        // Default all items to 'good'
-        const defaultConditions: Record<string, string> = {}
-        const defaultNotes: Record<string, string> = {}
-        for (const item of bk.booking_items || []) {
-          defaultConditions[item.id] = 'good'
-          defaultNotes[item.id] = ''
-        }
-        setConditions(defaultConditions)
-        setConditionNotes(defaultNotes)
-        if (!Number(bk.deposit_amount)) setNoDeposit(true)
+        return { ...bk, customer } as Booking
       }
-      setLoading(false)
+      return null
+    },
+  })
+
+  const booking = bookingData || null
+
+  useEffect(() => {
+    if (!bookingData) return
+    const defaultConditions: Record<string, string> = {}
+    const defaultNotes: Record<string, string> = {}
+    for (const item of bookingData.booking_items || []) {
+      defaultConditions[item.id] = 'good'
+      defaultNotes[item.id] = ''
     }
-    load()
-  }, [id])
+    setConditions(defaultConditions)
+    setConditionNotes(defaultNotes)
+    if (!Number(bookingData.deposit_amount)) setNoDeposit(true)
+  }, [bookingData])
 
   const depositHeld = booking ? Number(booking.deposit_amount ?? 0) : 0
   const deduction = parseFloat(deductionAmount || '0') || 0
@@ -209,7 +213,7 @@ export default function ReturnPage() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <Loader2 className="w-6 h-6 animate-spin text-blue-600" />

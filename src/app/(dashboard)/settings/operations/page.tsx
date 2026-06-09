@@ -1,17 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { OperationsSettingsClient } from './OperationsSettingsClient'
 
 export default async function OperationsSettingsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: staff } = await supabase
-    .from('staff')
-    .select('business_id, branch_id, role')
-    .eq('id', user.id)
-    .single()
-
+  const { staff } = await getCurrentStaff()
   if (!staff) return null
 
   const [{ data: currentBranch }, { data: branches }] = await Promise.all([

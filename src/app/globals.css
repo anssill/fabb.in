@@ -102,6 +102,30 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 48px;
+  }
+
+  @media (min-width: 768px) {
+    input,
+    select,
+    textarea {
+      min-height: revert;
+    }
   }
 }
 

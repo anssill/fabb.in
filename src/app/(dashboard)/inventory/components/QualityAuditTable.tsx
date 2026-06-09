@@ -90,7 +90,51 @@ export function QualityAuditTable({ auditItems }: { auditItems: any[] }) {
         </CardContent>
       </Card>
 
-      <Card className="border bg-card text-card-foreground">
+      <div className="space-y-3 md:hidden">
+        {filteredItems.map(item => (
+          <Card key={item.id} className={
+            loadingId === item.id
+              ? 'opacity-50 pointer-events-none'
+              : 'cursor-pointer border bg-card text-card-foreground transition-all active:scale-[0.99]'
+          }>
+            <CardContent className="flex gap-3 p-3">
+              {item.cover_image_url ? (
+                <img src={item.cover_image_url} alt={item.name} className="h-16 w-16 rounded-xl border border-border object-cover" />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-border bg-muted">
+                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                    <p className="text-xs text-muted-foreground">SKU: {item.sku || 'N/A'} ? {item.total_rentals} rentals</p>
+                  </div>
+                  <Badge variant="outline" className={`${CONDITION_COLORS[item.condition]} font-bold uppercase`}>{item.condition}</Badge>
+                </div>
+                {item.condition_notes && <p className="line-clamp-2 text-xs text-muted-foreground">{item.condition_notes}</p>}
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="secondary">{item.status.replace('_', ' ')}</Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">Manage</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel>Audit Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleSendToMaintenance(item.id)}>Send to Maintenance</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive-foreground focus:bg-destructive" onClick={() => handleRetireItem(item.id)}>Retire Item</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="hidden border bg-card text-card-foreground md:block">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>

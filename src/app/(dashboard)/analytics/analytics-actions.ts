@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import {
   startOfDay, subDays, format, eachDayOfInterval, isSameDay,
   startOfMonth, endOfMonth, subMonths, endOfDay
@@ -27,6 +28,12 @@ function paymentRevenueValue(payment: PaymentLike) {
   return 0
 }
 
+async function requireCurrentStaff() {
+  const { staff } = await getCurrentStaff()
+  if (!staff) throw new Error('Staff record not found')
+  return staff
+}
+
 function getPeriodDates(period: Period): { startDate: Date; endDate: Date; label: string } {
   const now = new Date()
   switch (period) {
@@ -49,43 +56,42 @@ function getPeriodDates(period: Period): { startDate: Date; endDate: Date; label
 
 export async function getRevenueStats(period: Period = '30d') {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
 
   const { startDate, endDate } = getPeriodDates(period)
 
-  const { data: payments, error: pError } = await supabase
-    .from('booking_payments')
-    .select('amount, created_at, method, type')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-    .eq('is_voided', false)
-    .order('created_at', { ascending: true })
+  const [
+    { data: payments, error: pError },
+    { data: expenses, error: eError },
+    { data: bookingsSource },
+  ] = await Promise.all([
+    supabase
+      .from('booking_payments')
+      .select('amount, created_at, method, type')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .eq('is_voided', false)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('expenses')
+      .select('amount, category, expense_date')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .gte('expense_date', startDate.toISOString().split('T')[0])
+      .lte('expense_date', endDate.toISOString().split('T')[0]),
+    supabase
+      .from('bookings')
+      .select('booking_source')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString()),
+  ])
 
   if (pError) throw pError
-
-  const { data: expenses, error: eError } = await supabase
-    .from('expenses')
-    .select('amount, category, expense_date')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .gte('expense_date', startDate.toISOString().split('T')[0])
-    .lte('expense_date', endDate.toISOString().split('T')[0])
-
   if (eError) throw eError
-
-  const { data: bookingsSource } = await supabase
-    .from('bookings')
-    .select('booking_source')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
 
   const interval = eachDayOfInterval({ start: startDate, end: endDate })
 
@@ -124,17 +130,14 @@ export async function getRevenueStats(period: Period = '30d') {
       { name: 'WhatsApp', value: bookingsSource?.filter(b => b.booking_source === 'whatsapp').length || 0 },
       { name: 'Referral', value: bookingsSource?.filter(b => b.booking_source === 'referral').length || 0 },
       { name: 'Repeat', value: bookingsSource?.filter(b => b.booking_source === 'repeat').length || 0 },
+      { name: 'Spot Pickup', value: bookingsSource?.filter(b => b.booking_source === 'spot_pickup').length || 0 },
     ].filter(s => s.value > 0)
   }
 }
 
 export async function getOccasionStats(period: Period = '30d') {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
 
   const { startDate, endDate } = getPeriodDates(period)
 
@@ -163,40 +166,36 @@ export async function getOccasionStats(period: Period = '30d') {
 
 export async function getStaffPerformance(period: Period = '30d') {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: myStaff } = await supabase.from('staff').select('business_id, branch_id, role').eq('id', user.id).single()
-  if (!myStaff) throw new Error('Staff record not found')
+  const myStaff = await requireCurrentStaff()
   if (!['owner', 'manager', 'super_admin'].includes(myStaff.role)) return []
 
   const { startDate, endDate } = getPeriodDates(period)
 
-  const { data: teamMembers } = await supabase
-    .from('staff')
-    .select('id, name, role')
-    .eq('business_id', myStaff.business_id)
-    .eq('branch_id', myStaff.branch_id)
-    .eq('status', 'active')
+  const [{ data: teamMembers }, { data: bookings }, { data: payments }] = await Promise.all([
+    supabase
+      .from('staff')
+      .select('id, name, role')
+      .eq('business_id', myStaff.business_id)
+      .eq('branch_id', myStaff.branch_id)
+      .eq('status', 'active'),
+    supabase
+      .from('bookings')
+      .select('id, created_by, total_amount')
+      .eq('business_id', myStaff.business_id)
+      .eq('branch_id', myStaff.branch_id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString()),
+    supabase
+      .from('booking_payments')
+      .select('amount, type, collected_by')
+      .eq('business_id', myStaff.business_id)
+      .eq('branch_id', myStaff.branch_id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .eq('is_voided', false),
+  ])
 
   if (!teamMembers) return []
-
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('id, created_by, total_amount')
-    .eq('business_id', myStaff.business_id)
-    .eq('branch_id', myStaff.branch_id)
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-
-  const { data: payments } = await supabase
-    .from('booking_payments')
-    .select('amount, type, collected_by')
-    .eq('business_id', myStaff.business_id)
-    .eq('branch_id', myStaff.branch_id)
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-    .eq('is_voided', false)
 
   return teamMembers.map(member => {
     const memberBookings = bookings?.filter(b => b.created_by === member.id) || []
@@ -215,39 +214,35 @@ export async function getStaffPerformance(period: Period = '30d') {
 
 export async function getPLStatement(period: Period = '30d') {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id, role').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
   if (!['owner', 'super_admin'].includes(staff.role)) return null
 
   const { startDate, endDate } = getPeriodDates(period)
 
-  const { data: payments } = await supabase
-    .from('booking_payments')
-    .select('amount, type')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-    .eq('is_voided', false)
-
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select('amount, category')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .gte('expense_date', startDate.toISOString().split('T')[0])
-    .lte('expense_date', endDate.toISOString().split('T')[0])
-
-  const { data: deposits } = await supabase
-    .from('booking_payments')
-    .select('amount, type')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .in('type', ['deposit', 'deposit_refund'])
-    .eq('is_voided', false)
+  const [{ data: payments }, { data: expenses }, { data: deposits }] = await Promise.all([
+    supabase
+      .from('booking_payments')
+      .select('amount, type')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .eq('is_voided', false),
+    supabase
+      .from('expenses')
+      .select('amount, category')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .gte('expense_date', startDate.toISOString().split('T')[0])
+      .lte('expense_date', endDate.toISOString().split('T')[0]),
+    supabase
+      .from('booking_payments')
+      .select('amount, type')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .in('type', ['deposit', 'deposit_refund'])
+      .eq('is_voided', false),
+  ])
 
   const rentalIncome = payments?.filter(p => ['advance', 'balance'].includes(p.type))
     .reduce((s, p) => s + Number(p.amount), 0) || 0
@@ -283,11 +278,7 @@ export async function getPLStatement(period: Period = '30d') {
 
 export async function getBookingStats(period: Period = '30d') {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
 
   const { startDate, endDate } = getPeriodDates(period)
 
@@ -330,11 +321,7 @@ export async function getBookingStats(period: Period = '30d') {
 
 export async function getUtilizationStats() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
 
   const { data: variants, error } = await supabase
     .from('item_variants')
@@ -353,11 +340,7 @@ export async function getUtilizationStats() {
 
 export async function getInventoryPerformance() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
-  if (!staff) throw new Error('Staff record not found')
+  const staff = await requireCurrentStaff()
 
   const { data: items, error } = await supabase
     .from('items')

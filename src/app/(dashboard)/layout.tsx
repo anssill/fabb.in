@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import { SidebarWrapper } from './components/Sidebar'
 import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
@@ -9,7 +10,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   if (!user) redirect('/login')
 
@@ -27,19 +28,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/setup')
   }
 
-  // Fetch business data
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('*')
-    .eq('id', staff.business_id)
-    .single()
-
-  // Get all branches for this business
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('id, name, prefix, address, city, state, phone, email, is_default, status, settings, gps_radius_metres, lat, lng')
-    .eq('business_id', staff.business_id)
-    .eq('status', 'active')
+  const [{ data: business }, { data: branches }] = await Promise.all([
+    supabase
+      .from('businesses')
+      .select('*')
+      .eq('id', staff.business_id)
+      .single(),
+    supabase
+      .from('branches')
+      .select('id, name, prefix, address, city, state, phone, email, is_default, status, settings, gps_radius_metres, lat, lng')
+      .eq('business_id', staff.business_id)
+      .eq('status', 'active'),
+  ])
 
   const branchAccess = Array.isArray(staff.accessible_branch_ids) ? staff.accessible_branch_ids : []
   const visibleBranches = staff.role === 'owner' || staff.role === 'super_admin' || branchAccess.length === 0
@@ -51,14 +51,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const staffWithActiveBranch = { ...staff, branch_id: activeBranchId }
 
   return (
-    <div className="min-h-screen bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
+    <div className="min-h-screen overflow-x-hidden bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
       <StoreInitializer staff={staffWithActiveBranch} business={business} branches={visibleBranches} />
       <SidebarWrapper staff={staffWithActiveBranch} branches={visibleBranches} />
       <NotificationRealtime />
       <DataRealtime />
-      <div className="flex min-h-screen flex-col transition-all duration-300 xl:ml-[17.5rem]">
+      <div className="flex min-h-screen min-w-0 flex-col transition-all duration-300 xl:ml-[17.5rem]">
         <Header staff={staff} />
-        <main className="flex-1 px-3 pb-24 pt-16 sm:px-5 sm:pt-18 md:pb-28 xl:p-7 xl:pt-20">
+        <main className="min-w-0 flex-1 px-3 pb-[calc(80px+env(safe-area-inset-bottom))] pt-[calc(56px+env(safe-area-inset-top))] sm:px-5 md:pb-8 md:pt-18 xl:p-7 xl:pt-20">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

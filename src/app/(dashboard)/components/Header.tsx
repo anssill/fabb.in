@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, LogOut, User, Settings, Moon, Sun, Search } from 'lucide-react'
+import { Bell, LogOut, User, Settings, Moon, Sun, Search, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 interface Props {
@@ -51,29 +51,29 @@ export function Header({ staff }: Props) {
   const pathSegments = pathname.split('/').filter(Boolean)
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-white/70 bg-[#e9ebf5]/85 px-3 backdrop-blur-xl transition-all duration-300 sm:px-4 xl:left-[17.5rem] xl:px-7 dark:border-slate-800 dark:bg-slate-950/80">
-      <div className="ml-10 flex min-w-0 flex-1 items-center gap-3 xl:ml-0">
-        <div className="hidden h-10 w-10 place-items-center rounded-full bg-white text-slate-600 shadow-sm sm:grid">
+    <header className="fixed left-0 right-0 top-0 z-30 flex h-[calc(56px+env(safe-area-inset-top))] items-end justify-between border-b border-white/70 bg-[#e9ebf5]/90 px-3 pb-2 pt-[env(safe-area-inset-top)] backdrop-blur-xl transition-all duration-300 sm:px-4 md:h-16 md:items-center md:pb-0 md:pt-0 xl:left-[17.5rem] xl:px-7 dark:border-slate-800 dark:bg-slate-950/80">
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-3 md:ml-10 md:justify-start xl:ml-0">
+        <div className="hidden h-10 w-10 place-items-center rounded-full bg-white text-slate-600 shadow-sm md:grid">
           <Search className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold capitalize text-slate-950 dark:text-white">
+          <p className="truncate text-center text-sm font-semibold capitalize text-slate-950 md:text-left dark:text-white">
             {pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
           </p>
-          <p className="hidden text-xs text-slate-500 sm:block">Fabb workspace</p>
+          <p className="hidden text-xs text-slate-500 md:block">Fabb workspace</p>
         </div>
       </div>
 
       {/* Right: Actions */}
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm">
+        <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="hidden h-11 w-11 rounded-full bg-white text-slate-500 shadow-sm md:inline-flex md:h-10 md:w-10">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm"
+          className="relative hidden h-11 w-11 rounded-full bg-white text-slate-500 shadow-sm md:inline-flex md:h-10 md:w-10"
           onClick={() => router.push('/notifications')}
         >
           <Bell className="w-4 h-4" />
@@ -87,9 +87,13 @@ export function Header({ staff }: Props) {
           )}
         </Button>
 
+        <Button variant="ghost" size="icon-sm" className="h-12 w-12 rounded-full bg-white text-slate-700 shadow-sm md:hidden" onClick={() => router.push('/bookings/new')} aria-label="New booking">
+          <Plus className="h-5 w-5" />
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-10 gap-2 rounded-full bg-white px-2 shadow-sm sm:h-11 sm:pr-3">
+            <Button variant="ghost" size="sm" className="hidden h-11 gap-2 rounded-full bg-white px-2 shadow-sm sm:pr-3 md:inline-flex md:h-10">
               <Avatar className="w-7 h-7">
                 <AvatarFallback className="text-xs bg-blue-100 text-blue-700">{initials}</AvatarFallback>
               </Avatar>

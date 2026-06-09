@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,39 +10,31 @@ import { Input } from '@/components/ui/input'
 import { Plus, Search, Users, Phone, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
 import { useAppStore } from '@/lib/store'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function CustomersPage() {
-  const { activeBranch } = useAppStore()
-  const [customers, setCustomers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { activeBranch, staff } = useAppStore()
   const [search, setSearch] = useState('')
+  const branchId = activeBranch?.id || staff?.branch_id
 
-  useEffect(() => {
-    async function fetchCustomers() {
+  const { data: customers = [], isLoading } = useQuery({
+    queryKey: ['customers', staff?.business_id, branchId],
+    enabled: Boolean(staff?.business_id && branchId),
+    staleTime: 60_000,
+    queryFn: async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('business_id, branch_id')
-        .eq('id', user.id)
-        .single()
-      if (!staff) return
-
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('customers')
         .select('id, name, phone, email, total_bookings, total_spent, outstanding_balance, blacklisted, created_at')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
         .order('created_at', { ascending: false })
         .limit(200)
 
-      setCustomers(data || [])
-      setLoading(false)
-    }
-    fetchCustomers()
-  }, [activeBranch?.id])
+      if (error) throw error
+      return data || []
+    },
+  })
 
   // Filter by name or phone client-side
   const filtered = useMemo(() => {
@@ -60,13 +53,13 @@ export default function CustomersPage() {
           <p className="text-sm text-slate-500">{customers.length} customer profiles in this branch</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" className="h-10 w-full px-4 sm:w-auto" asChild>
+          <Button variant="outline" className="w-full px-4 sm:w-auto md:h-10" asChild>
             <Link href="/customers/blacklist">
               <ShieldAlert className="w-4 h-4 mr-2 text-red-500" />
               Blacklist
             </Link>
           </Button>
-          <Button className="h-10 w-full px-4 sm:w-auto" asChild>
+          <Button className="w-full px-4 sm:w-auto md:h-10" asChild>
             <Link href="/customers/new">
               <Plus className="w-4 h-4 mr-2" />
               Add Customer
@@ -81,7 +74,7 @@ export default function CustomersPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Search by name or phone..."
-              className="pl-10"
+              className="h-11 pl-10 md:h-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -91,8 +84,8 @@ export default function CustomersPage() {
 
       <Card>
         <CardContent className="p-0">
-          {loading ? (
-          <div className="text-center py-16 text-slate-400 text-sm">Loading customers...</div>
+          {isLoading ? (
+          <CustomersSkeleton />
         ) : filtered.length > 0 ? (
           <div className="divide-y divide-slate-100">
               {filtered.map((customer) => (
@@ -151,6 +144,23 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function CustomersSkeleton() {
+  return (
+    <div className="divide-y divide-slate-100">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-3 p-4">
+          <Skeleton className="h-10 w-10 rounded-2xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <Skeleton className="h-8 w-20" />
+        </div>
+      ))}
     </div>
   )
 }

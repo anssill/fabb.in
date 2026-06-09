@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { IndianRupee, TrendingDown, TrendingUp } from 'lucide-react'
@@ -18,7 +19,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default async function ExpensesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) return null
 
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
@@ -29,40 +30,40 @@ export default async function ExpensesPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
 
-  // This month's expenses
-  const { data: thisMonthExpenses } = await supabase
-    .from('expenses')
-    .select('category, amount')
-    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
-    .gte('expense_date', monthStart)
-    .lte('expense_date', monthEnd)
-
-  // Last month's expenses (for comparison)
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)
-  const { data: lastMonthExpenses } = await supabase
-    .from('expenses')
-    .select('amount')
-    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
-    .gte('expense_date', lastMonthStart)
-    .lte('expense_date', lastMonthEnd)
-
-  // This month's revenue (from booking_payments)
-  const { data: thisMonthPayments } = await supabase
-    .from('booking_payments')
-    .select('amount, type')
-    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
-    .gte('created_at', monthStart)
-    .lte('created_at', monthEnd + 'T23:59:59')
-    .eq('is_voided', false)
-
-  // All expenses for list view
-  const { data: allExpenses, count } = await supabase
-    .from('expenses')
-    .select('id, description, amount, category, expense_date, receipt_url, created_at', { count: 'exact' })
-    .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
-    .order('expense_date', { ascending: false })
-    .limit(100)
+  const [
+    { data: thisMonthExpenses },
+    { data: lastMonthExpenses },
+    { data: thisMonthPayments },
+    { data: allExpenses, count },
+  ] = await Promise.all([
+    supabase
+      .from('expenses')
+      .select('category, amount')
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .gte('expense_date', monthStart)
+      .lte('expense_date', monthEnd),
+    supabase
+      .from('expenses')
+      .select('amount')
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .gte('expense_date', lastMonthStart)
+      .lte('expense_date', lastMonthEnd),
+    supabase
+      .from('booking_payments')
+      .select('amount, type')
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .gte('created_at', monthStart)
+      .lte('created_at', monthEnd + 'T23:59:59')
+      .eq('is_voided', false),
+    supabase
+      .from('expenses')
+      .select('id, description, amount, category, expense_date, receipt_url, created_at', { count: 'exact' })
+      .eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+      .order('expense_date', { ascending: false })
+      .limit(100),
+  ])
 
   const thisMonthTotal = (thisMonthExpenses || []).reduce((s, e) => s + Number(e.amount), 0)
   const lastMonthTotal = (lastMonthExpenses || []).reduce((s, e) => s + Number(e.amount), 0)

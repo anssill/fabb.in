@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,11 +41,29 @@ interface Props {
 
 export function ExpensesClient({ initialExpenses }: Props) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const filtered = initialExpenses.filter((e) => {
+  const { data: expenses = initialExpenses } = useQuery({
+    queryKey: ['expenses-list'],
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id, description, amount, category, expense_date, receipt_url, created_at')
+        .order('expense_date', { ascending: false })
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as Expense[]
+    },
+    initialData: initialExpenses,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+
+  const filtered = expenses.filter((e) => {
     const matchesSearch = !search || e.description.toLowerCase().includes(search.toLowerCase())
     const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter
     return matchesSearch && matchesCategory
@@ -58,6 +77,7 @@ export function ExpensesClient({ initialExpenses }: Props) {
       const { error } = await supabase.from('expenses').delete().eq('id', id)
       if (error) throw error
       toast.success('Expense deleted')
+      queryClient.setQueryData<Expense[]>(['expenses-list'], (current) => current?.filter((expense) => expense.id !== id) || [])
       router.refresh()
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete')

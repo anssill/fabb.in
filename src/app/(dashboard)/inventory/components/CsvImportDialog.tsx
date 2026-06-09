@@ -193,7 +193,7 @@ export function CsvImportDialog() {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true) }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="w-full sm:w-auto">
           <Upload className="w-4 h-4 mr-2" />
           Import CSV
         </Button>

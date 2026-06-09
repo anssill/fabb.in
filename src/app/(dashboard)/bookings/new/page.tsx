@@ -53,7 +53,7 @@ export interface BookingDates {
   rental_days_override?: number
   fitting_date?: string
   occasion?: string
-  booking_source?: 'walk_in' | 'phone' | 'whatsapp' | 'referral' | 'repeat'
+  booking_source?: 'walk_in' | 'phone' | 'whatsapp' | 'referral' | 'repeat' | 'spot_pickup'
   customer_requests?: string[]
   notes?: string
 }

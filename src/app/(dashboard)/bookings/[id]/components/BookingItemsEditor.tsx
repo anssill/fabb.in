@@ -354,14 +354,14 @@ export function BookingItemsEditor({ bookingId, status, businessId, branchId, it
                       Cancel
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-md">
                     <AlertDialogHeader>
                       <AlertDialogTitle>{status === 'out' ? 'Cancel this picked-up item?' : 'Cancel this item?'}</AlertDialogTitle>
                       <AlertDialogDescription>
                         This removes only {item.item_name} ({item.size}) from the booking, releases its stock, and recalculates the booking total.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
                       <AlertDialogCancel>Keep</AlertDialogCancel>
                       <AlertDialogAction variant="destructive" onClick={() => cancelItem(item.id)}>
                         Cancel item

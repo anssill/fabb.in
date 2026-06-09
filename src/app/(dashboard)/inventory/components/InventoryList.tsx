@@ -167,7 +167,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
                 placeholder="Search items by name, SKU..." 
-                className="pl-10"
+                className="h-11 pl-10 md:h-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -181,7 +181,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-10 w-full justify-start rounded-full bg-white px-4 text-left font-normal shadow-sm sm:min-w-[240px]",
+                        "h-11 w-full justify-start rounded-full bg-white px-4 text-left font-normal shadow-sm md:h-10 sm:min-w-[240px]",
                         !dateRange && "text-muted-foreground"
                       )}
                     >
@@ -220,7 +220,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
               </div>
 
               <select 
-                className="h-10 w-full rounded-full border border-slate-100 bg-white px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 sm:min-w-[150px] sm:w-auto"
+                className="h-11 w-full rounded-full border border-slate-100 bg-white px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 md:h-10 sm:min-w-[150px] sm:w-auto"
                 value={selectedCategory || ''}
                 onChange={(e) => setSelectedCategory(e.target.value || null)}
               >
@@ -232,7 +232,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
 
               <Button 
                 variant="outline" 
-                className="relative h-10 w-full text-foreground sm:w-auto"
+                className="relative w-full text-foreground sm:w-auto md:h-10"
                 onClick={() => setIsScannerOpen(true)}
               >
                 <QrCode className="w-4 h-4 mr-2 text-primary" />

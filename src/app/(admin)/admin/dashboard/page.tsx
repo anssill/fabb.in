@@ -17,21 +17,38 @@ import { GlobalCharts } from './components/GlobalCharts'
 export default async function AdminDashboard() {
   const supabase = await createClient()
 
-  // 1. Core Metrics
-  const { count: businessCount } = await supabase.from('businesses').select('*', { count: 'exact', head: true })
-  const { count: staffCount } = await supabase.from('staff').select('*', { count: 'exact', head: true })
-  const { data: recentPayments } = await supabase.from('booking_payments').select('amount').limit(500)
-  
-  const totalRevenue = recentPayments?.reduce((acc, p) => acc + Number(p.amount), 0) || 0
-
-  // 2. Fetch Growth Data (Last 6 Months)
   const sixMonthsAgo = new Date()
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const [
+    { count: businessCount },
+    { count: staffCount },
+    { data: recentPayments },
+    { data: businessesForGrowth },
+    { data: revenuePoints },
+    { data: recentBusinesses },
+  ] = await Promise.all([
+    supabase.from('businesses').select('*', { count: 'exact', head: true }),
+    supabase.from('staff').select('*', { count: 'exact', head: true }),
+    supabase.from('booking_payments').select('amount').limit(500),
+    supabase
+      .from('businesses')
+      .select('created_at')
+      .filter('created_at', 'gte', sixMonthsAgo.toISOString()),
+    supabase
+      .from('booking_payments')
+      .select('amount, created_at')
+      .filter('created_at', 'gte', thirtyDaysAgo.toISOString()),
+    supabase
+      .from('businesses')
+      .select('id, name, slug, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
   
-  const { data: businessesForGrowth } = await supabase
-    .from('businesses')
-    .select('created_at')
-    .filter('created_at', 'gte', sixMonthsAgo.toISOString())
+  const totalRevenue = recentPayments?.reduce((acc, p) => acc + Number(p.amount), 0) || 0
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const growthMap = new Map()
@@ -54,15 +71,6 @@ export default async function AdminDashboard() {
     .map(([month, count]) => ({ month, count }))
     .reverse()
 
-  // 3. Fetch Revenue Data (Last 30 Days)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-  const { data: revenuePoints } = await supabase
-    .from('booking_payments')
-    .select('amount, created_at')
-    .filter('created_at', 'gte', thirtyDaysAgo.toISOString())
-
   const revenueByDay = new Map()
   for (let i = 0; i < 30; i++) {
     const d = new Date()
@@ -83,12 +91,6 @@ export default async function AdminDashboard() {
       amount 
     }))
     .reverse()
-
-  const { data: recentBusinesses } = await supabase
-    .from('businesses')
-    .select('id, name, slug, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5)
 
   const stats = [
     {
@@ -242,4 +244,3 @@ export default async function AdminDashboard() {
     </div>
   )
 }
-

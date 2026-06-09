@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -50,24 +51,19 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
   const { staff, activeBranch } = useAppStore()
   const branchId = activeBranch?.id || staff?.branch_id
   const [searchQuery, setSearchQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [searching, setSearching] = useState(false)
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
 
   // Real-time stock states
-  const [overlappingQuantities, setOverlappingQuantities] = useState<Record<string, number>>({})
-  const [variantTotalStocks, setVariantTotalStocks] = useState<Record<string, number>>({})
-  const [variantOptions, setVariantOptions] = useState<Record<string, VariantOption[]>>({})
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [variantTotalStockOverrides, setVariantTotalStockOverrides] = useState<Record<string, number>>({})
+  const [variantOptionOverrides, setVariantOptionOverrides] = useState<Record<string, VariantOption[]>>({})
 
-  // Fetch overlapping booking quantities for selected dates
-  const fetchAvailability = async () => {
-    if (!staff?.business_id || !branchId || !dates.pickup_date || !dates.return_date) return
-    setCheckingAvailability(true)
-    try {
+  const availabilityQuery = useQuery({
+    queryKey: ['booking-item-availability', staff?.business_id, branchId, dates.pickup_date, dates.return_date, bufferDays],
+    enabled: Boolean(staff?.business_id && branchId && dates.pickup_date && dates.return_date),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    queryFn: async () => {
       const supabase = createClient()
-      
-      // Calculate pickup_date minus configured turnover buffer
       const pickupDateObj = new Date(dates.pickup_date)
       pickupDateObj.setDate(pickupDateObj.getDate() - bufferDays)
       const pickupMinus1 = pickupDateObj.toISOString().slice(0, 10)
@@ -75,8 +71,8 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       const { data, error } = await supabase
         .from('booking_items')
         .select('item_variant_id, quantity, booking:bookings!inner(status, pickup_date, return_date)')
-        .eq('booking.business_id', staff.business_id)
-        .eq('booking.branch_id', branchId)
+        .eq('booking.business_id', staff!.business_id)
+        .eq('booking.branch_id', branchId!)
         .not('booking.status', 'in', '("cancelled","closed")')
         .lte('booking.pickup_date', dates.return_date)
         .gte('booking.return_date', pickupMinus1)
@@ -88,192 +84,178 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
         const bk = Array.isArray(row.booking) ? row.booking[0] : row.booking
         if (!bk) return
 
-        const activePickup = bk.pickup_date
-        const activeReturn = bk.return_date
-        
-        // Parse return date and add configured buffer
-        const retDate = new Date(activeReturn)
+        const retDate = new Date(bk.return_date)
         retDate.setDate(retDate.getDate() + bufferDays)
         const activeReturnWithBuffer = retDate.toISOString().slice(0, 10)
+        const overlaps = bk.pickup_date <= dates.return_date && dates.pickup_date <= activeReturnWithBuffer
 
-        // Check if [activePickup, activeReturnWithBuffer] overlaps with [dates.pickup_date, dates.return_date]
-        const overlaps = activePickup <= dates.return_date && dates.pickup_date <= activeReturnWithBuffer
-        
         if (overlaps) {
           reserved[row.item_variant_id] = (reserved[row.item_variant_id] || 0) + (row.quantity || 1)
         }
       })
 
-      setOverlappingQuantities(reserved)
-    } catch (err) {
-      console.error('Failed to fetch calendar availability:', err)
+      return reserved
+    },
+  })
+
+  const overlappingQuantities = availabilityQuery.data || {}
+
+  useEffect(() => {
+    if (availabilityQuery.error) {
+      console.error('Failed to fetch calendar availability:', availabilityQuery.error)
       toast.error('Could not verify item availability. Using default stock levels.')
-    } finally {
-      setCheckingAvailability(false)
     }
-  }
+  }, [availabilityQuery.error])
 
-  useEffect(() => {
-    fetchAvailability()
-    }, [dates.pickup_date, dates.return_date, staff?.business_id, branchId, bufferDays])
-
-  // Synchronize variantTotalStocks when results change
-  useEffect(() => {
-    setVariantTotalStocks(prev => {
-      const next = { ...prev }
-      let changed = false
-      results.forEach(item => {
-        item.item_variants.forEach(v => {
-          if (next[v.id] !== v.total_stock) {
-            next[v.id] = v.total_stock
-            changed = true
-          }
-        })
-      })
-      return changed ? next : prev
-    })
-
-    setVariantOptions(prev => {
-      const next = { ...prev }
-      results.forEach(item => {
-        next[item.id] = item.item_variants.map(v => ({
-          id: v.id,
-          item_id: item.id,
-          size: v.size,
-          colour: v.colour || undefined,
-          total_stock: v.total_stock,
-          available_stock: v.available_stock,
-          price: Number(v.price_override ?? item.price),
-        }))
-      })
-      return next
-    })
-  }, [results])
-
-  // Synchronize missing stocks and variant choices for items restored from drafts
-  useEffect(() => {
-    const missingIds = items
-      .map(i => i.variant_id)
-      .filter(id => variantTotalStocks[id] === undefined)
-    const missingItemIds = Array.from(new Set(
-      items
-        .map(i => i.item_id)
-        .filter(itemId => !variantOptions[itemId])
-    ))
-
-    if (missingIds.length === 0 && missingItemIds.length === 0) return
-
-    const fetchMissingVariantDetails = async () => {
-      try {
-        const supabase = createClient()
-        if (missingIds.length > 0) {
-          const { data, error } = await supabase
-            .from('item_variants')
-            .select('id, total_stock')
-            .in('id', missingIds)
-        
-          if (error) throw error
-        
-          setVariantTotalStocks(prev => {
-            const next = { ...prev }
-            data?.forEach(v => {
-              next[v.id] = v.total_stock
-            })
-            return next
-          })
-        }
-
-        if (missingItemIds.length > 0) {
-          const { data, error } = await supabase
-            .from('item_variants')
-            .select('id, item_id, size, colour, total_stock, available_stock, price_override')
-            .in('item_id', missingItemIds)
-            .gt('total_stock', 0)
-
-          if (error) throw error
-
-          setVariantOptions(prev => {
-            const next = { ...prev }
-            missingItemIds.forEach(itemId => {
-              const currentItem = items.find(item => item.item_id === itemId)
-              next[itemId] = (data || [])
-                .filter(v => v.item_id === itemId)
-                .map(v => ({
-                  id: v.id,
-                  item_id: v.item_id,
-                  size: v.size,
-                  colour: v.colour || undefined,
-                  total_stock: v.total_stock,
-                  available_stock: v.available_stock,
-                  price: Number(v.price_override ?? currentItem?.price ?? 0),
-                }))
-            })
-            return next
-          })
-        }
-      } catch (err) {
-        console.error('Failed to fetch missing variant details:', err)
-      }
-    }
-
-    fetchMissingVariantDetails()
-  }, [items, variantTotalStocks, variantOptions])
-
-  const handleSearch = async (rawQuery?: string) => {
-    if (!staff?.business_id || !branchId) return
-    const query = (rawQuery ?? searchQuery).trim()
-    setSearching(true)
-    try {
+  const searchQueryTrimmed = searchQuery.trim()
+  const itemsQuery = useQuery({
+    queryKey: ['booking-item-search', staff?.business_id, branchId, searchQueryTrimmed],
+    enabled: Boolean(staff?.business_id && branchId),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    queryFn: async () => {
       const supabase = createClient()
       let dbQuery = supabase
         .from('items')
         .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, colour, total_stock, available_stock, price_override)')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', branchId)
+        .eq('business_id', staff!.business_id)
+        .eq('branch_id', branchId!)
         .eq('is_active', true)
         .limit(10)
 
-      if (query.length >= 1) {
-        dbQuery = dbQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+      if (searchQueryTrimmed.length >= 1) {
+        dbQuery = dbQuery.or(`name.ilike.%${searchQueryTrimmed}%,sku.ilike.%${searchQueryTrimmed}%`)
       }
 
       const { data, error } = await dbQuery.order('name', { ascending: true })
       if (error) throw error
 
-      const normalized = ((data as SearchResult[]) || [])
+      return (((data as SearchResult[]) || [])
         .map((item) => ({
           ...item,
           item_variants: (item.item_variants || []).filter((v) => Number(v.available_stock || 0) > 0),
         }))
-        .filter((item) => item.item_variants.length > 0)
+        .filter((item) => item.item_variants.length > 0))
+    },
+  })
 
-      setResults(normalized)
-    } catch (error) {
-      console.error('Items search failed:', error)
+  useEffect(() => {
+    if (itemsQuery.error) {
+      console.error('Items search failed:', itemsQuery.error)
       toast.error('Could not load items. Please refresh and try again.')
-      setResults([])
-    } finally {
-      setSearching(false)
     }
+  }, [itemsQuery.error])
+
+  const results = itemsQuery.data || []
+  const searching = itemsQuery.isFetching
+  const checkingAvailability = availabilityQuery.isFetching
+
+  const resultVariantTotalStocks = useMemo(() => {
+    const next: Record<string, number> = {}
+    results.forEach(item => {
+      item.item_variants.forEach(v => {
+        next[v.id] = v.total_stock
+      })
+    })
+    return next
+  }, [results])
+
+  const resultVariantOptions = useMemo(() => {
+    const next: Record<string, VariantOption[]> = {}
+    results.forEach(item => {
+      next[item.id] = item.item_variants.map(v => ({
+        id: v.id,
+        item_id: item.id,
+        size: v.size,
+        colour: v.colour || undefined,
+        total_stock: v.total_stock,
+        available_stock: v.available_stock,
+        price: Number(v.price_override ?? item.price),
+      }))
+    })
+    return next
+  }, [results])
+
+  const baseVariantTotalStocks = useMemo(() => ({ ...resultVariantTotalStocks, ...variantTotalStockOverrides }), [resultVariantTotalStocks, variantTotalStockOverrides])
+  const baseVariantOptions = useMemo(() => ({ ...resultVariantOptions, ...variantOptionOverrides }), [resultVariantOptions, variantOptionOverrides])
+
+  const missingIds = useMemo(() => items
+    .map(i => i.variant_id)
+    .filter(id => baseVariantTotalStocks[id] === undefined), [items, baseVariantTotalStocks])
+  const missingItemIds = useMemo(() => Array.from(new Set(
+    items
+      .map(i => i.item_id)
+      .filter(itemId => !baseVariantOptions[itemId])
+  )), [items, baseVariantOptions])
+
+  const missingVariantDetailsQuery = useQuery({
+    queryKey: ['booking-missing-variant-details', missingIds, missingItemIds],
+    enabled: missingIds.length > 0 || missingItemIds.length > 0,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const supabase = createClient()
+      const [stocksResult, optionsResult] = await Promise.all([
+        missingIds.length > 0
+          ? supabase.from('item_variants').select('id, total_stock').in('id', missingIds)
+          : Promise.resolve({ data: [], error: null }),
+        missingItemIds.length > 0
+          ? supabase
+              .from('item_variants')
+              .select('id, item_id, size, colour, total_stock, available_stock, price_override')
+              .in('item_id', missingItemIds)
+              .gt('total_stock', 0)
+          : Promise.resolve({ data: [], error: null }),
+      ])
+
+      if (stocksResult.error) throw stocksResult.error
+      if (optionsResult.error) throw optionsResult.error
+
+      return { stocks: stocksResult.data || [], options: optionsResult.data || [] }
+    },
+  })
+
+  const missingVariantTotalStocks = useMemo(() => {
+    const next: Record<string, number> = {}
+    missingVariantDetailsQuery.data?.stocks.forEach((v: any) => {
+      next[v.id] = v.total_stock
+    })
+    return next
+  }, [missingVariantDetailsQuery.data])
+
+  const missingVariantOptions = useMemo(() => {
+    const next: Record<string, VariantOption[]> = {}
+    const options = missingVariantDetailsQuery.data?.options || []
+    missingItemIds.forEach(itemId => {
+      const currentItem = items.find(item => item.item_id === itemId)
+      next[itemId] = options
+        .filter((v: any) => v.item_id === itemId)
+        .map((v: any) => ({
+          id: v.id,
+          item_id: v.item_id,
+          size: v.size,
+          colour: v.colour || undefined,
+          total_stock: v.total_stock,
+          available_stock: v.available_stock,
+          price: Number(v.price_override ?? currentItem?.price ?? 0),
+        }))
+    })
+    return next
+  }, [missingVariantDetailsQuery.data, missingItemIds, items])
+
+
+  const variantTotalStocks = useMemo(() => ({ ...baseVariantTotalStocks, ...missingVariantTotalStocks }), [baseVariantTotalStocks, missingVariantTotalStocks])
+  const variantOptions = useMemo(() => ({ ...baseVariantOptions, ...missingVariantOptions }), [baseVariantOptions, missingVariantOptions])
+
+  useEffect(() => {
+    if (missingVariantDetailsQuery.error) {
+      console.error('Failed to fetch missing variant details:', missingVariantDetailsQuery.error)
+    }
+  }, [missingVariantDetailsQuery.error])
+
+  const handleSearch = () => {
+    void itemsQuery.refetch()
   }
-
-  useEffect(() => {
-    if (!staff?.business_id || !branchId) return
-    handleSearch('')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff?.business_id, branchId])
-
-  useEffect(() => {
-    if (!staff?.business_id || !branchId) return
-    if (searchQuery.trim().length === 0) return
-
-    const delayDebounce = setTimeout(() => {
-      handleSearch(searchQuery)
-    }, 250)
-
-    return () => clearTimeout(delayDebounce)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, staff?.business_id, branchId])
 
   const addItem = (item: SearchResult, variant: SearchResult['item_variants'][0]) => {
     const exists = items.find((i) => i.variant_id === variant.id)
@@ -289,7 +271,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       return
     }
 
-    setVariantTotalStocks(prev => ({ ...prev, [variant.id]: variant.total_stock }))
+    setVariantTotalStockOverrides(prev => ({ ...prev, [variant.id]: variant.total_stock }))
 
     setItems([
       ...items,
@@ -352,7 +334,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       return
     }
 
-    setVariantTotalStocks(prev => ({ ...prev, [nextVariant.id]: nextVariant.total_stock }))
+    setVariantTotalStockOverrides(prev => ({ ...prev, [nextVariant.id]: nextVariant.total_stock }))
     setItems(
       items.map((selected) =>
         selected.variant_id === item.variant_id
@@ -393,7 +375,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
               onChange={(e) => {
                 const next = e.target.value
                 setSearchQuery(next)
-                if (next.trim().length === 0) handleSearch('')
+                if (next.trim().length === 0) void itemsQuery.refetch()
               }}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />

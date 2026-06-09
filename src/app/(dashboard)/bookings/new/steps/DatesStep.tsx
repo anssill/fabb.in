@@ -383,6 +383,7 @@ export function DatesStep({ dates, setDates }: Props) {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="walk_in">Walk-in</SelectItem>
+                <SelectItem value="spot_pickup">Spot Pickup</SelectItem>
                 <SelectItem value="phone">Phone</SelectItem>
                 <SelectItem value="whatsapp">WhatsApp</SelectItem>
                 <SelectItem value="referral">Referral</SelectItem>

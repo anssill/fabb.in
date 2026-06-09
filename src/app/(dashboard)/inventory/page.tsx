@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { Button } from '@/components/ui/button'
 import { Plus, Package, Layers, Waves, ShieldAlert, PackageSearch } from 'lucide-react'
 import Link from 'next/link'
@@ -11,10 +12,7 @@ import { CsvImportDialog } from './components/CsvImportDialog'
 
 export default async function InventoryPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
+  const { staff } = await getCurrentStaff()
   if (!staff?.branch_id) return null
 
   const { data: items, count } = await supabase
@@ -83,7 +81,7 @@ export default async function InventoryPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-white p-1 shadow-sm sm:inline-grid sm:w-auto">
+        <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2 rounded-2xl bg-white p-1 shadow-sm sm:inline-grid sm:w-auto">
           <TabsTrigger value="all">
             <PackageSearch className="w-4 h-4 mr-2" />
             All Items ({totalItems})

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,7 +10,7 @@ import { getOperationSettings } from '@/lib/operation-settings'
 
 export default async function BookingDraftsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) return null
 
   const { data: staff } = await supabase
@@ -20,23 +21,24 @@ export default async function BookingDraftsPage() {
 
   if (!staff) return null
 
-  const { data: branch } = await supabase
-    .from('branches')
-    .select('settings')
-    .eq('id', staff.branch_id)
-    .single()
+  const [{ data: branch }, { data: drafts }] = await Promise.all([
+    supabase
+      .from('branches')
+      .select('settings')
+      .eq('id', staff.branch_id)
+      .single(),
+    supabase
+      .from('booking_drafts')
+      .select('id, draft_data, updated_at')
+      .eq('business_id', staff.business_id)
+      .eq('branch_id', staff.branch_id)
+      .eq('staff_id', staff.id)
+      .order('updated_at', { ascending: false })
+      .limit(20),
+  ])
 
   const operationSettings = getOperationSettings(branch?.settings)
   if (!operationSettings.enabled || !operationSettings.draftList) redirect('/bookings')
-
-  const { data: drafts } = await supabase
-    .from('booking_drafts')
-    .select('id, draft_data, updated_at')
-    .eq('business_id', staff.business_id)
-    .eq('branch_id', staff.branch_id)
-    .eq('staff_id', staff.id)
-    .order('updated_at', { ascending: false })
-    .limit(20)
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">

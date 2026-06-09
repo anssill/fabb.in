@@ -1,17 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { BranchesClient } from './BranchesClient'
 
 export const metadata = { title: 'Branches | Fabb.booking' }
 
 export default async function BranchesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { staff: currentStaff } = await getCurrentStaff()
+  if (!currentStaff) return null
 
   // Fetch staff list for manager selection
   const { data: staff } = await supabase
     .from('staff')
     .select('id, name, email')
+    .eq('business_id', currentStaff.business_id)
     .order('name')
 
   return (

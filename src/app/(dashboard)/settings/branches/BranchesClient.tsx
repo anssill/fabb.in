@@ -26,7 +26,7 @@ interface BranchesClientProps {
 }
 
 export function BranchesClient({ initialStaff }: BranchesClientProps) {
-  const { branches, activeBranch, setBranches } = useAppStore()
+  const { branches, activeBranch, staff, setBranches } = useAppStore()
   const supabase = createClient()
   const [editingBranch, setEditingBranch] = useState<BranchData | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -84,11 +84,8 @@ export function BranchesClient({ initialStaff }: BranchesClientProps) {
     }
     setIsSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      const { data: currentStaff } = await supabase.from('staff').select('business_id').eq('id', user.id).single()
-      if (!currentStaff) throw new Error('Business not found')
+      if (!staff?.business_id) throw new Error('Business not found')
+      const currentStaff = staff
 
       const branchPayload = {
         name: formData.name,

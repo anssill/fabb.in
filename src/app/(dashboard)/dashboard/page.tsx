@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth/current-user'
 import type { ElementType } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -97,7 +98,7 @@ function getWeeklyRevenueData(
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) return null
 
   const { data: staff } = await supabase
@@ -257,13 +258,13 @@ export default async function DashboardPage() {
             <p className="text-sm text-slate-500">{weekday}, {reportDate}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className="h-10 rounded-full border-white bg-white px-4 shadow-sm" asChild>
+            <Button variant="outline" size="sm" className="rounded-full border-white bg-white px-4 shadow-sm md:h-10" asChild>
               <Link href="/analytics">
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Analytics
               </Link>
             </Button>
-            <Button size="sm" className="h-10 rounded-full bg-[#4f46e5] px-4 text-white shadow-sm hover:bg-[#4338ca]" asChild>
+            <Button size="sm" className="rounded-full bg-[#4f46e5] px-4 text-white shadow-sm hover:bg-[#4338ca] md:h-10" asChild>
               <Link href="/bookings/new">
                 <Plus className="mr-2 h-4 w-4" />
                 New Booking
@@ -278,7 +279,7 @@ export default async function DashboardPage() {
             <AlertTitle>{overdueBookings.length} overdue return{overdueBookings.length !== 1 ? 's' : ''}</AlertTitle>
             <AlertDescription className="flex flex-col gap-3 text-rose-700 sm:flex-row sm:items-center sm:justify-between">
               <span>Items are past their due date. Contact customers before the day gets busy.</span>
-              <Button variant="outline" size="sm" className="h-8 rounded-full border-rose-200 bg-white text-rose-700" asChild>
+              <Button variant="outline" size="sm" className="rounded-full border-rose-200 bg-white text-rose-700 md:h-8" asChild>
                 <Link href="/bookings?status=overdue">View all <ChevronRight className="ml-1 h-3 w-3" /></Link>
               </Button>
             </AlertDescription>
@@ -329,7 +330,7 @@ export default async function DashboardPage() {
                     <h2 className="text-base font-semibold text-slate-950">Customer Habits</h2>
                     <p className="text-xs text-slate-500">Track revenue and profit by day</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full bg-slate-50 px-3 text-xs text-slate-600">
+                  <Button variant="ghost" size="sm" className="rounded-full bg-slate-50 px-3 text-xs text-slate-600 md:h-8">
                     This week
                     <ChevronDown className="ml-1 h-3.5 w-3.5" />
                   </Button>
@@ -338,16 +339,16 @@ export default async function DashboardPage() {
                   <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-200" /> Revenue</span>
                   <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#4f46e5]" /> Profit</span>
                 </div>
-                <div className="overflow-x-auto">
-                <div className="flex h-[230px] min-w-[460px] items-end gap-3 overflow-hidden sm:gap-5">
+                <div className="min-w-0">
+                <div className="flex h-[230px] min-w-0 items-end gap-2 overflow-hidden sm:gap-5">
                   {barData.map((item) => {
                     const revenueHeight = Math.max(18, Math.round((item.revenue / maxRevenue) * 160))
                     const profitHeight = Math.max(14, Math.round((item.profit / maxProfit) * 140))
                     return (
                       <div key={item.date} className="flex min-w-0 flex-1 flex-col items-center gap-2">
                         <div className="flex h-[172px] items-end gap-1.5">
-                          <div className="w-4 rounded-full bg-slate-200 sm:w-5" style={{ height: `${revenueHeight}px` }} />
-                          <div className="w-4 rounded-full bg-[#4f46e5] sm:w-5" style={{ height: `${profitHeight}px` }} />
+                          <div className="w-3 rounded-full bg-slate-200 sm:w-5" style={{ height: `${revenueHeight}px` }} />
+                          <div className="w-3 rounded-full bg-[#4f46e5] sm:w-5" style={{ height: `${profitHeight}px` }} />
                         </div>
                         <span className="text-[11px] text-slate-400">{item.date}</span>
                       </div>
@@ -367,7 +368,7 @@ export default async function DashboardPage() {
                     <h2 className="text-base font-semibold text-slate-950">Product Statistic</h2>
                     <p className="text-xs text-slate-500">Track your product sales</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full bg-slate-50 px-3 text-xs">
+                  <Button variant="ghost" size="sm" className="rounded-full bg-slate-50 px-3 text-xs md:h-8">
                     Today
                     <ChevronDown className="ml-1 h-3.5 w-3.5" />
                   </Button>
@@ -404,7 +405,7 @@ export default async function DashboardPage() {
                     <h2 className="text-base font-semibold text-slate-950">Customer Growth</h2>
                     <p className="text-xs text-slate-500">Track customer locations</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full bg-slate-50 px-3 text-xs">
+                  <Button variant="ghost" size="sm" className="rounded-full bg-slate-50 px-3 text-xs md:h-8">
                     Today
                     <ChevronDown className="ml-1 h-3.5 w-3.5" />
                   </Button>
@@ -440,7 +441,7 @@ export default async function DashboardPage() {
         </div>
 
         <Tabs defaultValue="schedule" className="w-full">
-          <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-white p-1 shadow-sm sm:h-12 sm:w-auto sm:inline-grid">
+          <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-3 rounded-2xl bg-white p-1 shadow-sm sm:h-12 sm:w-auto sm:inline-grid">
             <TabsTrigger value="schedule" className="rounded-xl data-[state=active]:bg-[#4f46e5] data-[state=active]:text-white">
               <CalendarCheck className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Schedule</span>
@@ -492,7 +493,34 @@ export default async function DashboardPage() {
                     <Link href="/bookings">View all <ChevronRight className="ml-1 h-3 w-3" /></Link>
                   </Button>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="space-y-3 px-4 pb-4 md:hidden">
+                  {(recentBookingsData || []).map((booking) => {
+                    const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+                    return (
+                      <Link key={booking.id} href={`/bookings/${booking.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-[#4f46e5]">{booking.booking_number}</p>
+                            <p className="mt-1 truncate text-sm text-slate-600">{customer?.name ?? '-'}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusBadge(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                          <span className="font-semibold">{formatMoney(Number(booking.total_amount))}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(booking.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                  {(!recentBookingsData || recentBookingsData.length === 0) && (
+                    <div className="py-8 text-center text-sm text-slate-500">No bookings yet</div>
+                  )}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                 <Table className="min-w-[620px]">
                   <TableHeader>
                     <TableRow>
@@ -557,7 +585,38 @@ export default async function DashboardPage() {
                     <Link href="/washing">View all <ChevronRight className="ml-1 h-3 w-3" /></Link>
                   </Button>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="space-y-3 px-4 pb-4 md:hidden">
+                  {(washingQueueData || []).map((entry) => {
+                    const item = Array.isArray(entry.item) ? entry.item[0] : entry.item
+                    const stageColor: Record<string, string> = {
+                      washing: 'bg-blue-50 text-blue-700 border-blue-100',
+                      drying: 'bg-amber-50 text-amber-700 border-amber-100',
+                      ironing: 'bg-orange-50 text-orange-700 border-orange-100',
+                      maintenance: 'bg-rose-50 text-rose-700 border-rose-100',
+                      ready: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    }
+                    return (
+                      <div key={entry.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Sparkles className="h-4 w-4 shrink-0 text-amber-400" />
+                            <span className="truncate font-medium">{item?.name ?? 'Item'}</span>
+                          </div>
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${stageColor[entry.stage] ?? 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                            {entry.stage}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-xs text-slate-500">
+                          Added {new Date(entry.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                    )
+                  })}
+                  {(!washingQueueData || washingQueueData.length === 0) && (
+                    <div className="py-8 text-center text-sm text-slate-500">Queue is empty. Great job.</div>
+                  )}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
                 <Table className="min-w-[460px]">
                   <TableHeader>
                     <TableRow>
@@ -667,7 +726,29 @@ function ScheduleCard({
           <Badge variant="secondary" className="rounded-full">{rows.length}</Badge>
         </div>
         {rows.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-3 px-4 pb-4 md:hidden">
+            {rows.map((booking) => {
+              const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+              return (
+                <Link key={booking.id} href={`/bookings/${booking.id}`} className="block rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[#4f46e5]">{booking.booking_number}</p>
+                      <p className="mt-1 truncate text-sm text-slate-600">{customer?.name ?? 'Customer'}</p>
+                      {customer?.phone && <p className="truncate text-xs text-slate-400">{customer.phone}</p>}
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusBadge(booking.status)}`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-xs text-slate-600">{getItemSummary(booking)}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{formatMoney(Number(booking.total_amount || 0))}</p>
+                </Link>
+              )
+            })}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
           <Table className="min-w-[520px]">
             <TableHeader>
               <TableRow>
@@ -713,6 +794,7 @@ function ScheduleCard({
             </TableBody>
           </Table>
           </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center px-5 py-10 text-center text-slate-500">
             <EmptyIcon className="mb-2 h-8 w-8 text-slate-300" />

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { notFound } from 'next/navigation'
 import { isValidUuid } from '@/lib/api-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -53,14 +54,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   }
 
   const supabase = await createClient()
+  const { user } = await getCurrentStaff()
 
-
-  // Get current authenticated user id for staff actions
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select(`
+  const [{ data: booking }, { data: smsLogs }] = await Promise.all([
+    supabase
+      .from('bookings')
+      .select(`
       *,
       customer:customers(*),
       branch:branches(name, city, settings),
@@ -76,17 +75,18 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         id, type, amount, method, reference_number, notes, created_at, is_voided,
         collected_by:staff!booking_payments_collected_by_fkey(name)
       )
-    `)
-    .eq('id', id)
-    .single()
+      `)
+      .eq('id', id)
+      .single(),
 
   // SMS log for this booking — fields: template_id, provider_response, created_at
-  const { data: smsLogs } = await supabase
-    .from('sms_log')
-    .select('id, template_id, phone, status, provider_response, created_at')
-    .eq('booking_id', id)
-    .order('created_at', { ascending: false })
-    .limit(20)
+    supabase
+      .from('sms_log')
+      .select('id, template_id, phone, status, provider_response, created_at')
+      .eq('booking_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ])
 
   if (!booking) notFound()
 

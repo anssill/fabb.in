@@ -39,6 +39,30 @@ export function InventoryPerformanceTable({ data }: PerformanceProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
+        <div className="space-y-3 p-3 md:hidden">
+          {data.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-6 text-center text-sm text-slate-500">No inventory data matching filter</div>
+          ) : (
+            data.map((item) => (
+              <div key={item.id} className="cursor-pointer rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all active:scale-[0.99]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-950">{item.name}</p>
+                    <p className="text-xs text-slate-500">{item.total_rentals} bookings</p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 text-[10px] capitalize">{item.category}</Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                  <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Revenue</span><p className="font-semibold">Rs {item.revenue.toLocaleString('en-IN')}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Net Profit</span><p className={item.netProfit >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-red-500'}>Rs {item.netProfit.toLocaleString('en-IN')}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">Cost</span><p className="font-semibold">Rs {item.totalCost.toLocaleString('en-IN')}</p></div>
+                  <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-500">ROI</span><p className={item.roi > 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-slate-500'}>{item.roi}%</p></div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/50">
@@ -103,6 +127,7 @@ export function InventoryPerformanceTable({ data }: PerformanceProps) {
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   )
