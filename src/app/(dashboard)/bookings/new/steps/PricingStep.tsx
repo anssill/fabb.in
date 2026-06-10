@@ -30,6 +30,37 @@ export function PricingStep({ pricing, setPricing, items, setItems, dates }: Pro
     )))
   }
 
+  const applyFinalTotal = (targetTotal: number) => {
+    const safeTarget = Math.max(0, Number(targetTotal) || 0)
+
+    if (safeTarget <= subtotal) {
+      setPricing({
+        ...pricing,
+        discount_type: 'flat',
+        discount_value: subtotal - safeTarget,
+        discount_amount: subtotal - safeTarget,
+        delivery_fee: 0,
+        total_amount: safeTarget,
+      })
+      return
+    }
+
+    setPricing({
+      ...pricing,
+      discount_type: 'flat',
+      discount_value: 0,
+      discount_amount: 0,
+      delivery_fee: safeTarget - subtotal,
+      total_amount: safeTarget,
+    })
+  }
+
+  const applyTotalAdjustment = (adjustment: number) => {
+    applyFinalTotal(subtotal + (Number(adjustment) || 0))
+  }
+
+  const totalAdjustment = pricing.delivery_fee - pricing.discount_amount
+
   useEffect(() => {
     const discountAmount = pricing.discount_type === 'percentage'
       ? Math.round(subtotal * pricing.discount_value / 100)
@@ -106,6 +137,35 @@ export function PricingStep({ pricing, setPricing, items, setItems, dates }: Pro
               placeholder="0"
               min={0}
             />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-foreground">Adjust total once</p>
+            <p className="text-xs text-muted-foreground">Use this when you want to set the booking price without changing each item rate.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Final booking total</Label>
+              <Input
+                type="number"
+                value={pricing.total_amount || ''}
+                onChange={(e) => applyFinalTotal(Number(e.target.value))}
+                placeholder="Enter final total"
+                min={0}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Total adjustment</Label>
+              <Input
+                type="number"
+                value={totalAdjustment || ''}
+                onChange={(e) => applyTotalAdjustment(Number(e.target.value))}
+                placeholder="Use negative for discount"
+              />
+              <p className="text-[11px] text-muted-foreground">Negative applies discount. Positive adds to the total.</p>
+            </div>
           </div>
         </div>
 

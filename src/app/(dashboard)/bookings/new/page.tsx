@@ -32,6 +32,9 @@ export interface BookingCustomer {
   id_number?: string
   id_proof_url?: string
   id_proof_file?: File | null
+  blacklisted?: boolean
+  total_bookings?: number
+  latest_booking_at?: string | null
 }
 
 export interface BookingItem {

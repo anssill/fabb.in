@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ChevronLeft, User, Package, CreditCard, Clock, AlertTriangle,
   CalendarDays, IndianRupee, MessageSquare, Plus, CheckCircle2,
-  Shield, Camera
+  Shield, Camera, Phone, Mail, MapPin, IdCard
 } from 'lucide-react'
 import Link from 'next/link'
 import { BookingActions } from './components/BookingActions'
@@ -119,6 +119,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   ])
 
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+  const customerPhones = [
+    { label: 'Primary', value: (customer as any)?.phone },
+    { label: 'Alternate', value: (customer as any)?.alternate_phone },
+    { label: 'Safety', value: (customer as any)?.emergency_phone },
+  ].filter((item) => item.value)
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
   const operationSettings = getOperationSettings((branch as any)?.settings)
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
@@ -294,15 +299,57 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="text-base font-semibold text-slate-900">{(customer as any)?.name || '—'}</p>
-                      <p className="text-sm text-slate-500">{(customer as any)?.phone || ''}</p>
+                      <p className="text-sm text-slate-500">{Number((customer as any)?.total_bookings || 0).toLocaleString('en-IN')} total booking{Number((customer as any)?.total_bookings || 0) === 1 ? '' : 's'}</p>
                     </div>
                     {(customer as any)?.id && (
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="outline" size="sm" className="shrink-0" asChild>
                         <Link href={`/customers/${(customer as any).id}`}>View Profile</Link>
                       </Button>
+                    )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {customerPhones.map((phone) => (
+                        <div key={phone.label} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{phone.label} phone</p>
+                          <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <Phone className="h-3.5 w-3.5 text-blue-600" />
+                            {phone.value}
+                          </p>
+                        </div>
+                      ))}
+                      {(customer as any)?.email && (
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Email</p>
+                          <p className="mt-1 inline-flex items-center gap-2 break-all text-sm font-semibold text-slate-900">
+                            <Mail className="h-3.5 w-3.5 text-blue-600" />
+                            {(customer as any).email}
+                          </p>
+                        </div>
+                      )}
+                      {((customer as any)?.id_type || (customer as any)?.id_number) && (
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">ID details</p>
+                          <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <IdCard className="h-3.5 w-3.5 text-blue-600" />
+                            {[(customer as any)?.id_type, (customer as any)?.id_number].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {(customer as any)?.address && (
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Address</p>
+                        <p className="mt-1 flex gap-2 text-sm font-medium text-slate-900">
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" />
+                          <span>{(customer as any).address}</span>
+                        </p>
+                      </div>
                     )}
                   </div>
                 </CardContent>

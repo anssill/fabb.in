@@ -11,6 +11,7 @@ import { Search, Package, Plus, Minus, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import type { BookingItem, BookingDates } from '../page'
+import { resolveRentalDays } from '@/lib/booking-utils'
 
 interface Props {
   items: BookingItem[]
@@ -149,6 +150,12 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
   const results = itemsQuery.data || []
   const searching = itemsQuery.isFetching
   const checkingAvailability = availabilityQuery.isFetching
+  const rentalDays = dates.pickup_date && dates.return_date
+    ? resolveRentalDays(dates.pickup_date, dates.return_date, dates.rental_days_override)
+    : 1
+  const selectedQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
+  const selectedDaySubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const selectedBookingSubtotal = selectedDaySubtotal * rentalDays
 
   const resultVariantTotalStocks = useMemo(() => {
     const next: Record<string, number> = {}
@@ -549,7 +556,27 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
                 </Button>
               </div>
             ))}
-            <div className="text-right pt-1">
+            <div className="sticky bottom-0 rounded-xl border border-border bg-background/95 p-3 shadow-sm backdrop-blur">
+              <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Items</p>
+                  <p className="font-bold text-foreground">{items.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total qty</p>
+                  <p className="font-bold text-foreground">{selectedQuantity}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Subtotal/day</p>
+                  <p className="font-bold text-foreground">₹{selectedDaySubtotal.toLocaleString('en-IN')}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Booking subtotal ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</span>
+                <span className="text-base font-bold text-foreground">₹{selectedBookingSubtotal.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <div className="hidden text-right pt-1">
               <p className="text-sm text-muted-foreground">
                 Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/day
               </p>
