@@ -7,6 +7,7 @@ type SendBusinessPushArgs = {
   title: string
   body: string
   url?: string
+  tag?: string
   userIds?: string[]
 }
 
@@ -14,7 +15,7 @@ type SendRolePushArgs = Omit<SendBusinessPushArgs, 'userIds'> & {
   roles: string[]
 }
 
-export async function sendBusinessPush({ businessId, title, body, url, userIds }: SendBusinessPushArgs) {
+export async function sendBusinessPush({ businessId, title, body, url, tag, userIds }: SendBusinessPushArgs) {
   try {
     const supabase = getSupabaseAdmin()
     const { error } = await supabase.functions.invoke('send-push-notification', {
@@ -23,6 +24,7 @@ export async function sendBusinessPush({ businessId, title, body, url, userIds }
         title,
         body,
         url,
+        tag,
         user_ids: userIds,
       },
     })

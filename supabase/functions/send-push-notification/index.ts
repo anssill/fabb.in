@@ -1,22 +1,26 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.43.4'
-import webpush from 'npm:web-push@3.6.7'
+import webpush from 'npm:web-push'
 
 type PushRequest = {
   business_id: string
   title: string
   body: string
   url?: string
+  tag?: string
   user_ids?: string[]
 }
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@fabbclothing.com'
 const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')!
 const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')!
 
-webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+webpush.setVapidDetails(
+  'mailto:info@fabbclothing.com',
+  vapidPublicKey,
+  vapidPrivateKey
+)
 
 serve(async (req) => {
   if (req.method !== 'POST') {
@@ -49,6 +53,7 @@ serve(async (req) => {
       title: payload.title,
       body: payload.body,
       url: payload.url || '/dashboard',
+      tag: payload.tag || 'fabb-notification',
     })
 
     const results = await Promise.allSettled(
@@ -67,8 +72,6 @@ serve(async (req) => {
     )
 
     return new Response(JSON.stringify({
-      success: true,
-      attempted: subscriptions?.length || 0,
       sent: results.filter((result) => result.status === 'fulfilled').length,
       failed: results.filter((result) => result.status === 'rejected').length,
     }), {

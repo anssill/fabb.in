@@ -262,9 +262,7 @@ export default async function DashboardPage() {
             <RealtimeRefreshIndicator
               channelName="dashboard-live-refresh"
               businessId={staff.business_id}
-              userId={user.id}
               tables={['bookings', 'booking_payments', 'items', 'washing_queue']}
-              enablePushRegistration
             />
             <Button variant="outline" size="sm" className="rounded-full border-white bg-white px-4 shadow-sm md:h-10" asChild>
               <Link href="/analytics">

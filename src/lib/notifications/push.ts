@@ -1,4 +1,9 @@
-// Generate VAPID keys with: npx web-push generate-vapid-keys
+// SETUP REQUIRED:
+// 1. Run: npx web-push generate-vapid-keys
+// 2. Add to .env.local: NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public key>
+// 3. Add to Vercel env vars: NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public key>
+// 4. Add to Supabase Edge Function secrets: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+// 5. Run: supabase functions deploy send-push-notification
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
@@ -12,16 +17,10 @@ function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-
-  for (let index = 0; index < rawData.length; index += 1) {
-    outputArray[index] = rawData.charCodeAt(index)
-  }
-
-  return outputArray
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)))
 }
 
-export async function requestPushPermission({ userId, businessId }: RequestPushPermissionArgs) {
+export async function initPushNotifications(userId: string, businessId: string) {
   if (typeof window === 'undefined') return false
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false
 
@@ -34,11 +33,14 @@ export async function requestPushPermission({ userId, businessId }: RequestPushP
 
   if (permission !== 'granted') return false
 
-  const registration = await navigator.serviceWorker.register('/sw.js')
-  const existingSubscription = await registration.pushManager.getSubscription()
-  const subscription = existingSubscription || await registration.pushManager.subscribe({
+  const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  await navigator.serviceWorker.ready
+
+  const readyRegistration = await navigator.serviceWorker.ready
+  const existingSubscription = await readyRegistration.pushManager.getSubscription()
+  const subscription = existingSubscription || await readyRegistration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
+    applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
   })
 
   const supabase = createClient() as any
@@ -72,4 +74,8 @@ export async function requestPushPermission({ userId, businessId }: RequestPushP
   }
 
   return true
+}
+
+export async function requestPushPermission({ userId, businessId }: RequestPushPermissionArgs) {
+  return initPushNotifications(userId, businessId)
 }

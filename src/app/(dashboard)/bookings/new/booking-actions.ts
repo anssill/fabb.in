@@ -380,9 +380,10 @@ export async function createNewBookingFlow(data: BookingData) {
     })
     await sendBusinessPush({
       businessId: data.businessId,
-      title: 'New booking created',
-      body: `${data.customer.name} booked ${data.items.length} item${data.items.length !== 1 ? 's' : ''}. Booking: ${bookingNumber}`,
+      title: '🎉 New Booking Created',
+      body: `Booking #${bookingNumber} for ${data.customer.name} has been created`,
       url: `/bookings/${booking!.id}`,
+      tag: 'new-booking',
     })
 
     // 8. Trigger Notion Sync

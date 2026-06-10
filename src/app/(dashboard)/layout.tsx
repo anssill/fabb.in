@@ -5,6 +5,7 @@ import { SidebarWrapper } from './components/Sidebar'
 import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
 import { NotificationRealtime } from '@/components/notifications/NotificationRealtime'
+import { PushNotificationInitializer } from '@/components/notifications/PushNotificationInitializer'
 import { DataRealtime } from '@/components/shared/DataRealtime'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
@@ -48,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <StoreInitializer staff={staffWithActiveBranch} business={business} branches={visibleBranches} />
       <SidebarWrapper staff={staffWithActiveBranch} branches={visibleBranches} />
       <NotificationRealtime />
+      <PushNotificationInitializer userId={user.id} businessId={staff.business_id} />
       <DataRealtime />
       <div className="flex min-h-screen min-w-0 flex-col transition-all duration-300 xl:ml-[17.5rem]">
         <Header staff={staff} />

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import type { ReactNode } from 'react'
 import { getCurrentStaff } from '@/lib/auth/get-current-staff'
 import { notFound } from 'next/navigation'
 import { isValidUuid } from '@/lib/api-utils'
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ChevronLeft, User, Package, CreditCard, Clock, AlertTriangle,
   CalendarDays, IndianRupee, MessageSquare, Plus, CheckCircle2,
-  Shield, Camera, Phone, Mail, MapPin, IdCard
+  Shield, Camera, Phone, Mail, MapPin, IdCard, MessageCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { BookingActions } from './components/BookingActions'
@@ -46,6 +47,52 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 }
 
 const BOOKING_TAB_BUTTON_CLASS = 'h-9 w-full justify-start rounded-lg border border-slate-200 bg-white px-3 py-0 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-950 data-active:border-slate-300 data-active:bg-white data-active:text-slate-950 data-active:shadow-md'
+
+function normalizePhoneForLink(phone?: string | null) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (!digits) return null
+  return digits.startsWith('91') ? digits : `91${digits}`
+}
+
+function CustomerPhoneRow({ label, value }: { label: string; value?: string | null }) {
+  const phoneForLink = normalizePhoneForLink(value)
+
+  return (
+    <div className="grid gap-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 sm:grid-cols-[150px_minmax(0,1fr)] sm:items-center">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      {phoneForLink ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <a href={`tel:+${phoneForLink}`} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 hover:text-blue-700">
+            <Phone className="h-3.5 w-3.5 text-blue-600" />
+            {value}
+          </a>
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" asChild>
+            <a href={`https://wa.me/${phoneForLink}`} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${label}`}>
+              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+            </a>
+          </Button>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">Not provided</p>
+      )}
+    </div>
+  )
+}
+
+function CustomerInfoRow({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="grid gap-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 sm:grid-cols-[150px_minmax(0,1fr)]">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <div className="text-sm font-medium text-slate-900">{children}</div>
+    </div>
+  )
+}
 
 export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -122,8 +169,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const customerPhones = [
     { label: 'Primary', value: (customer as any)?.phone },
     { label: 'Alternate', value: (customer as any)?.alternate_phone },
-    { label: 'Safety', value: (customer as any)?.emergency_phone },
-  ].filter((item) => item.value)
+    { label: 'Emergency', value: (customer as any)?.emergency_phone },
+  ]
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
   const operationSettings = getOperationSettings((branch as any)?.settings)
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
@@ -304,6 +351,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-slate-900">{(customer as any)?.name || '—'}</p>
                       <p className="text-sm text-slate-500">{Number((customer as any)?.total_bookings || 0).toLocaleString('en-IN')} total booking{Number((customer as any)?.total_bookings || 0) === 1 ? '' : 's'}</p>
+                      {(customer as any)?.blacklisted === true && (
+                        <Badge variant="destructive" className="mt-2 w-fit rounded-full">
+                          <AlertTriangle className="mr-1 h-3 w-3" />
+                          Blacklisted
+                        </Badge>
+                      )}
                     </div>
                     {(customer as any)?.id && (
                       <Button variant="outline" size="sm" className="shrink-0" asChild>
@@ -314,24 +367,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {customerPhones.map((phone) => (
-                        <div key={phone.label} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{phone.label} phone</p>
-                          <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <Phone className="h-3.5 w-3.5 text-blue-600" />
-                            {phone.value}
-                          </p>
-                        </div>
+                        <CustomerPhoneRow key={phone.label} label={`${phone.label} phone`} value={phone.value} />
                       ))}
-                      {(customer as any)?.email && (
-                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Email</p>
-                          <p className="mt-1 inline-flex items-center gap-2 break-all text-sm font-semibold text-slate-900">
-                            <Mail className="h-3.5 w-3.5 text-blue-600" />
-                            {(customer as any).email}
-                          </p>
-                        </div>
-                      )}
-                      {((customer as any)?.id_type || (customer as any)?.id_number) && (
+                      {false && ((customer as any)?.id_type || (customer as any)?.id_number) && (
                         <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">ID details</p>
                           <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -342,15 +380,61 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                       )}
                     </div>
 
-                    {(customer as any)?.address && (
-                      <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Address</p>
-                        <p className="mt-1 flex gap-2 text-sm font-medium text-slate-900">
+                    <CustomerInfoRow label="Email">
+                      {(customer as any)?.email ? (
+                        <a href={`mailto:${(customer as any).email}`} className="inline-flex items-center gap-2 break-all hover:text-blue-700">
+                          <Mail className="h-3.5 w-3.5 text-blue-600" />
+                          {(customer as any).email}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">Not provided</span>
+                      )}
+                    </CustomerInfoRow>
+
+                    <CustomerInfoRow label="Address">
+                      {(customer as any)?.address ? (
+                        <span className="flex gap-2">
                           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600" />
-                          <span>{(customer as any).address}</span>
-                        </p>
+                          <span className="whitespace-pre-wrap">{(customer as any).address}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Not provided</span>
+                      )}
+                    </CustomerInfoRow>
+
+                    <CustomerInfoRow label="ID">
+                      {((customer as any)?.id_type || (customer as any)?.id_number) ? (
+                        <span className="inline-flex items-center gap-2">
+                          <IdCard className="h-3.5 w-3.5 text-blue-600" />
+                          {[(customer as any)?.id_type, (customer as any)?.id_number].filter(Boolean).join(' - ')}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Not provided</span>
+                      )}
+                    </CustomerInfoRow>
+
+                    {(customer as any)?.notes && (
+                      <CustomerInfoRow label="Notes">
+                        <span className="whitespace-pre-wrap">{(customer as any).notes}</span>
+                      </CustomerInfoRow>
+                    )}
+
+                    {Number((customer as any)?.outstanding_balance || 0) > 0 && (
+                      <div className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+                        <span className="text-sm font-semibold text-red-700">Outstanding balance</span>
+                        <Badge variant="destructive" className="rounded-full">
+                          Rs {Number((customer as any).outstanding_balance).toLocaleString('en-IN')}
+                        </Badge>
                       </div>
                     )}
+
+                    {(customer as any)?.blacklisted === true && (
+                      <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                        <AlertTriangle className="mr-2 inline h-4 w-4" />
+                        This customer is blacklisted{(customer as any)?.blacklist_reason ? `: ${(customer as any).blacklist_reason}` : '.'}
+                      </div>
+                    )}
+
                   </div>
                 </CardContent>
               </Card>

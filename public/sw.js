@@ -1,22 +1,22 @@
 self.addEventListener('push', (event) => {
-  const fallback = {
-    title: 'Fabb Booking',
-    body: 'You have a new update.',
-    url: '/dashboard',
+  let data = { title: 'Fabb', body: 'New update', url: '/bookings' }
+
+  try {
+    data = event.data?.json() ?? data
+  } catch {
+    data = { ...data, body: event.data?.text() || data.body }
   }
 
-  const data = event.data ? event.data.json() : fallback
-  const title = data.title || fallback.title
-  const options = {
-    body: data.body || fallback.body,
-    icon: '/brand/fabb-icon-192.png',
-    badge: '/brand/fabb-icon-72.png',
-    data: {
-      url: data.url || fallback.url,
-    },
-  }
-
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Fabb', {
+      body: data.body || 'New update',
+      icon: '/brand/fabb-icon-192.png',
+      badge: '/brand/fabb-icon-72.png',
+      tag: data.tag || 'fabb-notification',
+      renotify: true,
+      data: { url: data.url || '/bookings' },
+    })
+  )
 })
 
 self.addEventListener('notificationclick', (event) => {

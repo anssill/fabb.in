@@ -12,6 +12,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
+  // This endpoint is called only after an explicit login completion, not during
+  // middleware session refreshes. Missing/suspended staff should end the session.
   const { data: staffRecord, error } = await supabaseAdmin
     .from('staff')
     .select('id, status, role, setup_completed')

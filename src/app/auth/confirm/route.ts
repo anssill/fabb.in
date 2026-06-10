@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
-  const tokenHash = requestUrl.searchParams.get('token_hash')
+  const tokenHash = requestUrl.searchParams.get('token_hash') || requestUrl.searchParams.get('hash')
   const type = requestUrl.searchParams.get('type') as EmailOtpType | null
   const next = requestUrl.searchParams.get('next') || '/dashboard'
 
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=auth', request.url))
   }
 
+  // This validation only runs for a new OTP confirmation URL with a token hash.
   const { data: staffRecord } = await supabaseAdmin
     .from('staff')
     .select('id, status, role, setup_completed')
