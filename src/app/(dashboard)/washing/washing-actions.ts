@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseAdminClient, type SupabaseClient } from '@supabase/supabase-js'
+import { sendBusinessPush } from '@/lib/notifications/send-push'
 
 function getAdmin() {
   return createSupabaseAdminClient(
@@ -254,6 +255,13 @@ export async function markAsReady(
     title: 'Item Ready from Wash',
     body: `Item ${resolvedItemId} is now ready and available for inventory.`,
     action_url: '/inventory'
+  })
+
+  await sendBusinessPush({
+    businessId: resolvedBusinessId,
+    title: 'Item ready',
+    body: 'An item is ready from washing and back in inventory.',
+    url: '/washing',
   })
 
   return { success: true }

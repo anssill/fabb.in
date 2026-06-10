@@ -8,6 +8,7 @@ import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
 import { resolveRentalDays } from '@/lib/booking-utils'
 import { checklistRowsForBooking, taskRowsForBooking } from '@/lib/operations'
+import { sendBusinessPush, sendRolePush } from '@/lib/notifications/send-push'
 
 interface BookingData {
   customer: {
@@ -331,6 +332,13 @@ export async function createNewBookingFlow(data: BookingData) {
         reference_number: data.payment.reference || null,
         notes: data.payment.notes || null,
       })
+      await sendRolePush({
+        businessId: data.businessId,
+        roles: ['owner', 'manager', 'super_admin'],
+        title: 'Payment recorded',
+        body: `Advance payment of Rs ${advanceAmount.toLocaleString('en-IN')} recorded for ${bookingNumber}.`,
+        url: `/bookings/${booking!.id}`,
+      })
     }
 
     // 5b. Record deposit if collected now
@@ -343,6 +351,13 @@ export async function createNewBookingFlow(data: BookingData) {
         amount: depositAmount,
         method: data.payment.method || 'cash',
         collected_by: data.staffId,
+      })
+      await sendRolePush({
+        businessId: data.businessId,
+        roles: ['owner', 'manager', 'super_admin'],
+        title: 'Payment recorded',
+        body: `Deposit of Rs ${depositAmount.toLocaleString('en-IN')} recorded for ${bookingNumber}.`,
+        url: `/bookings/${booking!.id}`,
       })
     }
 
@@ -362,6 +377,12 @@ export async function createNewBookingFlow(data: BookingData) {
       body: `${data.customer.name} booked ${data.items.length} items for ${data.dates.event_date}. Booking: ${bookingNumber}`,
       type: 'success',
       actionUrl: `/bookings/${booking!.id}`
+    })
+    await sendBusinessPush({
+      businessId: data.businessId,
+      title: 'New booking created',
+      body: `${data.customer.name} booked ${data.items.length} item${data.items.length !== 1 ? 's' : ''}. Booking: ${bookingNumber}`,
+      url: `/bookings/${booking!.id}`,
     })
 
     // 8. Trigger Notion Sync

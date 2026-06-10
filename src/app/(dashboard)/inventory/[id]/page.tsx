@@ -7,11 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   ChevronLeft, Package, Edit, Trash2, BarChart3,
-  CalendarCheck, IndianRupee, Waves,
+  CalendarCheck, IndianRupee, Waves, ClipboardCheck,
 } from 'lucide-react'
 import Link from 'next/link'
 import { ItemTag } from './components/ItemTag'
 import { AvailabilityCalendar } from './components/AvailabilityCalendar'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const CONDITION_COLORS: Record<string, string> = {
   excellent: 'bg-green-100 text-green-700',
@@ -102,7 +108,19 @@ export default async function InventoryDetailPage({ params }: { params: Promise<
             <p className="text-sm text-slate-500">{item.sku} · {item.category} · {branch?.name || 'Branch'}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9" asChild>
+                  <Link href="/inventory?tab=audit" aria-label="Quality Audit">
+                    <ClipboardCheck className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Quality Audit</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/inventory/${item.id}/edit`}>
               <Edit className="w-4 h-4 mr-1" />Edit

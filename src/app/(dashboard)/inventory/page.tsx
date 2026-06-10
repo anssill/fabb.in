@@ -10,7 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SyncInventoryButton } from './components/SyncInventoryButton'
 import { CsvImportDialog } from './components/CsvImportDialog'
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>
+}) {
+  const { tab } = searchParams ? await searchParams : { tab: undefined }
   const supabase = await createClient()
   const { staff } = await getCurrentStaff()
   if (!staff?.branch_id) return null
@@ -80,7 +85,7 @@ export default async function InventoryPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs defaultValue={tab === 'audit' ? 'audit' : 'all'} className="space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-2 rounded-2xl bg-white p-1 shadow-sm sm:inline-grid sm:w-auto">
           <TabsTrigger value="all">
             <PackageSearch className="w-4 h-4 mr-2" />

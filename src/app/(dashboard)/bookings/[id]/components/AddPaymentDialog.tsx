@@ -105,6 +105,17 @@ export function AddPaymentDialog({
 
       if (error) throw new Error(error.message)
 
+      fetch('/api/notifications/payment-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId,
+          businessId,
+          amount: parsedAmount,
+          type: paymentType,
+        }),
+      }).catch((error) => console.error('Payment push failed:', error))
+
       toast.success('Payment recorded successfully')
       setOpen(false)
       router.refresh()

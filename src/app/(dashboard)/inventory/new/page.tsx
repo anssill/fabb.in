@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { createItem } from '../inventory-actions'
 import { ImageUpload } from '../components/ImageUpload'
 import { StorageService } from '@/lib/storage-service'
+import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['Kurtha', 'Pants', 'Pant Set', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
 const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
@@ -70,6 +71,8 @@ export default function NewItemPage() {
   const [showBulk, setShowBulk] = useState(false)
   const [bulkQty, setBulkQty] = useState(1)
   const [bulkColour, setBulkColour] = useState('')
+  const [skuError, setSkuError] = useState('')
+  const [checkingSku, setCheckingSku] = useState(false)
 
   const [form, setForm] = useState({
     name: '',
@@ -87,8 +90,40 @@ export default function NewItemPage() {
     { size: 'M', colour: '', total_stock: 1, price_override: null },
   ])
 
-  const updateForm = (field: string, value: string | number) =>
+  const updateForm = (field: string, value: string | number) => {
+    if (field === 'sku') setSkuError('')
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const validateSku = async (skuValue = form.sku) => {
+    const cleanSku = skuValue.trim().toUpperCase()
+    if (!cleanSku) {
+      setSkuError('')
+      return true
+    }
+    if (!staff?.business_id) return true
+
+    setCheckingSku(true)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('items')
+        .select('id')
+        .eq('business_id', staff.business_id)
+        .eq('sku', cleanSku)
+        .limit(1)
+
+      if (error) throw error
+      const isDuplicate = Boolean(data?.length)
+      setSkuError(isDuplicate ? 'SKU already in use' : '')
+      return !isDuplicate
+    } catch (error) {
+      console.error('SKU validation failed:', error)
+      return true
+    } finally {
+      setCheckingSku(false)
+    }
+  }
 
   const addVariant = () =>
     setVariants([...variants, { size: '', colour: '', total_stock: 1, price_override: null }])
@@ -132,6 +167,7 @@ export default function NewItemPage() {
       return
     }
     if (!staff?.business_id) return
+    if (!(await validateSku())) return
 
     setSaving(true)
     try {
@@ -175,7 +211,16 @@ export default function NewItemPage() {
             </div>
             <div className="space-y-2">
               <Label>SKU <span className="text-muted-foreground">(auto-generated if empty)</span></Label>
-              <Input value={form.sku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder="KUR-001" />
+              <Input
+                value={form.sku}
+                onChange={(e) => updateForm('sku', e.target.value.toUpperCase())}
+                onBlur={() => void validateSku()}
+                placeholder="KUR-001"
+                aria-invalid={Boolean(skuError)}
+              />
+              <p className="text-xs text-muted-foreground">SKU must be unique across your inventory</p>
+              {checkingSku && <p className="text-xs text-muted-foreground">Checking SKU...</p>}
+              {skuError && <p className="text-xs font-medium text-red-600">{skuError}</p>}
             </div>
             <div className="space-y-2">
               <Label>Category *</Label>
@@ -405,7 +450,7 @@ export default function NewItemPage() {
       {/* Submit */}
       <div className="flex justify-end gap-3 pb-8">
         <Button variant="outline" asChild><Link href="/inventory">Cancel</Link></Button>
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]" onClick={handleSubmit} disabled={saving}>
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]" onClick={handleSubmit} disabled={saving || checkingSku || Boolean(skuError)}>
           {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Add Item →'}
         </Button>
       </div>

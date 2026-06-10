@@ -43,6 +43,7 @@ import Link from 'next/link'
 import { DashboardCalendar } from './components/DashboardCalendar'
 import { DashboardPaymentChart } from './components/DashboardPaymentChart'
 import { DashboardActivity } from './components/DashboardActivity'
+import { RealtimeRefreshIndicator } from '@/components/shared/RealtimeRefreshIndicator'
 
 const formatMoney = (value: number) => `Rs ${value.toLocaleString('en-IN')}`
 
@@ -258,6 +259,13 @@ export default async function DashboardPage() {
             <p className="text-sm text-slate-500">{weekday}, {reportDate}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <RealtimeRefreshIndicator
+              channelName="dashboard-live-refresh"
+              businessId={staff.business_id}
+              userId={user.id}
+              tables={['bookings', 'booking_payments', 'items', 'washing_queue']}
+              enablePushRegistration
+            />
             <Button variant="outline" size="sm" className="rounded-full border-white bg-white px-4 shadow-sm md:h-10" asChild>
               <Link href="/analytics">
                 <BarChart3 className="mr-2 h-4 w-4" />

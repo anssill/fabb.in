@@ -4,6 +4,7 @@ import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NotionService } from '@/lib/notion'
 import { WhatsAppService } from '@/lib/whatsapp'
+import { sendBusinessPush } from '@/lib/notifications/send-push'
 
 function getAdmin() {
   return createSupabaseAdminClient(
@@ -48,6 +49,7 @@ export async function PATCH(
     }
 
     const staffId = staff.id
+    let sentItemsToWashing = false
 
     // 1. Fetch current booking items for synchronization
     const { data: bookingWithItems, error: fetchErr } = await supabaseAdmin
@@ -104,6 +106,7 @@ export async function PATCH(
           }))
 
         await supabaseAdmin.from('washing_queue').insert(queueRows)
+        sentItemsToWashing = true
 
         // E. Update item lifecycle status
         await supabaseAdmin.from('items')
@@ -170,6 +173,24 @@ export async function PATCH(
       old_value: { status: bookingWithItems.status },
       new_value: { status: booking.status }
     })
+
+    if (['booked', 'pending'].includes(status) && bookingWithItems.status !== status) {
+      await sendBusinessPush({
+        businessId: booking.business_id,
+        title: 'Booking status updated',
+        body: `${booking.booking_number} is now ${status}.`,
+        url: `/bookings/${bookingId}`,
+      })
+    }
+
+    if (sentItemsToWashing) {
+      await sendBusinessPush({
+        businessId: booking.business_id,
+        title: 'Items sent to washing',
+        body: `${booking.booking_number} returned items were added to the washing queue.`,
+        url: '/washing',
+      })
+    }
 
     // 6. Optional WhatsApp Notification
     try {

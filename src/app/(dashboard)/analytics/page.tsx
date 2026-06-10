@@ -28,6 +28,7 @@ import { StaffPerformanceSection } from './components/StaffPerformanceSection'
 import { PLStatement } from './components/PLStatement'
 import { AnalyticsDateSelector } from './components/AnalyticsDateSelector'
 import { createClient } from '@/lib/supabase/server'
+import { RealtimeRefreshIndicator } from '@/components/shared/RealtimeRefreshIndicator'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +51,7 @@ export default async function AnalyticsPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: staffRecord } = user
-    ? await supabase.from('staff').select('role').eq('id', user.id).single()
+    ? await supabase.from('staff').select('role, business_id').eq('id', user.id).single()
     : { data: null }
   const isOwner = staffRecord?.role === 'owner' || staffRecord?.role === 'super_admin'
   const isManager = isOwner || staffRecord?.role === 'manager'
@@ -116,9 +117,18 @@ export default async function AnalyticsPage({
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Analytics</h1>
           <p className="text-sm text-slate-500">Business performance — {PERIOD_LABELS[period]}</p>
         </div>
-        <Suspense fallback={null}>
-          <AnalyticsDateSelector current={period} />
-        </Suspense>
+        <div className="flex flex-wrap items-center gap-2">
+          {staffRecord?.business_id && (
+            <RealtimeRefreshIndicator
+              channelName="analytics-live-refresh"
+              businessId={staffRecord.business_id}
+              tables={['bookings', 'booking_payments', 'items', 'expenses', 'washing_queue']}
+            />
+          )}
+          <Suspense fallback={null}>
+            <AnalyticsDateSelector current={period} />
+          </Suspense>
+        </div>
       </div>
 
       {/* KPI Cards */}

@@ -18,6 +18,17 @@ export async function createItem(formData: any, variants: any[]) {
   // Generate SKU if empty
   const sku = formData.sku || `${formData.category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
+  const { data: duplicateSku, error: duplicateSkuError } = await supabase
+    .from('items')
+    .select('id')
+    .eq('business_id', staff.business_id)
+    .eq('sku', sku)
+    .limit(1)
+    .maybeSingle()
+
+  if (duplicateSkuError) throw formatSupabaseError(duplicateSkuError)
+  if (duplicateSku) throw new Error('SKU already in use')
+
   // 1. Create item in Supabase
   const { data: item, error: itemErr } = await supabase
     .from('items')
@@ -38,7 +49,7 @@ export async function createItem(formData: any, variants: any[]) {
       status: 'available',
       created_by: staff.id,
     })
-    .select('id')
+    .select('id, sku')
     .single()
 
   if (itemErr) throw formatSupabaseError(itemErr)
@@ -119,7 +130,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
 
   const { data: existingItem, error: existingError } = await supabase
     .from('items')
-    .select('id')
+    .select('id, sku')
     .eq('id', itemId)
     .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
@@ -127,17 +138,33 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
 
   if (existingError || !existingItem) throw new Error(existingError?.message || 'Inventory item not found')
 
+  const nextSku = String(formData.sku || '').trim().toUpperCase()
+  if (nextSku && nextSku !== String(existingItem.sku || '').trim().toUpperCase()) {
+    const { data: duplicateSku, error: duplicateSkuError } = await supabase
+      .from('items')
+      .select('id')
+      .eq('business_id', staff.business_id)
+      .eq('sku', nextSku)
+      .neq('id', itemId)
+      .limit(1)
+      .maybeSingle()
+
+    if (duplicateSkuError) throw formatSupabaseError(duplicateSkuError)
+    if (duplicateSku) throw new Error('SKU already in use')
+  }
+
   // 1. Update main item
   const { error: itemErr } = await supabase
     .from('items')
     .update({
       name: formData.name,
+      sku: nextSku || null,
       category: formData.category,
       description: formData.description || null,
       price: formData.price,
       deposit_amount: formData.deposit_amount ?? 0,
       condition: formData.condition,
-      purchase_cost: formData.purchase_price || null,
+      purchase_cost: formData.purchase_cost ?? formData.purchase_price ?? null,
       storage_location: formData.storage_location || null,
       cover_image_url: formData.cover_image_url !== undefined ? formData.cover_image_url : undefined,
       updated_at: new Date().toISOString(),
@@ -215,7 +242,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
   const stockSummary = variants.map(v => `${v.size}: ${v.total_stock}`).join(', ')
   try {
     const notionPageId = await NotionService.syncItem({
-      sku: currentItem?.sku || '',
+      sku: nextSku || currentItem?.sku || '',
       name: formData.name,
       category: formData.category,
       price: formData.price,
@@ -241,7 +268,7 @@ export async function updateItem(itemId: string, formData: any, variants: any[])
     action: 'item.updated',
     table_name: 'items',
     record_id: itemId,
-    new_value: { name: formData.name, variants: variants.length },
+    new_value: { name: formData.name, sku: nextSku || null, variants: variants.length },
   })
   if (auditError) console.error('Failed to write item audit log:', auditError)
 

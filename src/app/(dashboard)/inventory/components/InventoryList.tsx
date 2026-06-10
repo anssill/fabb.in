@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Search, Package, QrCode, Calendar as CalendarIcon, Layers } from 'lucide-react'
+import { ClipboardCheck, Eye, Pencil, Search, Package, QrCode, Calendar as CalendarIcon, Layers } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -18,6 +18,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 const CONDITION_COLORS: Record<string, string> = {
@@ -273,8 +279,11 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
             const sizes = item.item_variants?.map((v: any) => v.size).filter(Boolean).join(', ')
 
             return (
-              <Link key={item.id} href={`/inventory/${item.id}`}>
-                <Card className="group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <Card
+                key={item.id}
+                className="group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md active:scale-[0.99]"
+                onClick={() => router.push(`/inventory/${item.id}`)}
+              >
                   <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center relative overflow-hidden">
                     {item.cover_image_url ? (
                       <Image 
@@ -298,6 +307,61 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                         </Badge>
                       )}
                     </div>
+                    <TooltipProvider>
+                      <div className="absolute left-2 top-2 flex gap-1 rounded-full bg-white/90 p-1 shadow-sm backdrop-blur">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-full"
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`View ${item.name}`}
+                            >
+                              <Link href={`/inventory/${item.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-full"
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`Edit ${item.name}`}
+                            >
+                              <Link href={`/inventory/${item.id}/edit`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-full"
+                              onClick={(event) => event.stopPropagation()}
+                              aria-label={`Quality audit for ${item.name}`}
+                            >
+                              <Link href="/inventory?tab=audit">
+                                <ClipboardCheck className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Quality Audit</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </div>
                   <CardContent className="p-4">
                     <div className="min-w-0 mb-3">
@@ -335,8 +399,7 @@ export function InventoryList({ initialItems, businessId, branchId }: InventoryL
                       </div>
                     )}
                   </CardContent>
-                </Card>
-              </Link>
+              </Card>
             )
           })}
         </div>

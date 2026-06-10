@@ -35,6 +35,12 @@ interface SearchResult {
     total_stock: number
     available_stock: number
     price_override: number | null
+    status: string | null
+    washing_queue?: {
+      id: string
+      stage: string | null
+      completed_at: string | null
+    }[] | null
   }[]
 }
 
@@ -46,6 +52,20 @@ interface VariantOption {
   total_stock: number
   available_stock: number
   price: number
+  status?: string | null
+}
+
+const BLOCKED_ITEM_STATUSES = new Set(['in_washing', 'maintenance'])
+const ACTIVE_WASHING_STAGES = new Set(['in_washing', 'in_fitting', 'maintenance'])
+
+function isVariantSelectable(variant: SearchResult['item_variants'][0] | any) {
+  if (Number(variant.available_stock || 0) <= 0) return false
+  if (variant.status && BLOCKED_ITEM_STATUSES.has(variant.status)) return false
+
+  const activeWashingRows = (variant.washing_queue || []).filter((row: any) =>
+    row.completed_at === null && ACTIVE_WASHING_STAGES.has(row.stage)
+  )
+  return activeWashingRows.length === 0
 }
 
 export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStockLimit = false }: Props) {
@@ -118,10 +138,12 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       const supabase = createClient()
       let dbQuery = supabase
         .from('items')
-        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, colour, total_stock, available_stock, price_override)')
+        .select('id, name, sku, category, price, cover_image_url, status, item_variants(id, size, colour, total_stock, available_stock, price_override, status, washing_queue(id, stage, completed_at))')
         .eq('business_id', staff!.business_id)
         .eq('branch_id', branchId!)
         .eq('is_active', true)
+        .neq('status', 'in_washing')
+        .neq('status', 'maintenance')
         .limit(10)
 
       if (searchQueryTrimmed.length >= 1) {
@@ -134,7 +156,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       return (((data as SearchResult[]) || [])
         .map((item) => ({
           ...item,
-          item_variants: (item.item_variants || []).filter((v) => Number(v.available_stock || 0) > 0),
+          item_variants: (item.item_variants || []).filter(isVariantSelectable),
         }))
         .filter((item) => item.item_variants.length > 0))
     },
@@ -178,6 +200,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
         total_stock: v.total_stock,
         available_stock: v.available_stock,
         price: Number(v.price_override ?? item.price),
+        status: v.status,
       }))
     })
     return next
@@ -209,7 +232,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
         missingItemIds.length > 0
           ? supabase
               .from('item_variants')
-              .select('id, item_id, size, colour, total_stock, available_stock, price_override')
+              .select('id, item_id, size, colour, total_stock, available_stock, price_override, status, washing_queue(id, stage, completed_at)')
               .in('item_id', missingItemIds)
               .gt('total_stock', 0)
           : Promise.resolve({ data: [], error: null }),
@@ -237,6 +260,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
       const currentItem = items.find(item => item.item_id === itemId)
       next[itemId] = options
         .filter((v: any) => v.item_id === itemId)
+        .filter(isVariantSelectable)
         .map((v: any) => ({
           id: v.id,
           item_id: v.item_id,
@@ -245,6 +269,7 @@ export function ItemsStep({ items, setItems, dates, bufferDays = 1, enforceStock
           total_stock: v.total_stock,
           available_stock: v.available_stock,
           price: Number(v.price_override ?? currentItem?.price ?? 0),
+          status: v.status,
         }))
     })
     return next
