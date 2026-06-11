@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { getAuthRedirectUrl } from '@/lib/auth/redirect-url'
+import { ForgotPasswordModal } from './components/ForgotPasswordModal'
 
 const proofPoints = [
   'Supabase secured workspace',
@@ -27,6 +28,7 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [loginMode, setLoginMode] = useState<'otp' | 'password'>('otp')
   const [loading, setLoading] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -186,7 +188,16 @@ function LoginForm() {
 
               {loginMode === 'password' && (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => setForgotOpen(true)}
+                      className="text-xs font-semibold text-[#4f46e5] hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <Input
@@ -227,6 +238,7 @@ function LoginForm() {
           </div>
         </section>
       </div>
+      <ForgotPasswordModal open={forgotOpen} onOpenChange={setForgotOpen} defaultEmail={email} />
     </main>
   )
 }

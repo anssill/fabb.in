@@ -40,7 +40,7 @@ function ResetPasswordContent() {
     // onAuthStateChange fires immediately with the current auth state,
     // including PASSWORD_RECOVERY when the session was set by /auth/callback.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+      if (session || event === 'PASSWORD_RECOVERY') {
         setSessionSet(true)
       } else if (event === 'SIGNED_OUT') {
         setSessionSet(false)

@@ -22,17 +22,17 @@ interface Props {
   defaultEmail: string
 }
 
-export function ForgotPasswordModal({ open, onOpenChange }: Props) {
+export function ForgotPasswordModal({ open, onOpenChange, defaultEmail }: Props) {
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'input' | 'sent' | 'not_found'>('input')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (open) {
-      setEmail('')
+      setEmail(defaultEmail.trim().toLowerCase())
       setState('input')
     }
-  }, [open])
+  }, [defaultEmail, open])
 
   const handleSend = async () => {
     setLoading(true)
