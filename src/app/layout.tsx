@@ -63,13 +63,13 @@ export default function RootLayout({
             __html: `
               (function(){
                 try {
-                  var t = 'dark';
+                  var t = 'light';
                   var prefs = localStorage.getItem('fabb_display_prefs');
                   if (prefs) {
                     var parsed = JSON.parse(prefs);
                     if (parsed.theme) t = parsed.theme;
                   } else {
-                    t = localStorage.getItem('theme') || 'dark';
+                    t = localStorage.getItem('theme') || 'light';
                   }
                   if (t === 'system') {
                     t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -91,3 +91,4 @@ export default function RootLayout({
     </html>
   )
 }
+

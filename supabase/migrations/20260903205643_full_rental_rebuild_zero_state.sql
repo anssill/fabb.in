@@ -1513,7 +1513,6 @@ begin
       or new.role is distinct from old.role
       or new.status is distinct from old.status
       or new.permissions is distinct from old.permissions
-      or new.custom_permissions is distinct from old.custom_permissions
     )
   then
     raise exception 'Staff permission required to change role, branch, status or permissions';
@@ -2208,3 +2207,4 @@ begin
   end if;
 end
 $schema_contract$;
+

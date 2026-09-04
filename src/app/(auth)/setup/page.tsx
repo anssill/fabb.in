@@ -200,7 +200,13 @@ export default function SetupPage() {
       router.push('/dashboard')
       router.refresh()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Finalization failed')
+      const message =
+        error instanceof Error
+          ? error.message
+          : error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+            ? error.message
+            : 'Finalization failed'
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -263,7 +269,7 @@ export default function SetupPage() {
         </aside>
 
         <section className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
-          <Card className="min-h-full rounded-[1.65rem] border-0 bg-white shadow-sm">
+          <Card className="min-h-full rounded-[1.65rem] border-0 bg-white text-slate-950 shadow-sm dark:bg-white dark:text-slate-950">
             <CardContent className="flex min-h-full flex-col p-5 sm:p-8">
               <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex gap-4">
@@ -378,7 +384,7 @@ function SetupField({
           maxLength={maxLength}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="h-12 rounded-2xl border-slate-100 bg-slate-50 pl-11 text-sm shadow-none focus-visible:ring-[#4f46e5]"
+          className="h-12 rounded-2xl border-slate-100 bg-slate-50 pl-11 text-sm text-slate-950 shadow-none placeholder:text-slate-400 focus-visible:ring-[#4f46e5] dark:border-slate-100 dark:bg-slate-50 dark:text-slate-950 dark:placeholder:text-slate-400"
         />
       </div>
     </div>
@@ -396,3 +402,4 @@ function SkipPanel({ icon: Icon, title, detail }: { icon: ElementType; title: st
     </div>
   )
 }
+

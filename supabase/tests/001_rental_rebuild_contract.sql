@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(19);
+select plan(20);
 
 select has_function('public', 'get_rental_availability', array['uuid','uuid','date','date','uuid','uuid','integer'], 'date availability function exists');
 select has_function('public', 'post_booking_payment', array['uuid','text','numeric','text','text','text','text'], 'atomic payment command exists');
@@ -15,6 +15,10 @@ select hasnt_column('public', 'items', 'notion_page_id', 'Notion persistence is 
 select col_type_is('public', 'bookings', 'status', 'rental_booking_status', 'booking lifecycle uses the rental enum');
 select has_table('public', 'inventory_unavailability', 'damage and missing use a dedicated ledger');
 select has_table('public', 'inventory_assets', 'premium assets are supported');
+select is(
+  position('custom_permissions' in pg_get_functiondef('private.guard_staff_privilege_changes()'::regprocedure)),
+  0, 'staff updates do not reference the removed custom_permissions column'
+);
 select is(
   (select bool_and(relrowsecurity) from pg_class join pg_namespace on pg_namespace.oid = pg_class.relnamespace where nspname = 'public' and relkind in ('r', 'p')),
   true,
@@ -63,3 +67,4 @@ select is((select shortage_quantity from public.get_rental_availability('1000000
 
 select * from finish();
 rollback;
+
