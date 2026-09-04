@@ -19,7 +19,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import {
   User, Package, IndianRupee, CheckCircle2, ChevronLeft,
-  Loader2, ArrowRight, ShieldCheck, AlertTriangle, Camera, Edit2, X
+  Loader2, ArrowRight, ShieldCheck, AlertTriangle, Camera, Edit2, X, QrCode
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -33,7 +33,15 @@ const PAYMENT_METHODS = [
   { value: 'card', label: 'Card' },
 ]
 
-type BookingItem = { id: string; item_name: string; size: string; quantity: number; price: number }
+type BookingItem = {
+  id: string
+  item_name: string
+  size: string
+  quantity: number
+  price: number
+  item: { tracking_mode: string } | null
+  booking_item_assets: Array<{ asset_id: string; released_at: string | null; asset: { asset_code: string; status: string } | null }>
+}
 
 type Booking = {
   id: string
@@ -96,7 +104,7 @@ export default function PickupPage() {
           balance_due, deposit_amount, pickup_date, return_date,
           business_id, branch_id,
           customer:customers(id, name, phone),
-          booking_items(id, item_name, size, quantity, price),
+          booking_items(id, item_name, size, quantity, price, item:items(tracking_mode), booking_item_assets(asset_id, released_at, asset:inventory_assets(asset_code, status))),
           booking_payments(type, amount, is_voided)
         `)
         .eq('id', id)
@@ -107,10 +115,10 @@ export default function PickupPage() {
         const customer = Array.isArray(bk.customer) ? bk.customer[0] : bk.customer
         const payments = (bk.booking_payments || []).filter((p: any) => !p.is_voided)
         
-        // Calculate rental payments only (advance, balance, penalty - refund)
         const rentalPaid = payments
-          .filter((p: any) => !['deposit', 'deposit_refund'].includes(p.type))
-          .reduce((s: number, p: any) => s + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount)), 0)
+          .filter((p: any) => ['advance', 'balance'].includes(p.type))
+          .reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
+          - payments.filter((p: any) => p.type === 'refund').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
         
         // Calculate deposit payments only (deposit - deposit_refund)
         const depositPaid = payments
@@ -176,17 +184,22 @@ export default function PickupPage() {
       if (balanceDue > 0 && !skipBalance) {
         const amt = parseFloat(balanceAmount)
         if (amt > 0) {
-          await supabase.from('booking_payments').insert({
-            booking_id: booking.id,
-            business_id: booking.business_id,
-            branch_id: booking.branch_id,
+          const paymentResponse = await fetch(`/api/bookings/${booking.id}/payments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
             type: 'balance',
             amount: amt,
             method: balanceMethod,
-            reference_number: balanceRef.trim() || null,
+            reference: balanceRef.trim() || null,
             notes: balanceNotes.trim() || null,
-            collected_by: staffId,
+            idempotencyKey: crypto.randomUUID(),
+            }),
           })
+          if (!paymentResponse.ok) {
+            const result = await safeJsonParse(paymentResponse)
+            throw new Error(result.error || 'Balance payment failed')
+          }
         }
       }
 
@@ -194,25 +207,30 @@ export default function PickupPage() {
       if (depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected) {
         const amt = parseFloat(depositAmount)
         if (amt > 0) {
-          await supabase.from('booking_payments').insert({
-            booking_id: booking.id,
-            business_id: booking.business_id,
-            branch_id: booking.branch_id,
+          const paymentResponse = await fetch(`/api/bookings/${booking.id}/payments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
             type: 'deposit',
             amount: amt,
             method: depositMethod,
-            reference_number: depositRef.trim() || null,
+            reference: depositRef.trim() || null,
             notes: depositNotes.trim() || null,
-            collected_by: staffId,
+            idempotencyKey: crypto.randomUUID(),
+            }),
           })
+          if (!paymentResponse.ok) {
+            const result = await safeJsonParse(paymentResponse)
+            throw new Error(result.error || 'Deposit payment failed')
+          }
         }
       }
 
-      // 3. Update booking status to 'out'
+      // 3. Record fulfilment and mark the rental as picked up.
       const res = await fetch(`/api/bookings/${booking.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'out' }),
+        body: JSON.stringify({ status: 'picked_up' }),
       })
       if (!res.ok) {
         const d = await safeJsonParse(res)
@@ -256,7 +274,7 @@ export default function PickupPage() {
     )
   }
 
-  if (booking.status !== 'booked') {
+  if (!['confirmed', 'hold'].includes(booking.status)) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
@@ -267,7 +285,7 @@ export default function PickupPage() {
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-amber-400" />
             <p className="text-lg font-medium text-slate-900">Pickup not available</p>
             <p className="text-sm text-slate-500 mt-1">
-              This booking is currently <span className="font-semibold capitalize">{booking.status}</span>. Only <span className="font-semibold">Booked</span> bookings can be picked up.
+              This booking is currently <span className="font-semibold capitalize">{booking.status}</span>. Only confirmed rentals can be picked up.
             </p>
           </CardContent>
         </Card>
@@ -340,12 +358,14 @@ export default function PickupPage() {
                 <div key={bi.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm font-medium">{bi.item_name}</span>
+                    <div><span className="text-sm font-medium">{bi.item_name}</span>{(bi.booking_item_assets ?? []).filter((entry) => !entry.released_at).length ? <p className="text-xs font-mono text-blue-600">{(bi.booking_item_assets ?? []).filter((entry) => !entry.released_at).map((entry) => { const asset = Array.isArray(entry.asset) ? entry.asset[0] : entry.asset; return asset?.asset_code }).filter(Boolean).join(', ')}</p> : null}</div>
                   </div>
                   <span className="text-xs text-slate-500">Size {bi.size} × {bi.quantity}</span>
                 </div>
               ))}
             </div>
+
+            {booking.booking_items.some((bi) => { const item = Array.isArray(bi.item) ? bi.item[0] : bi.item; return item?.tracking_mode === 'asset' && (bi.booking_item_assets ?? []).filter((entry) => !entry.released_at).length < bi.quantity }) ? <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><QrCode className="mt-0.5 h-4 w-4 shrink-0" /><p>Premium pieces still need asset tags. Go back to the booking, use <strong>Scan Item Tag</strong> for every piece, then return here to complete pickup.</p></div> : null}
 
             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <Checkbox

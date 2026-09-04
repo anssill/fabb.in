@@ -28,7 +28,7 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
       ? Math.round(subtotal * pricing.discount_value / 100)
       : pricing.discount_value
 
-    const total = Math.max(0, subtotal - discountAmount + pricing.delivery_fee)
+    const total = Math.max(0, subtotal - discountAmount)
     setPricing({
       ...pricing,
       subtotal,
@@ -36,7 +36,7 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
       total_amount: total,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, pricing.discount_type, pricing.discount_value, pricing.delivery_fee])
+  }, [subtotal, pricing.discount_type, pricing.discount_value])
 
   return (
     <>
@@ -92,18 +92,6 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
           </div>
         </div>
 
-        {/* Delivery fee */}
-        <div className="space-y-2">
-          <Label>Delivery fee</Label>
-          <Input
-            type="number"
-            value={pricing.delivery_fee || ''}
-            onChange={(e) => setPricing({ ...pricing, delivery_fee: Number(e.target.value) })}
-            placeholder="0"
-            min={0}
-          />
-        </div>
-
         {/* Total */}
         <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
@@ -114,12 +102,6 @@ export function PricingStep({ pricing, setPricing, items, dates }: Props) {
             <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-medium">
               <span>Discount</span>
               <span>-₹{pricing.discount_amount.toLocaleString('en-IN')}</span>
-            </div>
-          )}
-          {pricing.delivery_fee > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Delivery</span>
-              <span className="font-semibold text-foreground">+₹{pricing.delivery_fee.toLocaleString('en-IN')}</span>
             </div>
           )}
           <div className="border-t border-border pt-2 flex justify-between text-lg font-bold text-foreground">

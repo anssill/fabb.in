@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, MapPin, Users, Settings, Receipt, MessageSquare, Package, Monitor, CreditCard, User, ShieldCheck } from 'lucide-react'
+import { Building2, MapPin, Users, Settings, Receipt, MessageSquare, Package, Monitor, User, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const SETTINGS_SECTIONS = [
@@ -14,7 +14,6 @@ const SETTINGS_SECTIONS = [
   { label: 'SMS Notifications', icon: MessageSquare, href: '/settings/sms', roles: ['owner', 'super_admin'] },
   { label: 'Inventory Settings', icon: Package, href: '/settings/inventory', roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Display Preferences', icon: Monitor, href: '/settings/display', roles: ['all'] },
-  { label: 'Billing', icon: CreditCard, href: '/settings/billing', roles: ['owner', 'super_admin'] },
   { label: 'My Account', icon: User, href: '/settings/account', roles: ['all'] },
   { label: 'Audit Log', icon: ShieldCheck, href: '/settings/audit-log', roles: ['owner', 'super_admin'] },
 ]

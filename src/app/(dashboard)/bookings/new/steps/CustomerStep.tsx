@@ -52,7 +52,6 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   useEffect(() => {
     const query = searchQuery.trim()
     if (!query || !staff?.business_id) {
-      setSearchResults([])
       return
     }
 
@@ -138,7 +137,10 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                   placeholder="Search by name or phone number..."
                   className="pl-10"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    if (!e.target.value.trim()) setSearchResults([])
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>

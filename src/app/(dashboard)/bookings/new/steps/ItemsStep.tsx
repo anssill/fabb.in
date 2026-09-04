@@ -14,6 +14,7 @@ interface Props {
   items: BookingItem[]
   setItems: (items: BookingItem[]) => void
   dates: BookingDates
+  setDates: (dates: BookingDates) => void
 }
 
 interface SearchResult {
@@ -26,67 +27,42 @@ interface SearchResult {
   item_variants: {
     id: string
     size: string
-    colour: string | null
     total_stock: number
-    available_stock: number
   }[]
 }
 
-export function ItemsStep({ items, setItems, dates }: Props) {
+export function ItemsStep({ items, setItems, dates, setDates }: Props) {
   const { staff } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
 
   // Real-time stock states
-  const [overlappingQuantities, setOverlappingQuantities] = useState<Record<string, number>>({})
+  const [availableQuantities, setAvailableQuantities] = useState<Record<string, number>>({})
   const [variantTotalStocks, setVariantTotalStocks] = useState<Record<string, number>>({})
   const [checkingAvailability, setCheckingAvailability] = useState(false)
 
   // Fetch overlapping booking quantities for selected dates
   const fetchAvailability = async () => {
-    if (!staff?.business_id || !dates.pickup_date || !dates.return_date) return
+    if (!staff?.business_id || !staff.branch_id || !dates.pickup_date || !dates.return_date) return
+    await Promise.resolve()
     setCheckingAvailability(true)
     try {
       const supabase = createClient()
       
-      // Calculate pickup_date - 1 day for turnover buffer
-      const pickupDateObj = new Date(dates.pickup_date)
-      pickupDateObj.setDate(pickupDateObj.getDate() - 1)
-      const pickupMinus1 = pickupDateObj.toISOString().slice(0, 10)
-
-      const { data, error } = await supabase
-        .from('booking_items')
-        .select('item_variant_id, quantity, booking:bookings!inner(status, pickup_date, return_date)')
-        .eq('booking.business_id', staff.business_id)
-        .not('booking.status', 'in', '("cancelled","closed")')
-        .lte('booking.pickup_date', dates.return_date)
-        .gte('booking.return_date', pickupMinus1)
+      const rpc = supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: { variant_id: string; available_quantity: number }[] | null; error: { message: string } | null }>
+      const { data, error } = await rpc('get_rental_availability', {
+        p_business_id: staff.business_id,
+        p_branch_id: staff.branch_id,
+        p_from: dates.pickup_date,
+        p_to: dates.return_date,
+        p_item_id: null,
+        p_requested_quantity: 0,
+      })
 
       if (error) throw error
 
-      const reserved: Record<string, number> = {}
-      data?.forEach((row: any) => {
-        const bk = Array.isArray(row.booking) ? row.booking[0] : row.booking
-        if (!bk) return
-
-        const activePickup = bk.pickup_date
-        const activeReturn = bk.return_date
-        
-        // Parse return date and add 1 day for buffer
-        const retDate = new Date(activeReturn)
-        retDate.setDate(retDate.getDate() + 1)
-        const activeReturnWithBuffer = retDate.toISOString().slice(0, 10)
-
-        // Check if [activePickup, activeReturnWithBuffer] overlaps with [dates.pickup_date, dates.return_date]
-        const overlaps = activePickup <= dates.return_date && dates.pickup_date <= activeReturnWithBuffer
-        
-        if (overlaps) {
-          reserved[row.item_variant_id] = (reserved[row.item_variant_id] || 0) + (row.quantity || 1)
-        }
-      })
-
-      setOverlappingQuantities(reserved)
+      setAvailableQuantities(Object.fromEntries((data ?? []).map((row) => [row.variant_id, row.available_quantity])))
     } catch (err) {
       console.error('Failed to fetch calendar availability:', err)
       toast.error('Could not verify item availability. Using default stock levels.')
@@ -96,25 +72,9 @@ export function ItemsStep({ items, setItems, dates }: Props) {
   }
 
   useEffect(() => {
-    fetchAvailability()
-  }, [dates.pickup_date, dates.return_date, staff?.business_id])
-
-  // Synchronize variantTotalStocks when results change
-  useEffect(() => {
-    setVariantTotalStocks(prev => {
-      const next = { ...prev }
-      let changed = false
-      results.forEach(item => {
-        item.item_variants.forEach(v => {
-          if (next[v.id] !== v.total_stock) {
-            next[v.id] = v.total_stock
-            changed = true
-          }
-        })
-      })
-      return changed ? next : prev
-    })
-  }, [results])
+    const timer = window.setTimeout(() => { void fetchAvailability() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [dates.pickup_date, dates.return_date, staff?.business_id, staff?.branch_id])
 
   // Synchronize missing stocks for items restored from drafts
   useEffect(() => {
@@ -152,13 +112,15 @@ export function ItemsStep({ items, setItems, dates }: Props) {
   const handleSearch = async (rawQuery?: string) => {
     if (!staff?.business_id) return
     const query = (rawQuery ?? searchQuery).trim()
+    await Promise.resolve()
     setSearching(true)
     try {
       const supabase = createClient()
       let dbQuery = supabase
         .from('items')
-        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, colour, total_stock, available_stock)')
+        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, total_stock)')
         .eq('business_id', staff.business_id)
+        .eq('branch_id', staff.branch_id)
         .eq('is_active', true)
         .limit(10)
 
@@ -177,6 +139,11 @@ export function ItemsStep({ items, setItems, dates }: Props) {
         .filter((item) => item.item_variants.length > 0)
 
       setResults(normalized)
+      setVariantTotalStocks((previous) => {
+        const next = { ...previous }
+        for (const item of normalized) for (const variant of item.item_variants) next[variant.id] = variant.total_stock
+        return next
+      })
     } catch (error) {
       console.error('Items search failed:', error)
       toast.error('Could not load items. Please refresh and try again.')
@@ -188,7 +155,8 @@ export function ItemsStep({ items, setItems, dates }: Props) {
 
   useEffect(() => {
     if (!staff?.business_id) return
-    handleSearch('')
+    const timer = window.setTimeout(() => { void handleSearch('') }, 0)
+    return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staff?.business_id])
 
@@ -211,7 +179,7 @@ export function ItemsStep({ items, setItems, dates }: Props) {
       return
     }
 
-    const dynamicAvailable = variant.total_stock - (overlappingQuantities[variant.id] || 0)
+    const dynamicAvailable = availableQuantities[variant.id] ?? variant.total_stock
     if (dynamicAvailable <= 0) {
       toast.warning('Booking Conflict: This variant is already booked for the selected dates!', {
         description: 'Allowed as override. Please verify availability manually.',
@@ -228,7 +196,6 @@ export function ItemsStep({ items, setItems, dates }: Props) {
         name: item.name,
         sku: item.sku || undefined,
         size: variant.size,
-        colour: variant.colour || undefined,
         price: item.price,
         quantity: 1,
         cover_image_url: item.cover_image_url,
@@ -242,8 +209,7 @@ export function ItemsStep({ items, setItems, dates }: Props) {
 
     if (delta > 0) {
       const totalStockVal = variantTotalStocks[variantId] ?? 999
-      const reservedVal = overlappingQuantities[variantId] || 0
-      const dynamicAvailable = totalStockVal - reservedVal
+      const dynamicAvailable = availableQuantities[variantId] ?? totalStockVal
 
       if (selectedItem.quantity + delta > dynamicAvailable) {
         toast.warning(`Conflict: Quantity exceeds available stock (${dynamicAvailable} available) for these dates.`, {
@@ -262,6 +228,8 @@ export function ItemsStep({ items, setItems, dates }: Props) {
   const removeItem = (variantId: string) => {
     setItems(items.filter((i) => i.variant_id !== variantId))
   }
+
+  const hasConflict = items.some((item) => item.quantity > (availableQuantities[item.variant_id] ?? variantTotalStocks[item.variant_id] ?? item.quantity))
 
   return (
     <>
@@ -325,7 +293,7 @@ export function ItemsStep({ items, setItems, dates }: Props) {
                     {item.item_variants
                       ?.map((v) => {
                         const isAdded = items.some((i) => i.variant_id === v.id)
-                        const dynamicAvailable = v.total_stock - (overlappingQuantities[v.id] || 0)
+                        const dynamicAvailable = availableQuantities[v.id] ?? v.total_stock
                         const isLowStock = dynamicAvailable <= 2 && dynamicAvailable > 0
                         const isOut = dynamicAvailable <= 0
                         return (
@@ -344,11 +312,6 @@ export function ItemsStep({ items, setItems, dates }: Props) {
                                 <span className="font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded text-[10px]">
                                   {v.size}
                                 </span>
-                                {v.colour && (
-                                  <span className="text-[11px] text-muted-foreground truncate max-w-[80px]" title={v.colour}>
-                                    {v.colour}
-                                  </span>
-                                )}
                               </div>
                               <span className={`text-[10px] font-medium ${
                                 isOut 
@@ -405,7 +368,7 @@ export function ItemsStep({ items, setItems, dates }: Props) {
                   <div>
                     <p className="text-sm font-semibold text-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.size}{item.colour ? ` · ${item.colour}` : ''} · ₹{item.price}/day
+                      {item.size} · ₹{item.price}/day
                     </p>
                   </div>
                 </div>
@@ -428,6 +391,13 @@ export function ItemsStep({ items, setItems, dates }: Props) {
                 Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/day
               </p>
             </div>
+          </div>
+        )}
+        {hasConflict && (
+          <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/20">
+            <label htmlFor="overbook-reason" className="text-sm font-semibold text-amber-900 dark:text-amber-200">Overbooking reason *</label>
+            <textarea id="overbook-reason" value={dates.overbook_reason || ''} onChange={(event) => setDates({ ...dates, overbook_reason: event.target.value })} className="min-h-20 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="Why is this shortage being overridden?" />
+            <p className="text-xs text-amber-800 dark:text-amber-300">This reason is stored permanently with the booking audit.</p>
           </div>
         )}
       </CardContent>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import imageCompression from 'browser-image-compression'
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
@@ -18,13 +18,6 @@ interface ImageUploadProps {
 export function ImageUpload({ value, onChange, disabled, className = '' }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(value || null)
   const [isCompressing, setIsCompressing] = useState(false)
-
-  // Update internal preview if external value changes (e.g., initial load)
-  useEffect(() => {
-    if (value !== undefined) {
-      setPreview(value)
-    }
-  }, [value])
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return

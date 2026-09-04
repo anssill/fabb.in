@@ -18,7 +18,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   salary: 'bg-purple-100 text-purple-700',
   maintenance: 'bg-amber-100 text-amber-700',
   utilities: 'bg-green-100 text-green-700',
-  washing: 'bg-cyan-100 text-cyan-700',
   transport: 'bg-orange-100 text-orange-700',
   marketing: 'bg-pink-100 text-pink-700',
   other: 'bg-slate-100 text-slate-700',
@@ -90,7 +89,6 @@ export function ExpensesClient({ initialExpenses }: Props) {
               <SelectItem value="salary">Salary</SelectItem>
               <SelectItem value="utilities">Utilities</SelectItem>
               <SelectItem value="maintenance">Maintenance</SelectItem>
-              <SelectItem value="washing">Washing</SelectItem>
               <SelectItem value="transport">Transport</SelectItem>
               <SelectItem value="marketing">Marketing</SelectItem>
               <SelectItem value="other">Other</SelectItem>

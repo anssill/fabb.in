@@ -19,6 +19,7 @@ export default async function AdminDashboard() {
 
   // 1. Core Metrics
   const { count: businessCount } = await supabase.from('businesses').select('*', { count: 'exact', head: true })
+  const { count: activeBusinessCount } = await supabase.from('businesses').select('*', { count: 'exact', head: true }).eq('status', 'active')
   const { count: staffCount } = await supabase.from('staff').select('*', { count: 'exact', head: true })
   const { data: recentPayments } = await supabase.from('booking_payments').select('amount').limit(500)
   
@@ -116,11 +117,11 @@ export default async function AdminDashboard() {
       color: 'emerald'
     },
     {
-      title: 'Active Subscription',
-      value: '94%',
+      title: 'Active Businesses',
+      value: activeBusinessCount || 0,
       icon: Activity,
-      trend: '-2%',
-      trendUp: false,
+      trend: '',
+      trendUp: true,
       color: 'orange'
     }
   ]

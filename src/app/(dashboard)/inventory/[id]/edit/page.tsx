@@ -13,14 +13,21 @@ export default async function EditInventoryPage({ params }: { params: Promise<{ 
   }
 
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
+  if (!staff?.business_id || !staff.branch_id) notFound()
 
   const { data: item } = await supabase
     .from('items')
     .select(`
       *,
-      item_variants(id, size, colour, total_stock, available_stock, reserved_stock, price_override)
+      item_variants(id, size, total_stock, price_override, branch_id, archived_at)
     `)
     .eq('id', id)
+    .eq('business_id', staff.business_id)
+    .eq('item_variants.branch_id', staff.branch_id)
+    .is('item_variants.archived_at', null)
     .single()
 
   if (!item) notFound()

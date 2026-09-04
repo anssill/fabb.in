@@ -90,10 +90,7 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
     try {
       const res = await fetch('/api/staff/invite', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-business-id': businessId
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(inviteData),
       })
 

@@ -11,24 +11,30 @@ import { useAppStore } from '@/lib/store'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-amber-50 text-amber-700',
-  booked: 'bg-indigo-50 text-indigo-700',
-  out: 'bg-blue-50 text-blue-700',
+  draft: 'bg-slate-100 text-slate-700',
+  quote: 'bg-slate-100 text-slate-700',
+  hold: 'bg-amber-50 text-amber-700',
+  confirmed: 'bg-indigo-50 text-indigo-700',
+  picked_up: 'bg-blue-50 text-blue-700',
+  partially_returned: 'bg-cyan-50 text-cyan-700',
   returned: 'bg-emerald-50 text-emerald-700',
   closed: 'bg-slate-100 text-slate-700',
   cancelled: 'bg-rose-50 text-rose-700',
 }
 
 const STATUS_BAR: Record<string, string> = {
-  pending: 'bg-amber-400',
-  booked: 'bg-[#4f46e5]',
-  out: 'bg-blue-500',
+  draft: 'bg-slate-300',
+  quote: 'bg-slate-300',
+  hold: 'bg-amber-400',
+  confirmed: 'bg-[#4f46e5]',
+  picked_up: 'bg-blue-500',
+  partially_returned: 'bg-cyan-500',
   returned: 'bg-emerald-500',
   closed: 'bg-slate-400',
   cancelled: 'bg-rose-400',
 }
 
-type StatusFilter = 'all' | 'booked' | 'out' | 'returned' | 'pending' | 'closed' | 'cancelled'
+type StatusFilter = 'all' | 'draft' | 'quote' | 'hold' | 'confirmed' | 'picked_up' | 'partially_returned' | 'returned' | 'closed' | 'cancelled'
 
 export default function BookingsPage() {
   const { activeBranch } = useAppStore()
@@ -116,7 +122,7 @@ export default function BookingsPage() {
 
       {/* Status Tabs */}
       <div className="flex gap-2 overflow-x-auto rounded-[1.65rem] bg-white p-2 shadow-sm">
-        {(['all', 'booked', 'out', 'returned', 'pending', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
+        {(['all', 'draft', 'quote', 'hold', 'confirmed', 'picked_up', 'partially_returned', 'returned', 'closed', 'cancelled'] as StatusFilter[]).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -126,7 +132,7 @@ export default function BookingsPage() {
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
           >
-            <span className="capitalize">{status}</span>
+            <span className="capitalize">{status.replaceAll('_', ' ')}</span>
             {counts[status] ? (
               <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${statusFilter === status ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {counts[status]}
@@ -156,12 +162,12 @@ export default function BookingsPage() {
             const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
             const items = booking.booking_items || []
             const itemSummary = (items as any[]).map((i: any) => `${i.item_name} (${i.size}×${i.quantity})`).join(', ')
-            const isOverdue = booking.status === 'out' && new Date(booking.return_date) < new Date()
+            const isOverdue = ['picked_up', 'partially_returned'].includes(booking.status) && new Date(booking.return_date) < new Date()
             const rentalDays = booking.pickup_date && booking.return_date
               ? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
               : 0
             const balanceDue = Number(booking.balance_due ?? 0)
-            const statusKey = isOverdue ? 'out' : booking.status
+            const statusKey = booking.status
 
             return (
               <Link
@@ -184,7 +190,7 @@ export default function BookingsPage() {
                       {isOverdue ? (
                         <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />OVERDUE</Badge>
                       ) : (
-                        <Badge className={`text-xs capitalize ${STATUS_COLORS[booking.status] || ''}`}>{booking.status}</Badge>
+                        <Badge className={`text-xs capitalize ${STATUS_COLORS[booking.status] || ''}`}>{booking.status.replaceAll('_', ' ')}</Badge>
                       )}
                     </div>
                     <p className="text-base font-semibold text-slate-900 truncate">{(customer as any)?.name || 'Unknown'}</p>

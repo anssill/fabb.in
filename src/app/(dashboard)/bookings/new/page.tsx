@@ -38,7 +38,6 @@ export interface BookingItem {
   name: string
   sku?: string
   size: string
-  colour?: string
   price: number
   quantity: number
   cover_image_url?: string | null
@@ -52,6 +51,7 @@ export interface BookingDates {
   occasion?: string
   booking_source?: 'walk_in' | 'phone' | 'whatsapp' | 'referral' | 'repeat'
   notes?: string
+  overbook_reason?: string
 }
 
 export interface BookingPricing {
@@ -61,7 +61,6 @@ export interface BookingPricing {
   discount_amount: number
   tax_amount: number
   total_amount: number
-  delivery_fee: number
 }
 
 export interface BookingPayment {
@@ -95,7 +94,7 @@ export default function NewBookingPage() {
   const [dates, setDates] = useState<BookingDates>({ event_date: '', pickup_date: '', return_date: '' })
   const [pricing, setPricing] = useState<BookingPricing>({
     subtotal: 0, discount_type: 'flat', discount_value: 0,
-    discount_amount: 0, tax_amount: 0, total_amount: 0, delivery_fee: 0,
+    discount_amount: 0, tax_amount: 0, total_amount: 0,
   })
   const [payment, setPayment] = useState<BookingPayment>({
     advance_amount: 0, deposit_amount: 0, method: 'cash',
@@ -118,7 +117,7 @@ export default function NewBookingPage() {
       case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
       case 2: return items.length > 0
       case 3: return pricing.total_amount > 0
-      case 4: return payment.advance_amount > 0
+      case 4: return payment.advance_amount >= 0
       default: return true
     }
   }, [currentStep, customer, items, dates, pricing, payment])
@@ -131,7 +130,7 @@ export default function NewBookingPage() {
       setPricing((prev) => ({
         ...prev,
         subtotal,
-        total_amount: subtotal - prev.discount_amount + prev.delivery_fee,
+        total_amount: subtotal - prev.discount_amount,
       }))
     }
     if (currentStep === 3) {
@@ -228,7 +227,7 @@ export default function NewBookingPage() {
       <Card className="shadow-sm border-border">
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
         {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
-        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} />}
+        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} setDates={setDates} />}
         {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} dates={dates} />}
         {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}

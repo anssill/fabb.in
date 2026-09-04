@@ -59,7 +59,11 @@ export function DataRealtime() {
       'items', 
       'item_variants', 
       'expenses', 
-      'washing_queue',
+      'booking_item_fulfilments',
+      'inventory_unavailability',
+      'inventory_transfers',
+      'financial_entries',
+      'deposit_ledger',
       'staff_attendance'
     ]
 
@@ -67,7 +71,6 @@ export function DataRealtime() {
       supabase
         .channel(`realtime-global-${table}`)
         .on(
-          // @ts-ignore
           'postgres_changes',
           { event: '*', schema: 'public', table },
           handleUpdate

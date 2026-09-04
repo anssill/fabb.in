@@ -94,7 +94,6 @@ export function RecordExpenseDialog() {
                   <SelectItem value="salary">Salary</SelectItem>
                   <SelectItem value="utilities">Utilities</SelectItem>
                   <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="washing">Washing</SelectItem>
                   <SelectItem value="transport">Transport</SelectItem>
                   <SelectItem value="marketing">Marketing</SelectItem>
                   <SelectItem value="other">Other</SelectItem>

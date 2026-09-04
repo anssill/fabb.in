@@ -1,362 +1,145 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Search, Package, QrCode, Calendar as CalendarIcon, Layers } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { QRScanner } from '@/components/shared/QRScanner'
+import { useEffect, useMemo, useState } from 'react'
+import { addDays, format } from 'date-fns'
+import { CalendarDays, Layers3, Package, QrCode, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { format, addDays, parseISO } from 'date-fns'
+import { QRScanner } from '@/components/shared/QRScanner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
-const CONDITION_COLORS: Record<string, string> = {
-  excellent: 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  good: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20',
-  fair: 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20',
-  poor: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20',
+type Variant = { id: string; size: string; total_stock: number; price_override: number | null }
+type InventoryItem = {
+  id: string; name: string; sku: string | null; category: string; cover_image_url: string | null
+  price: number; deposit_amount: number; status: string; storage_location: string | null
+  item_variants: Variant[] | null
 }
-
-interface InventoryListProps {
-  initialItems: any[]
+type AvailabilityRow = {
+  item_id: string; variant_id: string; size: string; physical_stock: number; peak_booked: number
+  unavailable_quantity: number; out_quantity: number; available_quantity: number; shortage_quantity: number
 }
+type Props = { initialItems: InventoryItem[]; businessId: string; branchId: string }
 
-export function InventoryList({ initialItems }: InventoryListProps) {
+export function InventoryList({ initialItems, businessId, branchId }: Props) {
   const [search, setSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
-  const [isScannerOpen, setIsScannerOpen] = useState(false)
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(),
-    to: addDays(new Date(), 3)
-  })
-  const [bookings, setBookings] = useState<any[]>([])
-  const [loadingBookings, setLoadingBookings] = useState(true)
-  const router = useRouter()
+  const [category, setCategory] = useState('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [availability, setAvailability] = useState<AvailabilityRow[]>([])
+  const [range, setRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: addDays(new Date(), 3) })
 
-  const categories = useMemo(() => {
-    const cats = new Set(initialItems.map(item => item.category))
-    return Array.from(cats).sort()
-  }, [initialItems])
-
-  // Fetch bookings for the selected range to calculate availability
   useEffect(() => {
-    async function fetchRelevantBookings() {
-      setLoadingBookings(true)
+    let cancelled = false
+    async function loadAvailability() {
+      setLoading(true)
       const supabase = createClient()
-      
-      // We fetch bookings that overlap with the selected range
-      // Include 1-day turnover buffer: return_date + 1
-      const fromStr = format(dateRange.from, 'yyyy-MM-dd')
-      const toStr = format(dateRange.to, 'yyyy-MM-dd')
-
-      const { data } = await supabase
-        .from('booking_items')
-        .select(`
-          quantity,
-          variant_id,
-          item_id,
-          bookings!inner(pickup_date, return_date, status)
-        `)
-        .neq('bookings.status', 'cancelled')
-        .lte('bookings.pickup_date', toStr)
-        // Note: we use return_date < fromStr for overlap if no buffer
-        // But with 1-day buffer, an item is busy until return_date + 1
-        // So it overlaps if (return_date + 1) >= fromStr
-      
-      // More accurate overlap filtering in-memory for simplicity with buffer
-      const filtered = (data || []).filter((bi: any) => {
-        const pickup = bi.bookings.pickup_date
-        const retDate = parseISO(bi.bookings.return_date)
-        const returnWithBuffer = format(addDays(retDate, 1), 'yyyy-MM-dd')
-        
-        return pickup <= toStr && returnWithBuffer >= fromStr
+      const rpc = supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: AvailabilityRow[] | null; error: { message: string } | null }>
+      const { data, error } = await rpc('get_rental_availability', {
+        p_business_id: businessId, p_branch_id: branchId,
+        p_from: format(range.from, 'yyyy-MM-dd'), p_to: format(range.to, 'yyyy-MM-dd'),
+        p_item_id: null, p_requested_quantity: 0,
       })
-
-      setBookings(filtered)
-      setLoadingBookings(false)
-    }
-
-    fetchRelevantBookings()
-  }, [dateRange])
-
-  // Dynamic Item Stats Calculation
-  const itemsWithAvailability = useMemo(() => {
-    return initialItems.map(item => {
-      // For each variant, calculate min availability in range
-      const variantsWithStock = (item.item_variants || []).map((v: any) => {
-        let maxReserved = 0
-        
-        // Find max reserved on any single day in the selected range
-        for (let d = new Date(dateRange.from); d <= dateRange.to; d = addDays(d, 1)) {
-          const dayStr = format(d, 'yyyy-MM-dd')
-          const reservedOnDay = bookings
-            .filter(bk => bk.variant_id === v.id)
-            .reduce((sum, bk) => {
-              const pickup = bk.bookings.pickup_date
-              const retDate = parseISO(bk.bookings.return_date)
-              const returnWithBuffer = format(addDays(retDate, 1), 'yyyy-MM-dd')
-              if (dayStr >= pickup && dayStr <= returnWithBuffer) return sum + (bk.quantity || 1)
-              return sum
-            }, 0)
-          maxReserved = Math.max(maxReserved, reservedOnDay)
-        }
-
-        return {
-          ...v,
-          dynamic_available: Math.max(0, (v.total_stock || 0) - maxReserved)
-        }
-      })
-
-      const totalStock = variantsWithStock.reduce((sum: number, v: any) => sum + (v.total_stock || 0), 0)
-      const dynamicAvailable = variantsWithStock.reduce((sum: number, v: any) => sum + (v.dynamic_available || 0), 0)
-
-      return {
-        ...item,
-        item_variants: variantsWithStock,
-        total_stock: totalStock,
-        dynamic_available: dynamicAvailable
+      if (!cancelled) {
+        if (error) console.error('Availability query failed', error.message)
+        setAvailability(data ?? [])
+        setLoading(false)
       }
-    })
-  }, [initialItems, bookings, dateRange])
-
-  const filteredItems = useMemo(() => {
-    return itemsWithAvailability.filter(item => {
-      const matchesSearch = 
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.sku && item.sku.toLowerCase().includes(search.toLowerCase()))
-      
-      const matchesCategory = !selectedCategory || item.category === selectedCategory
-
-      return matchesSearch && matchesCategory
-    })
-  }, [search, selectedCategory, itemsWithAvailability])
-
-  const handleScanSuccess = (decodedText: string) => {
-    setIsScannerOpen(false)
-    const foundItem = initialItems.find(item => 
-      item.sku === decodedText || item.id === decodedText
-    )
-    if (foundItem) {
-      router.push(`/inventory/${foundItem.id}`)
-    } else {
-      alert(`No item found with SKU: ${decodedText}`)
     }
+    void loadAvailability()
+    return () => { cancelled = true }
+  }, [branchId, businessId, range])
+
+  const categories = useMemo(() => [...new Set(initialItems.map((item) => item.category))].sort(), [initialItems])
+  const availabilityByVariant = useMemo(() => new Map(availability.map((row) => [row.variant_id, row])), [availability])
+  const filtered = useMemo(() => {
+    const normalized = search.trim().toLowerCase()
+    return initialItems.filter((item) => {
+      const matchesSearch = !normalized || item.name.toLowerCase().includes(normalized) || item.sku?.toLowerCase().includes(normalized)
+      return matchesSearch && (!category || item.category === category)
+    })
+  }, [category, initialItems, search])
+
+  function handleScan(value: string) {
+    setScannerOpen(false)
+    const match = initialItems.find((item) => item.sku === value || item.id === value)
+    if (match) window.location.assign(`/inventory/${match.id}`)
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search & Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col xl:flex-row gap-4">
+    <div className="space-y-5">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="space-y-3 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search items by name, SKU..." 
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="pl-10" />
             </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {/* Date Range Picker */}
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "h-10 justify-start rounded-full bg-white px-4 text-left font-normal shadow-sm min-w-[240px]",
-                        !dateRange && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {format(dateRange.from, "LLL dd, y")} -{" "}
-                            {format(dateRange.to, "LLL dd, y")}
-                          </>
-                        ) : (
-                          format(dateRange.from, "LLL dd, y")
-                        )
-                      ) : (
-                        <span>Pick a date range</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={dateRange?.from}
-                      selected={dateRange as any}
-                      onSelect={(range: any) => {
-                        if (range?.from && range?.to) {
-                          setDateRange(range)
-                        } else if (range?.from) {
-                          setDateRange({ from: range.from, to: range.from })
-                        }
-                      }}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <select 
-                className="h-10 rounded-full border border-slate-100 bg-white px-3 py-2 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4f46e5]/20 min-w-[150px]"
-                value={selectedCategory || ''}
-                onChange={(e) => setSelectedCategory(e.target.value || null)}
-              >
-                <option value="">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-
-              <Button 
-                variant="outline" 
-                className="h-10 relative group text-foreground"
-                onClick={() => setIsScannerOpen(true)}
-              >
-                <QrCode className="w-4 h-4 mr-2 text-primary" />
-                Scan
-              </Button>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild><Button variant="outline" className="justify-start rounded-full px-4"><CalendarDays className="mr-2 h-4 w-4 text-primary" />{format(range.from, 'dd MMM yyyy')} – {format(range.to, 'dd MMM yyyy')}</Button></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar mode="range" selected={range} defaultMonth={range.from} numberOfMonths={2} onSelect={(selection) => { if (selection?.from) setRange({ from: selection.from, to: selection.to ?? selection.from }) }} />
+              </PopoverContent>
+            </Popover>
+            <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-full border bg-background px-4 text-sm">
+              <option value="">All categories</option>
+              {categories.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+            <Button variant="outline" onClick={() => setScannerOpen(true)}><QrCode className="mr-2 h-4 w-4" />Scan</Button>
           </div>
-          
-          <div className="mt-3 flex items-center justify-between text-[10px] text-muted-foreground font-medium">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Available
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-destructive" /> Fully Booked
-              </span>
-              <span className="italic">* Showing availability for selected dates (inc. 1-day washing buffer)</span>
-            </div>
-            {loadingBookings && <span className="animate-pulse flex items-center gap-2"><Layers className="w-3 h-3 animate-spin" /> Updating availability...</span>}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>Pickup and return dates are inclusive. No turnover buffer is added.</span>
+            {loading && <span className="flex items-center gap-1"><Layers3 className="h-3 w-3 animate-spin" />Updating availability…</span>}
           </div>
         </CardContent>
       </Card>
 
-      {/* Scanner implementation */}
-      <QRScanner 
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onScanSuccess={handleScanSuccess}
-        onScanError={(err: string) => console.log(err)}
-      />
+      <QRScanner isOpen={scannerOpen} onClose={() => setScannerOpen(false)} onScanSuccess={handleScan} onScanError={console.warn} />
 
-      {/* Items Grid */}
-      {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredItems.map((item) => {
-            const totalStock = item.total_stock
-            const availableStock = item.dynamic_available
-            const sizes = item.item_variants?.map((v: any) => v.size).filter(Boolean).join(', ')
+      {filtered.length ? (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {filtered.map((item) => {
+            const rows = (item.item_variants ?? []).map((variant) => availabilityByVariant.get(variant.id) ?? {
+              item_id: item.id, variant_id: variant.id, size: variant.size, physical_stock: variant.total_stock,
+              peak_booked: 0, unavailable_quantity: 0, out_quantity: 0, available_quantity: variant.total_stock, shortage_quantity: 0,
+            })
+            const totals = rows.reduce((sum, row) => ({
+              physical: sum.physical + row.physical_stock, booked: sum.booked + row.peak_booked,
+              unavailable: sum.unavailable + row.unavailable_quantity, out: sum.out + row.out_quantity,
+              available: sum.available + row.available_quantity,
+            }), { physical: 0, booked: 0, unavailable: 0, out: 0, available: 0 })
 
             return (
               <Link key={item.id} href={`/inventory/${item.id}`}>
-                <Card className="group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-                  <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center relative overflow-hidden">
-                    {item.cover_image_url ? (
-                      <img 
-                        src={item.cover_image_url} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      />
-                    ) : (
-                      <Package className="w-12 h-12 text-muted-foreground/30" />
-                    )}
-                    <div className="absolute top-2 right-2 flex flex-col gap-1">
-                      <Badge className={`text-[10px] uppercase font-bold px-2 py-0.5 border-none shadow-sm ${CONDITION_COLORS[item.condition] || 'bg-muted'}`}>
-                        {item.condition}
-                      </Badge>
-                      {availableStock === 0 && (
-                        <Badge variant="destructive" className="text-[10px] uppercase font-bold">
-                          Fully Booked
-                        </Badge>
-                      )}
-                    </div>
+                <Card className="group h-full overflow-hidden border-0 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                    {item.cover_image_url ? <Image src={item.cover_image_url} alt={item.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition group-hover:scale-105" /> : <div className="grid h-full place-items-center"><Package className="h-12 w-12 text-muted-foreground/30" /></div>}
+                    <Badge className="absolute right-3 top-3 bg-background/90 text-foreground">{totals.available} available</Badge>
                   </div>
-                  <CardContent className="p-4">
-                    <div className="min-w-0 mb-3">
-                      <p className="text-xs font-semibold text-[#4f46e5] uppercase tracking-wider mb-1">{item.category}</p>
-                      <h3 className="text-sm font-bold text-foreground truncate group-hover:text-[#4f46e5] transition-colors">{item.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">SKU: {item.sku || 'N/A'}</p>
+                  <CardContent className="space-y-3 p-4">
+                    <div><p className="text-xs font-semibold uppercase tracking-wider text-primary">{item.category}</p><h3 className="truncate font-semibold">{item.name}</h3><p className="text-xs text-muted-foreground">SKU {item.sku || '—'} · ₹{item.price}</p></div>
+                    <div className="grid grid-cols-4 gap-2 rounded-2xl bg-muted/60 p-3 text-center">
+                      <Metric label="Stock" value={totals.physical} /><Metric label="Booked" value={totals.booked} /><Metric label="Out" value={totals.out} /><Metric label="Blocked" value={totals.unavailable} />
                     </div>
-                    
-                    <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">Rental Price</span>
-                        <span className="text-sm font-bold text-foreground">₹{item.price}</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-xs text-muted-foreground">Availability</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-sm font-bold ${availableStock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-                            {availableStock} available
-                          </span>
-                          <span className="text-xs text-muted-foreground/50">of {totalStock}</span>
-                        </div>
-                      </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {rows.map((row) => <span key={row.variant_id} className={`rounded-full border px-2 py-1 text-[11px] ${row.available_quantity > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30' : 'border-red-200 bg-red-50 text-red-700 dark:bg-red-950/30'}`}>{row.size}: {row.available_quantity}/{row.physical_stock}</span>)}
                     </div>
-
-                    {sizes && (
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {sizes.split(', ').slice(0, 3).map((size: string) => (
-                          <span key={size} className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border">
-                            {size}
-                          </span>
-                        ))}
-                        {sizes.split(', ').length > 3 && (
-                          <span className="text-[10px] text-muted-foreground self-center">+{sizes.split(', ').length - 3}</span>
-                        )}
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </Link>
             )
           })}
         </div>
-      ) : (
-        <Card className="border-2 border-dashed border-slate-200 bg-white/70">
-          <CardContent className="text-center py-20">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-muted-foreground/30" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground">No items found</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-              We could not find any items matching your current filters for the selected dates.
-            </p>
-            {(search || selectedCategory) && (
-              <Button 
-                variant="link" 
-                className="mt-2 text-primary font-semibold"
-                onClick={() => {
-                  setSearch('')
-                  setSelectedCategory(null)
-                }}
-              >
-                Clear all filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      ) : <Card className="border-dashed"><CardContent className="py-16 text-center text-sm text-muted-foreground">No rental items match these filters.</CardContent></Card>}
     </div>
   )
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div><p className="font-semibold text-foreground">{value}</p><p className="text-[10px] text-muted-foreground">{label}</p></div>
 }

@@ -18,9 +18,11 @@ import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   draft:     { color: 'bg-slate-100 text-slate-700',   label: 'Draft' },
-  pending:   { color: 'bg-amber-100 text-amber-700',   label: 'Pending' },
-  booked:    { color: 'bg-blue-100 text-blue-700',     label: 'Booked' },
-  out:       { color: 'bg-violet-100 text-violet-700', label: 'Out' },
+  quote:     { color: 'bg-slate-100 text-slate-700',   label: 'Quote' },
+  hold:      { color: 'bg-amber-100 text-amber-700',   label: 'Hold' },
+  confirmed: { color: 'bg-blue-100 text-blue-700',     label: 'Confirmed' },
+  picked_up: { color: 'bg-violet-100 text-violet-700', label: 'Picked up / Out' },
+  partially_returned: { color: 'bg-cyan-100 text-cyan-700', label: 'Partially returned' },
   returned:  { color: 'bg-green-100 text-green-700',   label: 'Returned' },
   closed:    { color: 'bg-emerald-100 text-emerald-700', label: 'Closed' },
   cancelled: { color: 'bg-red-100 text-red-700',       label: 'Cancelled' },
@@ -39,10 +41,6 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
   const supabase = await createClient()
 
-
-  // Get current authenticated user id for staff actions
-  const { data: { user } } = await supabase.auth.getUser()
-
   const { data: booking } = await supabase
     .from('bookings')
     .select(`
@@ -51,10 +49,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       branch:branches(name, city),
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
-        id, quantity, price, rental_days, subtotal, item_name, size,
-        condition_on_return, condition_notes_on_return,
+        id, quantity, picked_up_quantity, returned_quantity, price, rental_days, subtotal, item_name, size,
         item:items(id, name, cover_image_url, sku),
-        variant:item_variants(size, colour)
+        variant:item_variants(size)
       ),
       booking_payments(
         id, type, amount, method, reference_number, notes, created_at, is_voided,
@@ -79,14 +76,16 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.draft
 
-  const isOverdue = booking.status === 'out' && new Date(booking.return_date) < new Date()
+  const isOverdue = ['picked_up', 'partially_returned'].includes(booking.status) && new Date(booking.return_date) < new Date()
   const rentalDays = (booking as any).rental_days ?? calculateBillableRentalDays(booking.pickup_date, booking.return_date)
 
   const payments = ((booking.booking_payments || []) as any[]).filter((p: any) => !p.is_voided)
-  const totalPaid = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
-  const balanceDue = Number(booking.total_amount ?? 0) - totalPaid
+  const rentalPaid = payments.filter((payment: any) => ['advance', 'balance'].includes(payment.type)).reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
+    - payments.filter((payment: any) => payment.type === 'refund').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
+  const totalCollected = payments.filter((payment: any) => !['deposit_refund', 'refund'].includes(payment.type)).reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
+  const balanceDue = Math.max(0, Number(booking.total_amount ?? 0) - rentalPaid)
 
-  const statusSteps = ['pending', 'booked', 'out', 'returned', 'closed']
+  const statusSteps = ['hold', 'confirmed', 'picked_up', 'partially_returned', 'returned', 'closed']
   const currentStepIdx = statusSteps.indexOf(booking.status)
 
   // suppress unused variable warning
@@ -125,12 +124,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
           <BookingActions booking={{
             id: booking.id,
             status: booking.status,
-            business_id: booking.business_id,
-            branch_id: booking.branch_id,
-            staff_id: user?.id ?? '',
             balance_due: Number(booking.balance_due ?? balanceDue),
             deposit_amount: Number((booking as any).deposit_amount ?? 0),
-            total_amount: Number(booking.total_amount ?? 0),
             booking_items: ((booking.booking_items || []) as any[]).map((bi: any) => ({
               id: bi.id,
               item_name: bi.item_name || (Array.isArray(bi.item) ? bi.item[0]?.name : bi.item?.name) || '',
@@ -397,7 +392,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               {/* Summary */}
               <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
                 <span className="text-sm font-semibold text-slate-700">Total Collected</span>
-                <span className="text-base font-bold text-slate-900">₹{totalPaid.toLocaleString('en-IN')}</span>
+                <span className="text-base font-bold text-slate-900">₹{totalCollected.toLocaleString('en-IN')}</span>
               </div>
               {balanceDue > 0 && (
                 <div className="flex justify-between items-center mt-1">
@@ -432,12 +427,9 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-900">{bi.item_name || item?.name}</p>
                         <p className="text-xs text-slate-500">Size: {bi.size} · Qty: {bi.quantity} · ₹{bi.price}/day × {bi.rental_days ?? rentalDays} days</p>
-                        {bi.condition_on_return && (
-                          <p className="text-xs text-slate-600 mt-1">
-                            Return condition: <span className="font-medium capitalize">{bi.condition_on_return}</span>
-                            {bi.condition_notes_on_return ? ` — ${bi.condition_notes_on_return}` : ''}
-                          </p>
-                        )}
+                        <p className="text-xs text-slate-600 mt-1">
+                          Picked up: {bi.picked_up_quantity || 0} · Returned: {bi.returned_quantity || 0} · Out: {Math.max(0, (bi.picked_up_quantity || 0) - (bi.returned_quantity || 0))}
+                        </p>
                       </div>
                       <p className="text-sm font-bold text-slate-900 flex-shrink-0">₹{Number(subtotal).toLocaleString('en-IN')}</p>
                     </div>

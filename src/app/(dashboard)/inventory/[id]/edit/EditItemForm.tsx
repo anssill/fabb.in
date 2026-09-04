@@ -16,8 +16,6 @@ import { StorageService } from '@/lib/storage-service'
 import { useAppStore } from '@/lib/store'
 
 const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
-const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
-
 const SIZE_PRESETS = {
   'Clothing': ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'],
   'Numeric': ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'],
@@ -27,10 +25,7 @@ const SIZE_PRESETS = {
 interface Variant {
   id?: string
   size: string
-  colour: string
   total_stock: number
-  available_stock: number
-  reserved_stock: number
   price_override: number | null
 }
 
@@ -76,7 +71,6 @@ export function EditItemForm({ item }: EditItemFormProps) {
   const [bulkSizes, setBulkSizes] = useState<string[]>([])
   const [showBulk, setShowBulk] = useState(false)
   const [bulkQty, setBulkQty] = useState(1)
-  const [bulkColour, setBulkColour] = useState('')
 
   const [form, setForm] = useState({
     name: item.name,
@@ -86,18 +80,16 @@ export function EditItemForm({ item }: EditItemFormProps) {
     storage_location: item.storage_location || '',
     price: item.price,
     deposit_amount: item.deposit_amount ?? 0,
-    condition: item.condition,
     purchase_cost: item.purchase_cost || 0,
+    replacement_value: item.replacement_value || 0,
+    tracking_mode: item.tracking_mode || 'quantity',
   })
 
   const [variants, setVariants] = useState<Variant[]>(
     item.item_variants.map((v: any) => ({
       id: v.id,
       size: v.size,
-      colour: v.colour || '',
       total_stock: v.total_stock,
-      available_stock: v.available_stock,
-      reserved_stock: v.reserved_stock,
       price_override: v.price_override,
     }))
   )
@@ -106,7 +98,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
     setForm((prev) => ({ ...prev, [field]: value }))
 
   const addVariant = () =>
-    setVariants([...variants, { size: '', colour: '', total_stock: 1, available_stock: 1, reserved_stock: 0, price_override: null }])
+    setVariants([...variants, { size: '', total_stock: 1, price_override: null }])
 
   const removeVariant = (index: number) => {
     if (variants.length <= 1) return
@@ -115,12 +107,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
 
   const updateVariant = (index: number, field: string, value: string | number | null) => {
     const updated = [...variants]
-    const variant = { ...updated[index], [field]: value }
-    if (field === 'total_stock' && typeof value === 'number') {
-      const delta = value - updated[index].total_stock
-      variant.available_stock = Math.max(0, updated[index].available_stock + delta)
-    }
-    updated[index] = variant as Variant
+    updated[index] = { ...updated[index], [field]: value } as Variant
     setVariants(updated)
   }
 
@@ -134,16 +121,12 @@ export function EditItemForm({ item }: EditItemFormProps) {
       .filter((s) => !existingSizes.has(s))
       .map((s) => ({
         size: s,
-        colour: bulkColour,
         total_stock: bulkQty,
-        available_stock: bulkQty,
-        reserved_stock: 0,
         price_override: null,
       }))
     setVariants([...variants.filter((v) => v.size.trim()), ...newVariants])
     setBulkSizes([])
     setBulkQty(1)
-    setBulkColour('')
     setShowBulk(false)
     toast.success(`Added ${newVariants.length} size variant${newVariants.length !== 1 ? 's' : ''} with Qty ${bulkQty}`)
   }
@@ -239,7 +222,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
             <CardTitle className="text-base">Pricing</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Rental rate (₹/day) *</Label>
                 <Input type="number" value={form.price || ''} onChange={(e) => updateForm('price', Number(e.target.value))} placeholder="500" min={0} />
@@ -252,30 +235,20 @@ export function EditItemForm({ item }: EditItemFormProps) {
                 <Label>Purchase price (₹)</Label>
                 <Input type="number" value={form.purchase_cost || ''} onChange={(e) => updateForm('purchase_cost', Number(e.target.value))} placeholder="5000" min={0} />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Condition */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Condition</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
-              {CONDITIONS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => updateForm('condition', c)}
-                  className={`px-4 py-2 rounded-lg text-sm capitalize border transition-colors ${
-                    form.condition === c
-                      ? 'bg-primary text-primary-foreground border-primary font-medium'
-                      : 'border-input text-muted-foreground bg-transparent hover:bg-muted'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+              <div className="space-y-2">
+                <Label>Replacement value (₹)</Label>
+                <Input type="number" value={form.replacement_value || ''} onChange={(e) => updateForm('replacement_value', Number(e.target.value))} placeholder="8000" min={0} />
+              </div>
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Tracking mode</Label>
+                <Select value={form.tracking_mode} onValueChange={(value) => updateForm('tracking_mode', value)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quantity">Quantity by size</SelectItem>
+                    <SelectItem value="asset">Individual premium assets</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -286,7 +259,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">Size & Stock Variants</CardTitle>
-                <CardDescription>Existing variants will be updated, missing ones will be deleted</CardDescription>
+                <CardDescription>Existing sizes are updated; removed sizes are archived to preserve rental history.</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowBulk(!showBulk)}>
@@ -346,15 +319,6 @@ export function EditItemForm({ item }: EditItemFormProps) {
                       className="h-8 text-xs bg-background"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Bulk Colour (optional)</Label>
-                    <Input
-                      value={bulkColour}
-                      onChange={(e) => setBulkColour(e.target.value)}
-                      placeholder="e.g. Red"
-                      className="h-8 text-xs bg-background"
-                    />
-                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-1">
@@ -366,7 +330,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
                   >
                     Add {bulkSizes.length > 0 ? bulkSizes.length : ''} size{bulkSizes.length !== 1 ? 's' : ''} →
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setBulkQty(1); setBulkColour(''); setShowBulk(false) }}>
+                  <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setBulkQty(1); setShowBulk(false) }}>
                     Cancel
                   </Button>
                 </div>
@@ -384,15 +348,10 @@ export function EditItemForm({ item }: EditItemFormProps) {
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Colour</Label>
-                    <Input value={v.colour} onChange={(e) => updateVariant(i, 'colour', e.target.value)} placeholder="Red" />
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Stock</Label>
-                    <Input type="number" value={v.total_stock} onChange={(e) => updateVariant(i, 'total_stock', Number(e.target.value))} min={v.reserved_stock} />
-                    {v.reserved_stock > 0 && <p className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">{v.reserved_stock} reserved</p>}
+                    <Input type="number" value={v.total_stock} onChange={(e) => updateVariant(i, 'total_stock', Number(e.target.value))} min={0} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Price override (₹)</Label>
@@ -403,7 +362,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
             ))}
 
             <p className="text-xs text-muted-foreground">
-              Total available: <span className="font-semibold text-foreground">{variants.reduce((s, v) => s + v.available_stock, 0)}</span> / Total: <span className="font-semibold text-foreground">{variants.reduce((s, v) => s + v.total_stock, 0)}</span> units
+              Physical stock: <span className="font-semibold text-foreground">{variants.reduce((s, v) => s + v.total_stock, 0)}</span> units. Rental availability is calculated from booking dates.
             </p>
           </CardContent>
         </Card>

@@ -290,7 +290,7 @@ export function DatesStep({ dates, setDates }: Props) {
             className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px] placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring"
             value={dates.notes || ''}
             onChange={(e) => setDates({ ...dates, notes: e.target.value })}
-            placeholder="Any special instructions, delivery details, etc."
+            placeholder="Alteration notes or other rental instructions"
           />
         </div>
       </CardContent>

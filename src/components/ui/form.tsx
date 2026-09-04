@@ -1,8 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import * as LabelPrimitive from '@radix-ui/react-label'
-import { Slot } from '@radix-ui/react-slot'
+import { Label as LabelPrimitive, Slot as SlotPrimitive } from 'radix-ui'
 import {
   Controller,
   ControllerProps,
@@ -14,6 +13,8 @@ import {
 
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
+
+const Slot = SlotPrimitive.Slot
 
 const Form = FormProvider
 

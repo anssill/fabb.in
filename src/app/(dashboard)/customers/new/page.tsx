@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ChevronLeft, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
-import { integrations } from '@/lib/integrations'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
@@ -28,32 +27,15 @@ export default function NewCustomerPage() {
     
     setSaving(true)
     try {
-      const integrationSettings = (activeBranch?.settings as any)?.integrations || {}
-      
-      // 1. Phone validation
-      if (integrationSettings.phone?.enabled) {
-        toast.loading('Validating phone number...', { id: 'validation' })
-        const phoneResult = await integrations.validatePhone(form.phone, integrationSettings.phone.numverify_key)
-        if (phoneResult.error) {
-           console.warn('Phone validation error:', phoneResult.error)
-        } else if (phoneResult.valid === false) {
-           toast.error('Invalid mobile number. Please check and try again.', { id: 'validation' })
-           setSaving(false)
-           return
-        }
+      const normalizedPhone = form.phone.replace(/\D/g, '')
+      if (normalizedPhone.length !== 10) {
+        toast.error('Enter a valid 10-digit mobile number.', { id: 'validation' })
+        return
       }
 
-      // 2. Email validation
-      if (form.email && integrationSettings.email?.enabled) {
-        toast.loading('Verifying email address...', { id: 'validation' })
-        const emailResult = await integrations.validateEmail(form.email, integrationSettings.email.cloudmersive_key)
-        if (emailResult.error) {
-           console.warn('Email validation error:', emailResult.error)
-        } else if (emailResult.valid === false) {
-           toast.error('The email address provided is invalid or inactive.', { id: 'validation' })
-           setSaving(false)
-           return
-        }
+      if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        toast.error('Enter a valid email address.', { id: 'validation' })
+        return
       }
 
       toast.loading('Saving customer data...', { id: 'validation' })
@@ -62,7 +44,7 @@ export default function NewCustomerPage() {
       const { data: existing } = await supabase
         .from('customers')
         .select('id')
-        .eq('phone', form.phone)
+        .eq('phone', normalizedPhone)
         .eq('business_id', staff.business_id)
         .eq('branch_id', activeBranch?.id || staff.branch_id)
         .maybeSingle()
@@ -81,7 +63,7 @@ export default function NewCustomerPage() {
         const { data, error } = await supabase.from('customers').insert({
           business_id: staff.business_id,
           branch_id: activeBranch?.id || staff.branch_id,
-          name: form.name, phone: form.phone, email: form.email || null,
+          name: form.name, phone: normalizedPhone, email: form.email || null,
           address: form.address || null, id_type: form.id_type || null,
           id_number: form.id_number || null, notes: form.notes || null,
         }).select('id').single()
@@ -91,8 +73,8 @@ export default function NewCustomerPage() {
       
       toast.success('Customer saved successfully!', { id: 'validation' })
       router.push(`/customers/${customerId}`)
-    } catch (error: any) { 
-      toast.error(error.message || 'Failed to save customer', { id: 'validation' }) 
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save customer', { id: 'validation' })
     } finally { 
       setSaving(false) 
     }

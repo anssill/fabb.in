@@ -1,297 +1,78 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import { isValidUuid } from '@/lib/api-utils'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  ChevronLeft, Package, Edit, Trash2, BarChart3,
-  CalendarCheck, IndianRupee, Waves,
-} from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
+import { Archive, BarChart3, CalendarCheck, ChevronLeft, Edit, IndianRupee, Package, Plus, QrCode, Trash2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { isValidUuid } from '@/lib/api-utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ItemTag } from './components/ItemTag'
 import { AvailabilityCalendar } from './components/AvailabilityCalendar'
-
-const CONDITION_COLORS: Record<string, string> = {
-  excellent: 'bg-green-100 text-green-700',
-  good: 'bg-blue-100 text-blue-700',
-  fair: 'bg-amber-100 text-amber-700',
-  poor: 'bg-red-100 text-red-700',
-}
+import { addBundleComponent, archiveInventoryAsset, archiveItem, registerInventoryAsset, removeBundleComponent } from '../inventory-actions'
 
 export default async function InventoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  if (!isValidUuid(id)) {
-    notFound()
-  }
-
+  if (!isValidUuid(id)) notFound()
   const supabase = await createClient()
-
-  const { data: item } = await supabase
-    .from('items')
-    .select(`
-      *,
-      item_variants(id, size, colour, total_stock, available_stock, reserved_stock, price_override),
-      branch:branches(name)
-    `)
-    .eq('id', id)
-    .single()
-
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const db = supabase as any
+  const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
+  if (!staff?.business_id || !staff.branch_id) notFound()
+  const { data: item } = await db.from('items').select(`id, business_id, branch_id, name, sku, category, description, cover_image_url, price, deposit_amount, storage_location, total_rentals, total_revenue, tracking_mode, replacement_value, designer, brand, occasion, fabric, is_bundle, item_variants(id, size, total_stock, price_override, branch_id, archived_at)`).eq('id', id).eq('business_id', staff.business_id).eq('item_variants.branch_id', staff.branch_id).is('item_variants.archived_at', null).single()
   if (!item) notFound()
 
-  const branch = Array.isArray(item.branch) ? item.branch[0] : item.branch
-  const totalStock = (item.item_variants || []).reduce((s: number, v: { total_stock: number }) => s + v.total_stock, 0)
-  const availableStock = (item.item_variants || []).reduce((s: number, v: { available_stock: number }) => s + v.available_stock, 0)
-  const reservedStock = (item.item_variants || []).reduce((s: number, v: { reserved_stock: number }) => s + v.reserved_stock, 0)
+  const [{ data: recentBookings }, { data: assets }, { data: unavailable }, { data: bundleComponents }, { data: componentVariants }] = await Promise.all([
+    db.from('booking_items').select('quantity, size, booking:bookings(id, booking_number, status, pickup_date, return_date, customer:customers(name))').eq('item_id', id).order('created_at', { ascending: false }).limit(6),
+    db.from('inventory_assets').select('id, asset_code, status, item_variant_id, acquired_on, acquisition_cost, storage_location, variant:item_variants(size)').eq('item_id', id).eq('branch_id', staff.branch_id).is('archived_at', null).order('asset_code').limit(250),
+    db.from('inventory_unavailability').select('id, reason, quantity, restored_quantity, item_variant_id, recorded_at').eq('item_id', id).filter('restored_quantity', 'lt', 'quantity'),
+    db.from('item_bundle_components').select('id, name, quantity, required, component:items!item_bundle_components_component_item_id_fkey(name,sku), variant:item_variants!item_bundle_components_component_variant_id_fkey(size)').eq('bundle_item_id', id).order('created_at'),
+    db.from('item_variants').select('id, size, item_id, item:items!inner(name,sku)').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).neq('item_id', id).is('archived_at', null).eq('items.is_active', true).order('size').limit(500),
+  ])
+  const { data: branch } = await supabase.from('branches').select('name').eq('id', staff.branch_id).single()
+  const variants = item.item_variants ?? []
+  const totalStock = variants.reduce((sum: number, variant: { total_stock: number }) => sum + variant.total_stock, 0)
+  const blocked = (unavailable ?? []).reduce((sum: number, entry: { quantity: number; restored_quantity: number }) => sum + entry.quantity - entry.restored_quantity, 0)
 
-  // Recent bookings for this item
-  const { data: recentBookings } = await supabase
-    .from('booking_items')
-    .select('booking:bookings(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
-    .eq('item_id', id)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  // All bookings for availability calendar (active + upcoming)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const { data: calendarBookings } = await supabase
-    .from('booking_items')
-    .select('variant_id, quantity, booking:bookings!inner(id, booking_number, status, pickup_date, return_date, customer:customers(name))')
-    .eq('item_id', id)
-    .gte('booking.return_date', thirtyDaysAgo.toISOString().split('T')[0])
-    .order('booking(pickup_date)', { ascending: true })
-    .limit(100)
-
-  const calendarData = (calendarBookings || []).map((bi: any) => {
-    const bk = Array.isArray(bi.booking) ? bi.booking[0] : bi.booking
-    if (!bk) return null
-    const cust = Array.isArray(bk.customer) ? bk.customer[0] : bk.customer
-    return {
-      id: bk.id,
-      booking_number: bk.booking_number,
-      status: bk.status,
-      pickup_date: bk.pickup_date,
-      return_date: bk.return_date,
-      customer_name: cust?.name || 'Customer',
-      variant_id: bi.variant_id,
-      quantity: bi.quantity || 1,
-    }
-  }).filter(Boolean) as any[]
+  async function archive() {
+    'use server'
+    await archiveItem(id)
+    redirect('/inventory')
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/inventory"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-slate-900">{item.name}</h1>
-              <Badge className={`text-xs ${CONDITION_COLORS[item.condition] || ''}`}>{item.condition}</Badge>
-            </div>
-            <p className="text-sm text-slate-500">{item.sku} · {item.category} · {branch?.name || 'Branch'}</p>
-          </div>
+          <Button variant="ghost" size="sm" asChild><Link href="/inventory"><ChevronLeft className="mr-1 h-4 w-4" />Back</Link></Button>
+          <div><div className="flex items-center gap-2"><h1 className="text-xl font-semibold">{item.name}</h1><Badge variant="secondary">{item.tracking_mode === 'asset' ? 'Asset tracked' : 'Quantity tracked'}</Badge>{item.is_bundle && <Badge>Bundle</Badge>}</div><p className="text-sm text-muted-foreground">{item.sku || 'No SKU'} · {item.category} · {branch?.name || 'Branch'}</p></div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/inventory/${item.id}/edit`}>
-              <Edit className="w-4 h-4 mr-1" />Edit
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" className="text-red-600"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
-        </div>
+        <div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link href={`/inventory/${id}/edit`}><Edit className="mr-1 h-4 w-4" />Edit</Link></Button><form action={archive}><Button variant="outline" size="sm" className="text-amber-700"><Archive className="mr-1 h-4 w-4" />Archive</Button></form></div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Cover Image */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="aspect-[16/9] bg-slate-100 flex items-center justify-center rounded-lg overflow-hidden">
-                {item.cover_image_url ? (
-                  <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <Package className="w-16 h-16 text-slate-300" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Variants */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium">Size & Stock Variants</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-500 border-b">
-                      <th className="pb-2 font-medium">Size</th>
-                      <th className="pb-2 font-medium">Colour</th>
-                      <th className="pb-2 font-medium text-center">Total</th>
-                      <th className="pb-2 font-medium text-center">Available</th>
-                      <th className="pb-2 font-medium text-center">Reserved</th>
-                      <th className="pb-2 font-medium text-right">Rental Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(item.item_variants || []).map((v: Record<string, unknown>) => (
-                      <tr key={v.id as string} className={(v.status as string) !== 'available' ? 'opacity-50' : ''}>
-                        <td className="py-2.5 font-medium">{v.size as string}</td>
-                        <td className="py-2.5 text-slate-600">{(v.colour as string) || '—'}</td>
-                        <td className="py-2.5 text-center">{v.total_stock as number}</td>
-                        <td className="py-2.5 text-center">
-                          <span className={`font-medium ${(v.available_stock as number) === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {v.available_stock as number}
-                          </span>
-                        </td>
-                        <td className="py-2.5 text-center text-amber-600">{v.reserved_stock as number}</td>
-                        <td className="py-2.5 text-right">
-                          {(v.price_override as number) ? `₹${(v.price_override as number).toLocaleString('en-IN')}` : `₹${item.price}`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Bookings */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-blue-600" />
-                Recent Bookings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentBookings && recentBookings.length > 0 ? (
-                <div className="divide-y divide-slate-100">
-                  {recentBookings.map((bi, i) => {
-                    const booking = Array.isArray(bi.booking) ? bi.booking[0] : bi.booking
-                    if (!booking) return null
-                    const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
-                    return (
-                      <Link key={i} href={`/bookings/${booking.id}`} className="flex items-center justify-between py-2.5 hover:bg-slate-50 -mx-2 px-2 rounded transition-colors">
-                        <div>
-                          <p className="text-sm font-medium">{booking.booking_number}</p>
-                          <p className="text-xs text-slate-500">{customer?.name || 'Customer'}</p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className="text-xs capitalize">{booking.status}</Badge>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''} → {booking.return_date ? new Date(booking.return_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
-                          </p>
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 text-center py-4">No bookings yet for this item</p>
-              )}
-            </CardContent>
-          </Card>
+      <div className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
+        <div className="space-y-5">
+          <Card className="overflow-hidden"><CardContent className="p-0"><div className="relative aspect-[16/8] bg-muted">{item.cover_image_url ? <Image src={item.cover_image_url} alt={item.name} fill priority sizes="(max-width: 1024px) 100vw, 66vw" className="object-cover" /> : <div className="grid h-full place-items-center"><Package className="h-16 w-16 text-muted-foreground/30" /></div>}</div></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-base">Size and physical stock</CardTitle></CardHeader><CardContent><div className="overflow-x-auto rounded-xl border"><table className="w-full text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr><th className="p-3">Size</th><th className="p-3 text-center">Physical units</th><th className="p-3 text-center">Blocked now</th><th className="p-3 text-right">Rental rate</th></tr></thead><tbody className="divide-y">{variants.map((variant: { id: string; size: string; total_stock: number; price_override: number | null }) => { const variantBlocked = (unavailable ?? []).filter((entry: { item_variant_id: string }) => entry.item_variant_id === variant.id).reduce((sum: number, entry: { quantity: number; restored_quantity: number }) => sum + entry.quantity - entry.restored_quantity, 0); return <tr key={variant.id}><td className="p-3 font-medium">{variant.size}</td><td className="p-3 text-center">{variant.total_stock}</td><td className="p-3 text-center">{variantBlocked}</td><td className="p-3 text-right">₹{Number(variant.price_override ?? item.price).toLocaleString('en-IN')}</td></tr> })}</tbody></table></div></CardContent></Card>
+          {item.tracking_mode === 'asset' ? <Card><CardHeader><CardTitle className="flex items-center gap-2 text-base"><QrCode className="h-4 w-4 text-primary" />Premium asset pieces</CardTitle></CardHeader><CardContent className="space-y-4"><form action={registerInventoryAsset.bind(null, id)} className="grid gap-3 rounded-xl border bg-muted/20 p-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor="asset-size">Size</Label><select id="asset-size" name="item_variant_id" required className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">Choose</option>{variants.map((variant: { id: string; size: string }) => <option key={variant.id} value={variant.id}>{variant.size}</option>)}</select></div><div className="space-y-1.5"><Label htmlFor="asset-code">Asset code / QR</Label><Input id="asset-code" name="asset_code" required placeholder="FABB-0001" /></div><div className="space-y-1.5"><Label htmlFor="asset-date">Acquired on</Label><Input id="asset-date" name="acquired_on" type="date" /></div><div className="space-y-1.5"><Label htmlFor="asset-cost">Acquisition cost</Label><Input id="asset-cost" name="acquisition_cost" type="number" min={0} step="0.01" /></div><Button type="submit" size="sm"><Plus className="mr-1 h-4 w-4" />Register</Button><Input name="storage_location" placeholder="Rack / location (optional)" className="md:col-span-4" /></form>{assets?.length ? <div className="overflow-x-auto rounded-xl border"><table className="w-full text-sm"><thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr><th className="p-3">Asset code</th><th className="p-3">Size</th><th className="p-3">Status</th><th className="p-3">Acquired</th><th className="p-3 text-right">Cost</th><th className="p-3"></th></tr></thead><tbody className="divide-y">{assets.map((asset: any) => { const assetVariant = Array.isArray(asset.variant) ? asset.variant[0] : asset.variant; return <tr key={asset.id}><td className="p-3 font-mono font-medium">{asset.asset_code}</td><td className="p-3">{assetVariant?.size || '—'}</td><td className="p-3"><Badge variant="outline" className="capitalize">{asset.status.replaceAll('_', ' ')}</Badge></td><td className="p-3">{asset.acquired_on || '—'}</td><td className="p-3 text-right">{asset.acquisition_cost == null ? '—' : `₹${Number(asset.acquisition_cost).toLocaleString('en-IN')}`}</td><td className="p-3 text-right">{!['reserved', 'out', 'in_transit'].includes(asset.status) ? <form action={archiveInventoryAsset.bind(null, id, asset.id)}><Button type="submit" size="icon-sm" variant="ghost" aria-label={`Archive ${asset.asset_code}`}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></form> : null}</td></tr> })}</tbody></table></div> : <p className="py-4 text-center text-sm text-muted-foreground">No asset pieces registered yet.</p>}</CardContent></Card> : null}
+          {item.is_bundle ? <Card><CardHeader><CardTitle className="text-base">Bundle components</CardTitle></CardHeader><CardContent className="space-y-4"><form action={addBundleComponent.bind(null, id)} className="grid gap-3 rounded-xl border bg-muted/20 p-3 md:grid-cols-[1.5fr_1fr_100px_auto_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor="component-variant">Product / size</Label><select id="component-variant" name="component_variant_id" required className="h-10 w-full rounded-md border bg-background px-3 text-sm"><option value="">Choose component</option>{(componentVariants ?? []).map((variant: any) => { const componentItem = Array.isArray(variant.item) ? variant.item[0] : variant.item; return <option key={variant.id} value={variant.id}>{componentItem?.name} · {variant.size} · {componentItem?.sku || 'No SKU'}</option> })}</select></div><div className="space-y-1.5"><Label htmlFor="component-name">Piece name</Label><Input id="component-name" name="name" required placeholder="Jacket" /></div><div className="space-y-1.5"><Label htmlFor="component-quantity">Qty</Label><Input id="component-quantity" name="quantity" type="number" min={1} defaultValue={1} required /></div><label className="flex h-10 items-center gap-2 text-sm"><input name="required" type="checkbox" defaultChecked />Required</label><Button type="submit" size="sm"><Plus className="mr-1 h-4 w-4" />Add</Button></form>{bundleComponents?.length ? <div className="divide-y rounded-xl border">{bundleComponents.map((component: any) => { const componentItem = Array.isArray(component.component) ? component.component[0] : component.component; const componentVariant = Array.isArray(component.variant) ? component.variant[0] : component.variant; return <div key={component.id} className="flex items-center justify-between gap-3 p-3"><div><p className="font-medium">{component.name} × {component.quantity}</p><p className="text-xs text-muted-foreground">{componentItem?.name} · {componentVariant?.size || 'Any size'} · {component.required ? 'Required' : 'Optional'}</p></div><form action={removeBundleComponent.bind(null, id, component.id)}><Button type="submit" size="icon-sm" variant="ghost" aria-label={`Remove ${component.name}`}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></form></div> })}</div> : <p className="py-4 text-center text-sm text-muted-foreground">No bundle pieces configured yet.</p>}</CardContent></Card> : null}
+          <Card><CardHeader><CardTitle className="flex items-center gap-2 text-base"><CalendarCheck className="h-4 w-4 text-primary" />Recent rentals</CardTitle></CardHeader><CardContent>{recentBookings?.length ? <div className="divide-y">{recentBookings.map((line: any, index: number) => { const booking = Array.isArray(line.booking) ? line.booking[0] : line.booking; const customer = Array.isArray(booking?.customer) ? booking.customer[0] : booking?.customer; return booking ? <Link key={`${booking.id}-${index}`} href={`/bookings/${booking.id}`} className="flex items-center justify-between rounded-lg px-2 py-3 hover:bg-muted"><div><p className="font-medium">{booking.booking_number}</p><p className="text-xs text-muted-foreground">{customer?.name || 'Customer'} · {line.size} × {line.quantity}</p></div><div className="text-right"><Badge variant="outline" className="capitalize">{booking.status}</Badge><p className="mt-1 text-xs text-muted-foreground">{booking.pickup_date} → {booking.return_date}</p></div></Link> : null })}</div> : <p className="py-6 text-center text-sm text-muted-foreground">No rentals yet.</p>}</CardContent></Card>
         </div>
 
-        {/* Right sidebar */}
-        <div className="space-y-4">
-          {/* Stats */}
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center">
-                    <Package className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm text-slate-600">Stock</span>
-                </div>
-                <span className="text-sm font-semibold">{availableStock}/{totalStock}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-amber-50 flex items-center justify-center">
-                    <CalendarCheck className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <span className="text-sm text-slate-600">Reserved</span>
-                </div>
-                <span className="text-sm font-semibold">{reservedStock}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-green-50 flex items-center justify-center">
-                    <BarChart3 className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-sm text-slate-600">Total Rentals</span>
-                </div>
-                <span className="text-sm font-semibold">{item.total_rentals || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center">
-                    <IndianRupee className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <span className="text-sm text-slate-600">Revenue</span>
-                </div>
-                <span className="text-sm font-semibold">₹{Number(item.total_revenue || 0).toLocaleString('en-IN')}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Pricing</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Rental Rate</span>
-                <span className="font-medium">₹{item.price}</span>
-              </div>
-              {item.deposit_amount && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Deposit (Refundable)</span>
-                  <span>₹{item.deposit_amount}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Description */}
-          {item.description && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-600">{item.description}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Actions */}
-          <Card>
-            <CardContent className="p-3 space-y-2">
-              <Button variant="outline" className="w-full" size="sm">
-                <Waves className="w-4 h-4 mr-2" />
-                Send to Wash
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* QR Tag */}
+        <div className="space-y-5">
+          <Card><CardContent className="space-y-3 p-5"><Stat icon={Package} label="Physical stock" value={totalStock} /><Stat icon={Archive} label="Damaged / missing" value={blocked} /><Stat icon={QrCode} label="Tagged assets" value={assets?.length ?? 0} /><Stat icon={BarChart3} label="Total rentals" value={item.total_rentals ?? 0} /><Stat icon={IndianRupee} label="Revenue" value={`₹${Number(item.total_revenue ?? 0).toLocaleString('en-IN')}`} /></CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">Rental information</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><Info label="Base rate" value={`₹${Number(item.price).toLocaleString('en-IN')}`} /><Info label="Deposit" value={`₹${Number(item.deposit_amount ?? 0).toLocaleString('en-IN')}`} /><Info label="Replacement value" value={`₹${Number(item.replacement_value ?? 0).toLocaleString('en-IN')}`} /><Info label="Storage" value={item.storage_location || '—'} /><Info label="Brand" value={item.brand || item.designer || '—'} /></CardContent></Card>
+          {item.description && <Card><CardHeader><CardTitle className="text-sm">Description</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{item.description}</p></CardContent></Card>}
           <ItemTag item={{ sku: item.sku, name: item.name, category: item.category }} />
         </div>
       </div>
-
-      {/* Availability Calendar — full width below */}
-      <AvailabilityCalendar bookings={calendarData} variants={item.item_variants} />
+      <AvailabilityCalendar itemId={id} businessId={item.business_id} branchId={staff.branch_id} variants={variants} />
     </div>
   )
 }
+
+function Stat({ icon: Icon, label, value }: { icon: typeof Package; label: string; value: string | number }) { return <div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm text-muted-foreground"><span className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>{label}</span><strong className="text-sm">{value}</strong></div> }
+function Info({ label, value }: { label: string; value: string }) { return <div className="flex justify-between gap-4"><span className="text-muted-foreground">{label}</span><span className="text-right font-medium">{value}</span></div> }

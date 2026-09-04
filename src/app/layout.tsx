@@ -12,9 +12,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL('https://fabbin-xi.vercel.app'),
   title: 'Fabb — Clothing Rental Management',
-  description:
-    'India\'s #1 SaaS for clothing rental businesses. Manage inventory, bookings, customers, and payments in one place.',
-  keywords: ['clothing rental', 'rental management', 'SaaS', 'India', 'booking software', 'kerala fashion'],
+  description: 'Internal rental operations for inventory, bookings, customers, finance and staff.',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Fabb Rental',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Fabb Rental' },
   authors: [{ name: 'Fabb Team' }],
   icons: {
     icon: [
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Fabb — Clothing Rental Management',
-    description: 'Transform your clothing rental business with professional management software.',
+    description: 'Internal rental operations platform.',
     url: 'https://fabbin-xi.vercel.app',
     siteName: 'Fabb',
     images: [
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Fabb — Clothing Rental Management',
-    description: 'The all-in-one platform for professional clothing rental businesses.',
+    description: 'Internal rental operations platform.',
     images: ['/og-image.png'],
   },
 }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { IndianRupee } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { safeJsonParse } from '@/lib/api-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,12 +26,8 @@ import {
 
 interface Props {
   bookingId: string
-  businessId: string
-  branchId: string
-  staffId: string
   balanceDue: number
   depositAmount: number
-  totalAmount: number
 }
 
 const PAYMENT_TYPES = [
@@ -51,9 +47,6 @@ const PAYMENT_METHODS = [
 
 export function AddPaymentDialog({
   bookingId,
-  businessId,
-  branchId,
-  staffId,
   balanceDue,
   depositAmount,
 }: Props) {
@@ -90,20 +83,20 @@ export function AddPaymentDialog({
 
     setIsSubmitting(true)
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('booking_payments').insert({
-        booking_id: bookingId,
-        business_id: businessId,
-        branch_id: branchId,
+      const response = await fetch(`/api/bookings/${bookingId}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
         type: paymentType,
         amount: parsedAmount,
         method,
-        reference_number: reference.trim() || null,
+        reference: reference.trim() || null,
         notes: notes.trim() || null,
-        collected_by: staffId,
+        idempotencyKey: crypto.randomUUID(),
+        }),
       })
-
-      if (error) throw new Error(error.message)
+      const result = await safeJsonParse(response)
+      if (!response.ok) throw new Error(result.error || 'Payment failed')
 
       toast.success('Payment recorded successfully')
       setOpen(false)

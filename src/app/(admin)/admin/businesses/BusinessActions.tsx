@@ -53,28 +53,6 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
     }
   }
 
-  const handleExtendTrial = async () => {
-    setIsLoading(true)
-    try {
-      const res = await fetch(`/api/admin/businesses/${businessId}/trial`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      })
-
-      if (!res.ok) {
-        const data = await safeJsonParse(res)
-        throw new Error(data.error || 'Failed to extend trial')
-      }
-
-      toast.success(`Trial extended by 14 days for ${businessName}`)
-      router.refresh()
-    } catch (err: any) {
-      toast.error(err.message || 'Action failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -93,9 +71,6 @@ export function BusinessActions({ businessId, currentStatus, businessName }: Pro
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleStatusToggle}>
           {isSuspended ? 'Reactivate Business' : 'Suspend Business'}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleExtendTrial}>
-          Extend Trial by 14 Days
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

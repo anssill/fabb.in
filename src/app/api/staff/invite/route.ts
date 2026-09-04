@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { safeJsonParse } from '@/lib/api-utils'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { PERMISSION_KEYS } from '@/lib/permissions'
 import { z } from 'zod'
 
 const inviteSchema = z.object({
@@ -14,6 +16,18 @@ const inviteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: requester } = await supabase.from('staff').select('id, business_id, branch_id, role, status, permissions').eq('id', user.id).single()
+    if (!requester?.business_id || !['active', 'approved'].includes(requester.status)) return NextResponse.json({ error: 'Active staff account required' }, { status: 403 })
+    let canManageStaff = ['owner', 'super_admin'].includes(requester.role) || Boolean((requester.permissions as Record<string, boolean> | null)?.manage_staff)
+    if (!canManageStaff) {
+      const { data: assignments } = await (supabase as any).from('staff_role_assignments').select('role:business_roles(permissions)').eq('staff_id', user.id)
+      canManageStaff = (assignments ?? []).some((assignment: any) => { const role = Array.isArray(assignment.role) ? assignment.role[0] : assignment.role; return role?.permissions?.manage_staff === true })
+    }
+    if (!canManageStaff) return NextResponse.json({ error: 'Staff management permission required' }, { status: 403 })
+
     const body = await safeJsonParse(req)
     const validated = inviteSchema.safeParse(body)
     
@@ -22,6 +36,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, name, password, role, phone, permissions } = validated.data
+    const allowedPermissions = new Set<string>(PERMISSION_KEYS)
+    const safePermissions = Object.fromEntries(Object.entries(permissions || {}).filter(([key]) => allowedPermissions.has(key)))
 
     // 1. Check if user already exists in staff table
     const { data: existingStaff } = await supabaseAdmin
@@ -34,11 +50,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Staff member already exists with this email' }, { status: 400 })
     }
 
-    // 2. Get business_id from headers
-    const bizId = req.headers.get('x-business-id')
-    if (!bizId) {
-      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
-    }
+    // Tenant identity always comes from the authenticated manager.
+    const bizId = requester.business_id
 
     const { data: defaultBranch, error: branchError } = await supabaseAdmin
       .from('branches')
@@ -76,7 +89,7 @@ export async function POST(req: NextRequest) {
       phone: phone?.trim() || null,
       role,
       status: 'active',
-      permissions: permissions || {},
+      permissions: safePermissions,
       setup_completed: true, // They are invited, not setting up a new business
     })
 
@@ -85,6 +98,16 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
       return NextResponse.json({ error: staffError.message }, { status: 500 })
     }
+
+    await supabaseAdmin.from('audit_log').insert({
+      business_id: bizId,
+      branch_id: defaultBranch.id,
+      staff_id: user.id,
+      action: 'staff.invited',
+      table_name: 'staff',
+      record_id: authUser.user.id,
+      new_value: { email: email.toLowerCase(), name, role, permissions: safePermissions },
+    })
 
     return NextResponse.json({ 
       success: true, 

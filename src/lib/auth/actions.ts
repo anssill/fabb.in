@@ -50,8 +50,7 @@ export async function signUpAction(formData: SignUpInput) {
         name: businessName, 
         slug, 
         email,
-        status: 'trial',
-        plan: 'basic'
+        status: 'active'
       })
       .select()
       .single();
@@ -80,17 +79,16 @@ export async function signUpAction(formData: SignUpInput) {
       return { error: 'Failed to create branch: ' + branchError?.message };
     }
 
-    // 4. Create Auth User via Supabase Client (so session is handled properly)
-    const supabase = await createClient();
-    const { data: authResult, error: authError } = await supabase.auth.signUp({
+    // 4. Create a confirmed password user. Transactional email remains disabled
+    // at launch, so owner signup must not depend on a confirmation message.
+    const { data: authResult, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: password,
-      options: {
-        data: {
-          full_name: fullName,
-          business_id: business.id,
-        }
-      }
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        business_id: business.id,
+      },
     });
 
     if (authError) {
@@ -120,7 +118,9 @@ export async function signUpAction(formData: SignUpInput) {
       });
 
     if (staffError) {
-      // Note: Auth user stays, but staff record failed. This shouldn't normally happen if schema is right.
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      await supabaseAdmin.from('branches').delete().eq('id', branch.id);
+      await supabaseAdmin.from('businesses').delete().eq('id', business.id);
       return { error: 'Failed to save staff record: ' + staffError.message };
     }
 
@@ -129,6 +129,13 @@ export async function signUpAction(formData: SignUpInput) {
       .from('businesses')
       .update({ owner_id: userId })
       .eq('id', business.id);
+
+    // Establish the browser session after the confirmed admin-created account.
+    const supabase = await createClient();
+    const { error: sessionError } = await supabase.auth.signInWithPassword({ email, password });
+    if (sessionError) {
+      return { error: 'Workspace created, but automatic sign in failed. Please log in with your password.' };
+    }
 
     return { success: true };
   } catch (error) {

@@ -12,16 +12,10 @@ import { Badge } from '@/components/ui/badge'
 import { useAppStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Save, MessageSquare, TestTube, Key } from 'lucide-react'
+import { Save, MessageSquare, TestTube, ShieldCheck } from 'lucide-react'
 import { testSMSConnection } from './sms-actions'
 
 const SMS_TEMPLATES = [
-  {
-    key: 'login_otp',
-    label: 'Login OTP',
-    default: 'Your Fabb.booking login OTP is {otp}. Valid for 5 minutes. Do not share this code.',
-    variables: ['{otp}'],
-  },
   {
     key: 'booking_confirmed',
     label: 'Booking Confirmed',
@@ -48,33 +42,41 @@ const SMS_TEMPLATES = [
   },
 ]
 
+type SavedSmsTemplate = string | { body?: string; templateId?: string }
+type SavedSmsSettings = {
+  enabled?: boolean
+  templates?: Record<string, SavedSmsTemplate>
+}
+
 export function SmsSettingsClient() {
   const { activeBranch, setBranches, branches } = useAppStore()
   const supabase = createClient()
-  const settings = ((activeBranch?.settings as any)?.sms) || {}
+  const rawBranchSettings = (activeBranch?.settings ?? {}) as unknown as Record<string, unknown>
+  const settings = (rawBranchSettings.sms ?? {}) as SavedSmsSettings
 
   const [isSaving, setIsSaving] = useState(false)
   const [smsEnabled, setSmsEnabled] = useState(settings.enabled ?? false)
-  const [apiKey, setApiKey] = useState(settings.api_key ?? '')
-  const [senderId, setSenderId] = useState(settings.sender_id ?? '')
-  const [templates, setTemplates] = useState<Record<string, { body: string, templateId: string }>>(
-    SMS_TEMPLATES.reduce((acc, t) => ({
-      ...acc,
-      [t.key]: {
-        body: settings.templates?.[t.key]?.body ?? settings.templates?.[t.key] ?? t.default,
-        templateId: settings.templates?.[t.key]?.templateId ?? ''
-      },
-    }), {})
+  const [templates, setTemplates] = useState<Record<string, { body: string, templateId: string }>>(() =>
+    SMS_TEMPLATES.reduce((acc, t) => {
+      const saved = settings.templates?.[t.key]
+      return {
+        ...acc,
+        [t.key]: {
+          body: typeof saved === 'string' ? saved : saved?.body ?? t.default,
+          templateId: typeof saved === 'string' ? '' : saved?.templateId ?? '',
+        },
+      }
+    }, {})
   )
 
   async function handleSave() {
     if (!activeBranch) return
     setIsSaving(true)
     try {
-      const branchSettings = (activeBranch.settings as any) || {}
+      const branchSettings = (activeBranch.settings ?? {}) as unknown as Record<string, unknown>
       const newSettings = {
         ...branchSettings,
-        sms: { enabled: smsEnabled, api_key: apiKey, sender_id: senderId, templates }
+        sms: { enabled: smsEnabled, templates }
       }
       const { error } = await supabase
         .from('branches')
@@ -83,8 +85,8 @@ export function SmsSettingsClient() {
       if (error) throw error
       setBranches(branches.map(b => b.id === activeBranch.id ? { ...b, settings: newSettings } : b))
       toast.success('SMS settings saved')
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save SMS settings')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save SMS settings')
     } finally {
       setIsSaving(false)
     }
@@ -124,29 +126,9 @@ export function SmsSettingsClient() {
           {smsEnabled && (
             <>
               <Separator />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5" /> MSG91 API Key
-                  </Label>
-                  <Input
-                    type="password"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder="Your MSG91 API key"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Sender ID</Label>
-                  <Input
-                    value={senderId}
-                    onChange={e => setSenderId(e.target.value.toUpperCase().slice(0, 6))}
-                    placeholder="FABBKG"
-                    maxLength={6}
-                    className="font-mono uppercase"
-                  />
-                  <p className="text-xs text-slate-400">6-character DLT registered sender ID</p>
-                </div>
+              <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                MSG91 credentials are server-only Vercel environment variables. They are never saved in branch settings.
               </div>
               <Button variant="outline" size="sm" onClick={handleTestSms} className="h-8 text-xs">
                 <TestTube className="w-3.5 h-3.5 mr-1.5" /> Send Test SMS

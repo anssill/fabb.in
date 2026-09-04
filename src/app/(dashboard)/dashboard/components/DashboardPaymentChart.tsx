@@ -96,7 +96,6 @@ export function DashboardPaymentChart({ distribution }: Props) {
             </Pie>
             <ChartLegend
               content={<ChartLegendContent nameKey="name" />}
-              className="flex-wrap gap-1"
             />
           </PieChart>
         </ChartContainer>

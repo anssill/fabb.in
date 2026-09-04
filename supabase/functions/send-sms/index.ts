@@ -18,7 +18,7 @@ interface SMSRequest {
 Deno.serve(async (req: Request) => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    Deno.env.get("SUPABASE_SECRET_KEY") ?? ""
   );
 
   try {
@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     const response = await fetch("https://control.msg91.com/api/v5/flow/", {
       method: "POST",
       headers: {
-        "authkey": Deno.env.get("MSG91_API_KEY") ?? "",
+        "authkey": Deno.env.get("MSG91_AUTH_KEY") ?? "",
         "content-type": "application/json"
       },
       body: JSON.stringify(payload)

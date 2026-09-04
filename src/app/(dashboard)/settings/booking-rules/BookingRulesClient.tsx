@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { useAppStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { Save, Info } from 'lucide-react'
+import { Save } from 'lucide-react'
 
 export function BookingRulesClient() {
   const { activeBranch, setBranches, branches } = useAppStore()
@@ -21,7 +21,6 @@ export function BookingRulesClient() {
 
   const [advancePct, setAdvancePct] = useState<number>(settings.min_advance_pct ?? 30)
   const [depositPct, setDepositPct] = useState<number>(settings.deposit_default_pct ?? 20)
-  const [bufferDays, setBufferDays] = useState<number>(settings.buffer_days ?? 1)
   const [maxBookingWindow, setMaxBookingWindow] = useState<number>(settings.max_booking_window ?? 180)
   const [minRentalDays, setMinRentalDays] = useState<number>(settings.min_rental_days ?? 1)
 
@@ -33,7 +32,6 @@ export function BookingRulesClient() {
         ...settings,
         min_advance_pct: advancePct,
         deposit_default_pct: depositPct,
-        buffer_days: bufferDays,
         max_booking_window: maxBookingWindow,
         min_rental_days: minRentalDays,
       }
@@ -98,18 +96,7 @@ export function BookingRulesClient() {
           <CardTitle className="text-base font-semibold">Date & Scheduling Rules</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Buffer Days Between Bookings</Label>
-              <Input
-                type="number"
-                min={0} max={7}
-                value={bufferDays}
-                onChange={e => setBufferDays(Number(e.target.value))}
-              />
-              <p className="text-xs text-slate-400">Days blocked after return for washing.</p>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Max Advance Booking (days)</Label>
               <Input

@@ -23,9 +23,9 @@ export async function POST() {
     return NextResponse.json({ error: 'No staff account found for this email' }, { status: 403 })
   }
 
-  if (staffRecord.status === 'suspended') {
+  if (!['active', 'approved', 'invited'].includes(staffRecord.status)) {
     await supabase.auth.signOut()
-    return NextResponse.json({ error: 'This staff account is suspended' }, { status: 403 })
+    return NextResponse.json({ error: 'This staff account is not active' }, { status: 403 })
   }
 
   await supabaseAdmin

@@ -10,7 +10,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   salary: 'bg-purple-100 text-purple-700',
   maintenance: 'bg-amber-100 text-amber-700',
   utilities: 'bg-green-100 text-green-700',
-  washing: 'bg-cyan-100 text-cyan-700',
   transport: 'bg-orange-100 text-orange-700',
   marketing: 'bg-pink-100 text-pink-700',
   other: 'bg-slate-100 text-slate-700',
@@ -70,7 +69,7 @@ export default async function ExpensesPage() {
 
   // Revenue (exclude refunds and deposit_refunds)
   const thisMonthRevenue = (thisMonthPayments || [])
-    .filter(p => !['deposit_refund', 'refund'].includes(p.type))
+    .filter(p => !['deposit', 'deposit_refund', 'refund'].includes(p.type))
     .reduce((s, p) => s + Number(p.amount), 0)
 
   const profit = thisMonthRevenue - thisMonthTotal

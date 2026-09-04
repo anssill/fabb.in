@@ -18,6 +18,8 @@ const proofPoints = [
   'Dashboard-ready after sign in',
 ]
 
+const emailAuthEnabled = process.env.NEXT_PUBLIC_AUTH_EMAIL_ENABLED === 'true'
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -25,7 +27,7 @@ function LoginForm() {
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [password, setPassword] = useState('')
-  const [loginMode, setLoginMode] = useState<'otp' | 'password'>('otp')
+  const [loginMode, setLoginMode] = useState<'otp' | 'password'>(emailAuthEnabled ? 'otp' : 'password')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -52,6 +54,10 @@ function LoginForm() {
         router.push(result.next || searchParams.get('next') || '/dashboard')
         router.refresh()
         return
+      }
+
+      if (!emailAuthEnabled) {
+        throw new Error('Email OTP is disabled until transactional email is configured. Use password login.')
       }
 
       if (!otpSent) {
@@ -208,17 +214,19 @@ function LoginForm() {
               </Button>
             </form>
 
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMode((mode) => mode === 'otp' ? 'password' : 'otp')
-                setOtpSent(false)
-                setOtp('')
-              }}
-              className="mt-4 w-full text-center text-sm font-semibold text-[#4f46e5] hover:underline"
-            >
-              {loginMode === 'otp' ? 'Use password login instead' : 'Use email OTP instead'}
-            </button>
+            {emailAuthEnabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode((mode) => mode === 'otp' ? 'password' : 'otp')
+                  setOtpSent(false)
+                  setOtp('')
+                }}
+                className="mt-4 w-full text-center text-sm font-semibold text-[#4f46e5] hover:underline"
+              >
+                {loginMode === 'otp' ? 'Use password login instead' : 'Use email OTP instead'}
+              </button>
+            )}
 
             <p className="mt-6 text-center text-sm text-slate-500">
               New to Fabb?{' '}

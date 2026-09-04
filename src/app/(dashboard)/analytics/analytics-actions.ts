@@ -77,18 +77,27 @@ export async function getRevenueStats(period: Period = '30d') {
   const dailyData = interval.map(day => {
     const dayPayments = payments?.filter(p => isSameDay(new Date(p.created_at), day)) || []
     const dayExpenses = expenses?.filter(e => e.expense_date && isSameDay(new Date(e.expense_date), day)) || []
-    const revenue = dayPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+    const revenue = dayPayments.reduce((sum, p) => {
+      if (p.type === 'deposit' || p.type === 'deposit_refund') return sum
+      return sum + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount))
+    }, 0)
     const expense = dayExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
     return { date: format(day, 'dd MMM'), revenue, expense, profit: revenue - expense }
   })
 
-  const totalRevenue = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+  const totalRevenue = payments?.reduce((sum, p) => {
+    if (p.type === 'deposit' || p.type === 'deposit_refund') return sum
+    return sum + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount))
+  }, 0) || 0
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
 
   const methods = ['cash', 'upi', 'bank_transfer', 'card']
   const methodDistribution = methods.map(method => ({
     name: method === 'bank_transfer' ? 'Bank Transfer' : method.charAt(0).toUpperCase() + method.slice(1),
-    value: payments?.filter(p => p.method === method).reduce((sum, p) => sum + Number(p.amount), 0) || 0
+    value: payments?.filter(p => p.method === method).reduce((sum, p) => {
+      if (p.type === 'deposit' || p.type === 'deposit_refund') return sum
+      return sum + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount))
+    }, 0) || 0
   })).filter(m => m.value > 0)
 
   return {
@@ -98,9 +107,9 @@ export async function getRevenueStats(period: Period = '30d') {
       totalExpenses,
       netProfit: totalRevenue - totalExpenses,
       paymentCount: payments?.length || 0,
-      cashTotal: payments?.filter(p => p.method === 'cash').reduce((s, p) => s + Number(p.amount), 0) || 0,
-      upiTotal: payments?.filter(p => p.method === 'upi').reduce((s, p) => s + Number(p.amount), 0) || 0,
-      bankTotal: payments?.filter(p => p.method === 'bank_transfer').reduce((s, p) => s + Number(p.amount), 0) || 0,
+      cashTotal: payments?.filter(p => p.method === 'cash' && !['deposit', 'deposit_refund'].includes(p.type)).reduce((s, p) => s + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount)), 0) || 0,
+      upiTotal: payments?.filter(p => p.method === 'upi' && !['deposit', 'deposit_refund'].includes(p.type)).reduce((s, p) => s + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount)), 0) || 0,
+      bankTotal: payments?.filter(p => p.method === 'bank_transfer' && !['deposit', 'deposit_refund'].includes(p.type)).reduce((s, p) => s + (p.type === 'refund' ? -Number(p.amount) : Number(p.amount)), 0) || 0,
     },
     methodDistribution,
     sourceDistribution: [
@@ -226,13 +235,10 @@ export async function getPLStatement(period: Period = '30d') {
     .gte('expense_date', startDate.toISOString().split('T')[0])
     .lte('expense_date', endDate.toISOString().split('T')[0])
 
-  const { data: deposits } = await supabase
-    .from('booking_payments')
-    .select('amount')
+  const { data: deposits } = await (supabase.from as any)('deposit_ledger')
+    .select('amount, entry_type')
     .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
-    .eq('type', 'deposit')
-    .eq('is_voided', false)
 
   const rentalIncome = payments?.filter(p => !['deposit', 'deposit_refund', 'refund', 'penalty'].includes(p.type))
     .reduce((s, p) => s + Number(p.amount), 0) || 0
@@ -241,7 +247,8 @@ export async function getPLStatement(period: Period = '30d') {
   const refunds = payments?.filter(p => ['deposit_refund', 'refund'].includes(p.type))
     .reduce((s, p) => s + Number(p.amount), 0) || 0
   const totalRevenue = rentalIncome + penalties
-  const depositsHeld = deposits?.reduce((s, p) => s + Number(p.amount), 0) || 0
+  const depositsHeld = deposits?.reduce((sum: number, entry: { amount: number; entry_type: string }) =>
+    sum + (['collection', 'opening', 'transfer'].includes(entry.entry_type) ? Number(entry.amount) : -Number(entry.amount)), 0) || 0
 
   const expenseByCategory: Record<string, number> = {}
   for (const e of expenses || []) {
@@ -320,14 +327,30 @@ export async function getUtilizationStats() {
 
   const { data: variants, error } = await supabase
     .from('item_variants')
-    .select('total_stock, available_stock, reserved_stock, items!inner(business_id, branch_id)')
-    .eq('items.business_id', staff.business_id)
-    .eq('items.branch_id', staff.branch_id)
+    .select('total_stock')
+    .eq('business_id', staff.business_id)
+    .eq('branch_id', staff.branch_id)
+    .is('archived_at', null)
 
   if (error) throw formatError(error)
 
-  const total = variants.reduce((sum, v) => sum + v.total_stock, 0)
-  const reserved = variants.reduce((sum, v) => sum + v.reserved_stock, 0)
+  const today = format(new Date(), 'yyyy-MM-dd')
+  const { data: availability, error: availabilityError } = await (supabase.rpc as any)('get_rental_availability', {
+    p_business_id: staff.business_id,
+    p_branch_id: staff.branch_id,
+    p_from: today,
+    p_to: today,
+    p_item_id: null,
+    p_variant_id: null,
+    p_requested_quantity: 0,
+  })
+  if (availabilityError) throw formatError(availabilityError)
+
+  const total = variants.reduce((sum, v) => sum + Number(v.total_stock), 0)
+  const reserved = ((availability || []) as Array<{ peak_booked: number }>).reduce(
+    (sum, row) => sum + Number(row.peak_booked || 0),
+    0,
+  )
   const utilization = total > 0 ? (reserved / total) * 100 : 0
 
   return { totalItems: total, reservedItems: reserved, utilizationRate: Math.round(utilization) }

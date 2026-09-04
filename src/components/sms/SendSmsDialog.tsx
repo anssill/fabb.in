@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,8 @@ const SMS_TEMPLATES = [
   { key: 'overdue_notice', label: 'Overdue Notice' },
 ]
 
+const EMPTY_VARIABLES: Record<string, string> = {}
+
 export function SendSmsDialog({
   isOpen,
   onClose,
@@ -52,19 +54,18 @@ export function SendSmsDialog({
   bookingNumber,
   customerName,
   defaultTemplate,
-  variables = {}
+  variables = EMPTY_VARIABLES
 }: SendSmsDialogProps) {
   const { activeBranch } = useAppStore()
   const supabase = createClient()
   const [isSending, setIsSending] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<string>(defaultTemplate || '')
-  const [preview, setPreview] = useState('')
 
   const smsSettings = (activeBranch?.settings as any)?.sms
   const isEnabled = smsSettings?.enabled
   const templates = smsSettings?.templates || {}
 
-  useEffect(() => {
+  const preview = useMemo(() => {
     if (selectedTemplate && templates[selectedTemplate]) {
       let body = templates[selectedTemplate].body || ''
       const allVars = {
@@ -75,13 +76,12 @@ export function SendSmsDialog({
       }
 
       Object.entries(allVars).forEach(([key, val]) => {
-        body = body.replace(new RegExp(key, 'g'), val)
+        body = body.replaceAll(key, val)
       })
-      setPreview(body)
-    } else {
-      setPreview('')
+      return body
     }
-  }, [selectedTemplate, templates, customerName, bookingNumber, activeBranch, variables])
+    return ''
+  }, [selectedTemplate, templates, customerName, bookingNumber, activeBranch?.name, variables])
 
   async function handleSend() {
     if (!isEnabled) {

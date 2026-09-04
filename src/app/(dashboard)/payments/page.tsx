@@ -145,9 +145,10 @@ export default function PaymentsPage() {
 
       await supabase.from('audit_log').insert({
         business_id: staff.business_id,
+        branch_id: staff.branch_id,
         staff_id: user.id,
         action: 'cash_reconciliation',
-        resource_type: 'payments',
+        table_name: 'cash_sessions',
         new_value: {
           date: reconcileDate,
           cash_expected: cashToday,

@@ -13,10 +13,16 @@ export const PERMISSION_KEYS = [
   'manage_inventory',
   'manage_customers',
   'manage_payments',
-  'manage_washing',
+  'manage_transfers',
+  'manage_stocktakes',
   'manage_analytics',
   'manage_expenses',
   'manage_staff',
+  'manage_payroll',
+  'manage_reports',
+  'view_legacy_archive',
+  'override_availability',
+  'settle_deposits',
   'manage_settings',
 ] as const
 
@@ -34,10 +40,16 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'manage_inventory', label: 'Inventory', description: 'Add, edit, and view inventory items' },
   { key: 'manage_customers', label: 'Customers', description: 'View and manage customer records' },
   { key: 'manage_payments', label: 'Payments', description: 'View and record payments' },
-  { key: 'manage_washing', label: 'Washing Queue', description: 'Manage the washing/cleaning queue' },
+  { key: 'manage_transfers', label: 'Branch Transfers', description: 'Dispatch and receive rental inventory' },
+  { key: 'manage_stocktakes', label: 'Stocktakes', description: 'Count inventory and approve variances' },
   { key: 'manage_analytics', label: 'Analytics', description: 'Access reports and analytics' },
   { key: 'manage_expenses', label: 'Expenses', description: 'Record and view business expenses' },
   { key: 'manage_staff', label: 'Staff Management', description: 'View and manage team members' },
+  { key: 'manage_payroll', label: 'Payroll', description: 'Calculate payroll and record payouts' },
+  { key: 'manage_reports', label: 'Reports', description: 'View and export operational reports' },
+  { key: 'view_legacy_archive', label: 'Legacy Archive', description: 'Search historical read-only bookings' },
+  { key: 'override_availability', label: 'Overbook Rentals', description: 'Confirm a rental when date availability is insufficient' },
+  { key: 'settle_deposits', label: 'Settle Deposits', description: 'Refund or deduct refundable deposits' },
   { key: 'manage_settings', label: 'Settings', description: 'Access business and app settings' },
 ]
 
@@ -48,20 +60,24 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/inventory': 'manage_inventory',
   '/customers': 'manage_customers',
   '/payments': 'manage_payments',
-  '/washing': 'manage_washing',
+  '/inventory/transfers': 'manage_transfers',
+  '/inventory/stocktakes': 'manage_stocktakes',
   '/analytics': 'manage_analytics',
   '/expenses': 'manage_expenses',
   '/staff': 'manage_staff',
+  '/payroll': 'manage_payroll',
+  '/reports': 'manage_reports',
+  '/archive': 'view_legacy_archive',
   '/settings': 'manage_settings',
 }
 
 /**
- * Returns the default permission set — everything enabled.
+ * Returns a least-privilege default for a newly invited staff account.
  */
 export function getDefaultPermissions(): Record<PermissionKey, boolean> {
-  const perms: Record<string, boolean> = {}
+  const perms: Record<string, boolean> = { manage_dashboard: true }
   for (const key of PERMISSION_KEYS) {
-    perms[key] = true
+    if (key !== 'manage_dashboard') perms[key] = false
   }
   return perms as Record<PermissionKey, boolean>
 }
@@ -78,8 +94,8 @@ export function hasPermission(
   // Owners and super_admins bypass all permission checks
   if (role === 'owner' || role === 'super_admin') return true
 
-  // If permissions haven't been set yet, default to all-enabled
-  if (!permissions || Object.keys(permissions).length === 0) return true
+  // Empty legacy permission sets are intentionally least privilege.
+  if (!permissions || Object.keys(permissions).length === 0) return false
 
   // Explicit check
   return permissions[key] !== false
@@ -100,7 +116,7 @@ export function canAccessRoute(
   if (pathname.startsWith('/notifications')) return true
 
   // Find the matching route prefix
-  const matchedRoute = Object.keys(ROUTE_PERMISSION_MAP).find(
+  const matchedRoute = Object.keys(ROUTE_PERMISSION_MAP).sort((a, b) => b.length - a.length).find(
     route => pathname === route || pathname.startsWith(route + '/')
   )
 

@@ -89,12 +89,6 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
                 <span>-₹{pricing.discount_amount.toLocaleString('en-IN')}</span>
               </div>
             )}
-            {pricing.delivery_fee > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Delivery</span>
-                <span>+₹{pricing.delivery_fee.toLocaleString('en-IN')}</span>
-              </div>
-            )}
             <div className="flex justify-between text-base font-bold border-t pt-2">
               <span>Total</span>
               <span>₹{pricing.total_amount.toLocaleString('en-IN')}</span>

@@ -81,41 +81,6 @@ export type Database = {
           },
         ]
       }
-      otp_verifications: {
-        Row: {
-          business_id: string | null
-          code: string
-          created_at: string | null
-          expires_at: string
-          id: string
-          phone: string
-        }
-        Insert: {
-          business_id?: string | null
-          code: string
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          phone: string
-        }
-        Update: {
-          business_id?: string | null
-          code?: string
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          phone?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "otp_verifications_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       booking_drafts: {
         Row: {
           branch_id: string
@@ -171,54 +136,216 @@ export type Database = {
           },
         ]
       }
+      booking_item_assets: {
+        Row: {
+          asset_id: string
+          assigned_at: string
+          assigned_by: string | null
+          booking_item_id: string
+          business_id: string
+          released_at: string | null
+          released_by: string | null
+        }
+        Insert: {
+          asset_id: string
+          assigned_at?: string
+          assigned_by?: string | null
+          booking_item_id: string
+          business_id: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Update: {
+          asset_id?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          booking_item_id?: string
+          business_id?: string
+          released_at?: string | null
+          released_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_item_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_assets_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_assets_booking_item_id_fkey"
+            columns: ["booking_item_id"]
+            isOneToOne: false
+            referencedRelation: "booking_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_assets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_assets_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_item_fulfilments: {
+        Row: {
+          booking_id: string
+          booking_item_id: string
+          branch_id: string
+          business_id: string
+          event_type: Database["public"]["Enums"]["fulfilment_event_type"]
+          id: string
+          idempotency_key: string | null
+          notes: string | null
+          occurred_at: string
+          performed_by: string | null
+          quantity: number
+        }
+        Insert: {
+          booking_id: string
+          booking_item_id: string
+          branch_id: string
+          business_id: string
+          event_type: Database["public"]["Enums"]["fulfilment_event_type"]
+          id?: string
+          idempotency_key?: string | null
+          notes?: string | null
+          occurred_at?: string
+          performed_by?: string | null
+          quantity: number
+        }
+        Update: {
+          booking_id?: string
+          booking_item_id?: string
+          branch_id?: string
+          business_id?: string
+          event_type?: Database["public"]["Enums"]["fulfilment_event_type"]
+          id?: string
+          idempotency_key?: string | null
+          notes?: string | null
+          occurred_at?: string
+          performed_by?: string | null
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_item_fulfilments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_fulfilments_booking_item_id_fkey"
+            columns: ["booking_item_id"]
+            isOneToOne: false
+            referencedRelation: "booking_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_fulfilments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_fulfilments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_item_fulfilments_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_items: {
         Row: {
           booking_id: string
-          condition_notes_on_return: string | null
-          condition_on_return: string | null
+          branch_id: string
+          business_id: string
           created_at: string
           id: string
           item_id: string
           item_name: string
           item_sku: string | null
           item_variant_id: string
+          picked_up_quantity: number
           price: number
           quantity: number
           rental_days: number
+          replacement_value: number
+          returned_quantity: number
           size: string
+          substituted_from_id: string | null
+          substitution_reason: string | null
           subtotal: number | null
+          updated_at: string
         }
         Insert: {
           booking_id: string
-          condition_notes_on_return?: string | null
-          condition_on_return?: string | null
+          branch_id: string
+          business_id: string
           created_at?: string
           id?: string
           item_id: string
           item_name: string
           item_sku?: string | null
           item_variant_id: string
+          picked_up_quantity?: number
           price: number
           quantity?: number
           rental_days: number
+          replacement_value?: number
+          returned_quantity?: number
           size: string
+          substituted_from_id?: string | null
+          substitution_reason?: string | null
           subtotal?: number | null
+          updated_at?: string
         }
         Update: {
           booking_id?: string
-          condition_notes_on_return?: string | null
-          condition_on_return?: string | null
+          branch_id?: string
+          business_id?: string
           created_at?: string
           id?: string
           item_id?: string
           item_name?: string
           item_sku?: string | null
           item_variant_id?: string
+          picked_up_quantity?: number
           price?: number
           quantity?: number
           rental_days?: number
+          replacement_value?: number
+          returned_quantity?: number
           size?: string
+          substituted_from_id?: string | null
+          substitution_reason?: string | null
           subtotal?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -226,6 +353,20 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
           {
@@ -240,6 +381,13 @@ export type Database = {
             columns: ["item_variant_id"]
             isOneToOne: false
             referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_items_substituted_from_id_fkey"
+            columns: ["substituted_from_id"]
+            isOneToOne: false
+            referencedRelation: "booking_items"
             referencedColumns: ["id"]
           },
         ]
@@ -397,105 +545,144 @@ export type Database = {
       }
       bookings: {
         Row: {
+          actual_pickup_at: string | null
+          actual_return_at: string | null
           advance_amount: number
+          alteration_notes: string | null
           amount_paid: number
+          archived_at: string | null
           balance_due: number
           booking_number: string
           booking_source: string | null
           branch_id: string
           business_id: string
+          cancellation_fee: number
           cancellation_reason: string | null
           cancelled_at: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
           customer_id: string | null
+          damage_charge: number
           deposit_amount: number
           discount_amount: number
           discount_reason: string | null
+          event_date: string | null
+          fitting_date: string | null
+          hold_expires_at: string | null
           id: string
           last_updated_by: string | null
+          late_fee: number
           notes: string | null
-          notion_page_id: string | null
           occasion: string | null
+          overbook_reason: string | null
+          overbooked_at: string | null
+          overbooked_by: string | null
           physical_bill_number: string | null
           pickup_completed_at: string | null
           pickup_date: string
+          pickup_photos: string[] | null
           rental_days: number
           return_completed_at: string | null
           return_date: string
           staff_notes: string | null
-          status: string
+          status: Database["public"]["Enums"]["rental_booking_status"]
           subtotal: number
           tax_amount: number
           total_amount: number
           updated_at: string
         }
         Insert: {
+          actual_pickup_at?: string | null
+          actual_return_at?: string | null
           advance_amount?: number
+          alteration_notes?: string | null
           amount_paid?: number
+          archived_at?: string | null
           balance_due?: number
           booking_number: string
           booking_source?: string | null
           branch_id: string
           business_id: string
+          cancellation_fee?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          damage_charge?: number
           deposit_amount?: number
           discount_amount?: number
           discount_reason?: string | null
+          event_date?: string | null
+          fitting_date?: string | null
+          hold_expires_at?: string | null
           id?: string
           last_updated_by?: string | null
+          late_fee?: number
           notes?: string | null
-          notion_page_id?: string | null
           occasion?: string | null
+          overbook_reason?: string | null
+          overbooked_at?: string | null
+          overbooked_by?: string | null
           physical_bill_number?: string | null
           pickup_completed_at?: string | null
           pickup_date: string
+          pickup_photos?: string[] | null
           rental_days?: number
           return_completed_at?: string | null
           return_date: string
           staff_notes?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["rental_booking_status"]
           subtotal?: number
           tax_amount?: number
           total_amount?: number
           updated_at?: string
         }
         Update: {
+          actual_pickup_at?: string | null
+          actual_return_at?: string | null
           advance_amount?: number
+          alteration_notes?: string | null
           amount_paid?: number
+          archived_at?: string | null
           balance_due?: number
           booking_number?: string
           booking_source?: string | null
           branch_id?: string
           business_id?: string
+          cancellation_fee?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
+          damage_charge?: number
           deposit_amount?: number
           discount_amount?: number
           discount_reason?: string | null
+          event_date?: string | null
+          fitting_date?: string | null
+          hold_expires_at?: string | null
           id?: string
           last_updated_by?: string | null
+          late_fee?: number
           notes?: string | null
-          notion_page_id?: string | null
           occasion?: string | null
+          overbook_reason?: string | null
+          overbooked_at?: string | null
+          overbooked_by?: string | null
           physical_bill_number?: string | null
           pickup_completed_at?: string | null
           pickup_date?: string
+          pickup_photos?: string[] | null
           rental_days?: number
           return_completed_at?: string | null
           return_date?: string
           staff_notes?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["rental_booking_status"]
           subtotal?: number
           tax_amount?: number
           total_amount?: number
@@ -537,20 +724,73 @@ export type Database = {
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookings_overbooked_by_fkey"
+            columns: ["overbooked_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_document_sequences: {
+        Row: {
+          branch_id: string
+          business_id: string
+          document_type: Database["public"]["Enums"]["financial_document_type"]
+          financial_year: string
+          next_number: number
+          prefix: string
+        }
+        Insert: {
+          branch_id: string
+          business_id: string
+          document_type: Database["public"]["Enums"]["financial_document_type"]
+          financial_year: string
+          next_number?: number
+          prefix: string
+        }
+        Update: {
+          branch_id?: string
+          business_id?: string
+          document_type?: Database["public"]["Enums"]["financial_document_type"]
+          financial_year?: string
+          next_number?: number
+          prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_document_sequences_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_document_sequences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       branches: {
         Row: {
           address: string | null
+          bank_details: Json
           business_id: string
           city: string | null
           created_at: string
+          document_prefixes: Json
           email: string | null
           gps_radius_metres: number
           gst_number: string | null
+          gst_profile_id: string | null
           id: string
           is_default: boolean
           lat: number | null
+          legal_name: string | null
           lng: number | null
           name: string
           opening_hours: Json
@@ -564,15 +804,19 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          bank_details?: Json
           business_id: string
           city?: string | null
           created_at?: string
+          document_prefixes?: Json
           email?: string | null
           gps_radius_metres?: number
           gst_number?: string | null
+          gst_profile_id?: string | null
           id?: string
           is_default?: boolean
           lat?: number | null
+          legal_name?: string | null
           lng?: number | null
           name: string
           opening_hours?: Json
@@ -586,15 +830,19 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          bank_details?: Json
           business_id?: string
           city?: string | null
           created_at?: string
+          document_prefixes?: Json
           email?: string | null
           gps_radius_metres?: number
           gst_number?: string | null
+          gst_profile_id?: string | null
           id?: string
           is_default?: boolean
           lat?: number | null
+          legal_name?: string | null
           lng?: number | null
           name?: string
           opening_hours?: Json
@@ -614,86 +862,502 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "branches_gst_profile_id_fkey"
+            columns: ["gst_profile_id"]
+            isOneToOne: false
+            referencedRelation: "gst_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_roles: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_owner_role: boolean
+          name: string
+          permissions: Json
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_owner_role?: boolean
+          name: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_owner_role?: boolean
+          name?: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       businesses: {
         Row: {
           address: string | null
           city: string | null
+          closure_requested_at: string | null
+          closure_scheduled_at: string | null
           country: string
           created_at: string
           currency: string
           email: string | null
+          gst_mode: string
           gst_number: string | null
           id: string
+          locale: string
           logo_url: string | null
           name: string
           owner_id: string | null
           pan_number: string | null
           phone: string | null
           pincode: string | null
-          plan: string
+          price_tax_mode: string
+          primary_colour: string | null
           settings: Json
           slug: string
           state: string | null
           status: string
           timezone: string
-          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           city?: string | null
+          closure_requested_at?: string | null
+          closure_scheduled_at?: string | null
           country?: string
           created_at?: string
           currency?: string
           email?: string | null
+          gst_mode?: string
           gst_number?: string | null
           id?: string
+          locale?: string
           logo_url?: string | null
           name: string
           owner_id?: string | null
           pan_number?: string | null
           phone?: string | null
           pincode?: string | null
-          plan?: string
+          price_tax_mode?: string
+          primary_colour?: string | null
           settings?: Json
           slug: string
           state?: string | null
           status?: string
           timezone?: string
-          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           city?: string | null
+          closure_requested_at?: string | null
+          closure_scheduled_at?: string | null
           country?: string
           created_at?: string
           currency?: string
           email?: string | null
+          gst_mode?: string
           gst_number?: string | null
           id?: string
+          locale?: string
           logo_url?: string | null
           name?: string
           owner_id?: string | null
           pan_number?: string | null
           phone?: string | null
           pincode?: string | null
-          plan?: string
+          price_tax_mode?: string
+          primary_colour?: string | null
           settings?: Json
           slug?: string
           state?: string | null
           status?: string
           timezone?: string
-          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []
       }
+      cash_sessions: {
+        Row: {
+          branch_id: string
+          business_date: string
+          business_id: string
+          closed_at: string | null
+          closed_by: string | null
+          counted_closing_cash: number | null
+          expected_closing_cash: number | null
+          id: string
+          opened_at: string
+          opened_by: string | null
+          opening_cash: number
+          status: string
+          variance: number | null
+          variance_reason: string | null
+        }
+        Insert: {
+          branch_id: string
+          business_date: string
+          business_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_closing_cash?: number | null
+          expected_closing_cash?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash?: number
+          status?: string
+          variance?: number | null
+          variance_reason?: string | null
+        }
+        Update: {
+          branch_id?: string
+          business_date?: string
+          business_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_closing_cash?: number | null
+          expected_closing_cash?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash?: number
+          status?: string
+          variance?: number | null
+          variance_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      command_receipts: {
+        Row: {
+          actor_id: string | null
+          business_id: string
+          command_name: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          request_payload: Json
+          response_payload: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          business_id: string
+          command_name: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          request_payload?: Json
+          response_payload?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          business_id?: string
+          command_name?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          request_payload?: Json
+          response_payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "command_receipts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "command_receipts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_credit_entries: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          branch_id: string
+          business_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          entry_type: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          branch_id: string
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          entry_type: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          entry_type?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_documents: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string
+          document_number: string | null
+          document_type: string
+          id: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id: string
+          document_number?: string | null
+          document_type: string
+          id?: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          document_number?: string | null
+          document_type?: string
+          id?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_documents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_measurements: {
+        Row: {
+          business_id: string
+          customer_id: string
+          id: string
+          measured_at: string
+          measured_by: string | null
+          measurements: Json
+          notes: string | null
+        }
+        Insert: {
+          business_id: string
+          customer_id: string
+          id?: string
+          measured_at?: string
+          measured_by?: string | null
+          measurements?: Json
+          notes?: string | null
+        }
+        Update: {
+          business_id?: string
+          customer_id?: string
+          id?: string
+          measured_at?: string
+          measured_by?: string | null
+          measurements?: Json
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_measurements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_measurements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_measurements_measured_by_fkey"
+            columns: ["measured_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_phones: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          is_primary: boolean
+          label: string | null
+          phone: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          phone: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_phones_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_phones_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
+          archived_at: string | null
           blacklist_reason: string | null
           blacklisted: boolean
           blacklisted_at: string | null
@@ -707,16 +1371,21 @@ export type Database = {
           id_number: string | null
           id_proof_url: string | null
           id_type: string | null
+          merged_into_id: string | null
           name: string
           notes: string | null
           outstanding_balance: number
           phone: string
+          preferences: Json
+          profile_photo_url: string | null
+          risk_status: string
           total_bookings: number
           total_spent: number
           updated_at: string
         }
         Insert: {
           address?: string | null
+          archived_at?: string | null
           blacklist_reason?: string | null
           blacklisted?: boolean
           blacklisted_at?: string | null
@@ -730,16 +1399,21 @@ export type Database = {
           id_number?: string | null
           id_proof_url?: string | null
           id_type?: string | null
+          merged_into_id?: string | null
           name: string
           notes?: string | null
           outstanding_balance?: number
           phone: string
+          preferences?: Json
+          profile_photo_url?: string | null
+          risk_status?: string
           total_bookings?: number
           total_spent?: number
           updated_at?: string
         }
         Update: {
           address?: string | null
+          archived_at?: string | null
           blacklist_reason?: string | null
           blacklisted?: boolean
           blacklisted_at?: string | null
@@ -753,10 +1427,14 @@ export type Database = {
           id_number?: string | null
           id_proof_url?: string | null
           id_type?: string | null
+          merged_into_id?: string | null
           name?: string
           notes?: string | null
           outstanding_balance?: number
           phone?: string
+          preferences?: Json
+          profile_photo_url?: string | null
+          risk_status?: string
           total_bookings?: number
           total_spent?: number
           updated_at?: string
@@ -785,6 +1463,141 @@ export type Database = {
           },
           {
             foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_exports: {
+        Row: {
+          business_id: string
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          export_type: string
+          external_url: string | null
+          format: string
+          id: string
+          requested_by: string | null
+          status: string
+          storage_path: string | null
+        }
+        Insert: {
+          business_id: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          export_type: string
+          external_url?: string | null
+          format: string
+          id?: string
+          requested_by?: string | null
+          status?: string
+          storage_path?: string | null
+        }
+        Update: {
+          business_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          export_type?: string
+          external_url?: string | null
+          format?: string
+          id?: string
+          requested_by?: string | null
+          status?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_exports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_exports_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deposit_ledger: {
+        Row: {
+          amount: number
+          booking_id: string
+          branch_id: string
+          business_id: string
+          created_at: string
+          created_by: string | null
+          entry_type: string
+          id: string
+          note: string | null
+          payment_method: string | null
+          reference_number: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          branch_id: string
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          entry_type: string
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          reference_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deposit_ledger_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposit_ledger_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposit_ledger_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deposit_ledger_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "staff"
@@ -882,6 +1695,792 @@ export type Database = {
           },
         ]
       }
+      financial_documents: {
+        Row: {
+          booking_id: string | null
+          branch_id: string
+          business_id: string
+          created_at: string
+          customer_id: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["financial_document_type"]
+          financial_year: string
+          gst_profile_id: string | null
+          id: string
+          linked_document_id: string | null
+          payload: Json
+          place_of_supply: string | null
+          posted_at: string | null
+          posted_by: string | null
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_mode: string | null
+          total_amount: number
+        }
+        Insert: {
+          booking_id?: string | null
+          branch_id: string
+          business_id: string
+          created_at?: string
+          customer_id?: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["financial_document_type"]
+          financial_year: string
+          gst_profile_id?: string | null
+          id?: string
+          linked_document_id?: string | null
+          payload?: Json
+          place_of_supply?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_mode?: string | null
+          total_amount?: number
+        }
+        Update: {
+          booking_id?: string | null
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          customer_id?: string | null
+          document_number?: string
+          document_type?: Database["public"]["Enums"]["financial_document_type"]
+          financial_year?: string
+          gst_profile_id?: string | null
+          id?: string
+          linked_document_id?: string | null
+          payload?: Json
+          place_of_supply?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_mode?: string | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_documents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_gst_profile_id_fkey"
+            columns: ["gst_profile_id"]
+            isOneToOne: false
+            referencedRelation: "gst_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_linked_document_id_fkey"
+            columns: ["linked_document_id"]
+            isOneToOne: false
+            referencedRelation: "financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_entries: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          branch_id: string
+          business_id: string
+          customer_id: string | null
+          entry_type: Database["public"]["Enums"]["financial_entry_type"]
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          parent_entry_id: string | null
+          payment_method: string | null
+          posted_at: string
+          posted_by: string | null
+          reference_number: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          branch_id: string
+          business_id: string
+          customer_id?: string | null
+          entry_type: Database["public"]["Enums"]["financial_entry_type"]
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          parent_entry_id?: string | null
+          payment_method?: string | null
+          posted_at?: string
+          posted_by?: string | null
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          branch_id?: string
+          business_id?: string
+          customer_id?: string | null
+          entry_type?: Database["public"]["Enums"]["financial_entry_type"]
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          parent_entry_id?: string | null
+          payment_method?: string | null
+          posted_at?: string
+          posted_by?: string | null
+          reference_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_profiles: {
+        Row: {
+          address: string | null
+          business_id: string
+          created_at: string
+          gstin: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          legal_name: string
+          name: string
+          state_code: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          created_at?: string
+          gstin: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          legal_name: string
+          name: string
+          state_code: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          created_at?: string
+          gstin?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          legal_name?: string
+          name?: string
+          state_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gst_profiles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_assets: {
+        Row: {
+          acquired_on: string | null
+          acquisition_cost: number | null
+          archived_at: string | null
+          asset_code: string
+          branch_id: string
+          business_id: string
+          created_at: string
+          id: string
+          item_id: string
+          item_variant_id: string
+          metadata: Json
+          status: string
+          storage_location: string | null
+          updated_at: string
+        }
+        Insert: {
+          acquired_on?: string | null
+          acquisition_cost?: number | null
+          archived_at?: string | null
+          asset_code: string
+          branch_id: string
+          business_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          item_variant_id: string
+          metadata?: Json
+          status?: string
+          storage_location?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acquired_on?: string | null
+          acquisition_cost?: number | null
+          archived_at?: string | null
+          asset_code?: string
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_variant_id?: string
+          metadata?: Json
+          status?: string
+          storage_location?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_assets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_assets_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_assets_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_assets_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          branch_id: string
+          business_id: string
+          created_at: string
+          id: string
+          inventory_asset_id: string | null
+          item_id: string
+          item_variant_id: string
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          note: string | null
+          performed_by: string | null
+          quantity_after: number | null
+          quantity_before: number | null
+          quantity_delta: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          branch_id: string
+          business_id: string
+          created_at?: string
+          id?: string
+          inventory_asset_id?: string | null
+          item_id: string
+          item_variant_id: string
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          note?: string | null
+          performed_by?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_delta: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          branch_id?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          inventory_asset_id?: string | null
+          item_id?: string
+          item_variant_id?: string
+          movement_type?: Database["public"]["Enums"]["stock_movement_type"]
+          note?: string | null
+          performed_by?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_delta?: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_inventory_asset_id_fkey"
+            columns: ["inventory_asset_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_transfer_lines: {
+        Row: {
+          business_id: string
+          destination_item_variant_id: string | null
+          discrepancy_note: string | null
+          id: string
+          inventory_asset_id: string | null
+          item_id: string
+          item_variant_id: string
+          quantity: number
+          received_quantity: number
+          transfer_id: string
+        }
+        Insert: {
+          business_id: string
+          destination_item_variant_id?: string | null
+          discrepancy_note?: string | null
+          id?: string
+          inventory_asset_id?: string | null
+          item_id: string
+          item_variant_id: string
+          quantity: number
+          received_quantity?: number
+          transfer_id: string
+        }
+        Update: {
+          business_id?: string
+          destination_item_variant_id?: string | null
+          discrepancy_note?: string | null
+          id?: string
+          inventory_asset_id?: string | null
+          item_id?: string
+          item_variant_id?: string
+          quantity?: number
+          received_quantity?: number
+          transfer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfer_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfer_lines_destination_item_variant_id_fkey"
+            columns: ["destination_item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfer_lines_inventory_asset_id_fkey"
+            columns: ["inventory_asset_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfer_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfer_lines_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfer_lines_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_transfers: {
+        Row: {
+          business_id: string
+          destination_branch_id: string
+          dispatched_at: string | null
+          dispatched_by: string | null
+          id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          requested_at: string
+          requested_by: string | null
+          source_branch_id: string
+          status: Database["public"]["Enums"]["rental_transfer_status"]
+          transfer_number: string
+        }
+        Insert: {
+          business_id: string
+          destination_branch_id: string
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          source_branch_id: string
+          status?: Database["public"]["Enums"]["rental_transfer_status"]
+          transfer_number: string
+        }
+        Update: {
+          business_id?: string
+          destination_branch_id?: string
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          source_branch_id?: string
+          status?: Database["public"]["Enums"]["rental_transfer_status"]
+          transfer_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_destination_branch_id_fkey"
+            columns: ["destination_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_dispatched_by_fkey"
+            columns: ["dispatched_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_source_branch_id_fkey"
+            columns: ["source_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_unavailability: {
+        Row: {
+          booking_item_id: string | null
+          branch_id: string
+          business_id: string
+          id: string
+          inventory_asset_id: string | null
+          item_id: string
+          item_variant_id: string
+          notes: string | null
+          quantity: number
+          reason: Database["public"]["Enums"]["rental_unavailability_reason"]
+          recorded_at: string
+          recorded_by: string | null
+          restored_at: string | null
+          restored_by: string | null
+          restored_quantity: number
+        }
+        Insert: {
+          booking_item_id?: string | null
+          branch_id: string
+          business_id: string
+          id?: string
+          inventory_asset_id?: string | null
+          item_id: string
+          item_variant_id: string
+          notes?: string | null
+          quantity: number
+          reason: Database["public"]["Enums"]["rental_unavailability_reason"]
+          recorded_at?: string
+          recorded_by?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
+          restored_quantity?: number
+        }
+        Update: {
+          booking_item_id?: string | null
+          branch_id?: string
+          business_id?: string
+          id?: string
+          inventory_asset_id?: string | null
+          item_id?: string
+          item_variant_id?: string
+          notes?: string | null
+          quantity?: number
+          reason?: Database["public"]["Enums"]["rental_unavailability_reason"]
+          recorded_at?: string
+          recorded_by?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
+          restored_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_unavailability_booking_item_id_fkey"
+            columns: ["booking_item_id"]
+            isOneToOne: false
+            referencedRelation: "booking_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_inventory_asset_id_fkey"
+            columns: ["inventory_asset_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_item_variant_id_fkey"
+            columns: ["item_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_unavailability_restored_by_fkey"
+            columns: ["restored_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_bundle_components: {
+        Row: {
+          bundle_item_id: string
+          business_id: string
+          component_item_id: string
+          component_variant_id: string | null
+          created_at: string
+          id: string
+          name: string
+          quantity: number
+          required: boolean
+        }
+        Insert: {
+          bundle_item_id: string
+          business_id: string
+          component_item_id: string
+          component_variant_id?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          quantity?: number
+          required?: boolean
+        }
+        Update: {
+          bundle_item_id?: string
+          business_id?: string
+          component_item_id?: string
+          component_variant_id?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          quantity?: number
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_bundle_components_bundle_item_id_fkey"
+            columns: ["bundle_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_bundle_components_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_bundle_components_component_item_id_fkey"
+            columns: ["component_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_bundle_components_component_variant_id_fkey"
+            columns: ["component_variant_id"]
+            isOneToOne: false
+            referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_images: {
         Row: {
           created_at: string
@@ -929,13 +2528,13 @@ export type Database = {
       }
       item_variants: {
         Row: {
-          available_stock: number
-          colour: string | null
+          archived_at: string | null
+          branch_id: string
+          business_id: string
           created_at: string
           id: string
           item_id: string
           price_override: number | null
-          reserved_stock: number
           size: string
           sku: string | null
           status: string
@@ -943,13 +2542,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          available_stock?: number
-          colour?: string | null
+          archived_at?: string | null
+          branch_id: string
+          business_id: string
           created_at?: string
           id?: string
           item_id: string
           price_override?: number | null
-          reserved_stock?: number
           size: string
           sku?: string | null
           status?: string
@@ -957,13 +2556,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          available_stock?: number
-          colour?: string | null
+          archived_at?: string | null
+          branch_id?: string
+          business_id?: string
           created_at?: string
           id?: string
           item_id?: string
           price_override?: number | null
-          reserved_stock?: number
           size?: string
           sku?: string | null
           status?: string
@@ -971,6 +2570,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "item_variants_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_variants_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "item_variants_item_id_fkey"
             columns: ["item_id"]
@@ -982,90 +2595,118 @@ export type Database = {
       }
       items: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           branch_id: string
+          brand: string | null
           business_id: string
           category: string
           completeness_score: number
-          condition: string
-          condition_notes: string | null
           cover_image_url: string | null
           created_at: string
           created_by: string | null
           deposit_amount: number
           description: string | null
+          designer: string | null
+          fabric: string | null
           id: string
           is_active: boolean
+          is_bundle: boolean
           last_rented_at: string | null
+          measurements: Json
           metadata: Json
           name: string
-          notion_page_id: string | null
+          occasion: string | null
           price: number
           purchase_cost: number | null
           purchase_date: string | null
+          replacement_value: number
           sku: string | null
           status: string
           storage_location: string | null
           total_rentals: number
           total_revenue: number
+          tracking_mode: Database["public"]["Enums"]["inventory_tracking_mode"]
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           branch_id: string
+          brand?: string | null
           business_id: string
           category: string
           completeness_score?: number
-          condition?: string
-          condition_notes?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           deposit_amount?: number
           description?: string | null
+          designer?: string | null
+          fabric?: string | null
           id?: string
           is_active?: boolean
+          is_bundle?: boolean
           last_rented_at?: string | null
+          measurements?: Json
           metadata?: Json
           name: string
-          notion_page_id?: string | null
+          occasion?: string | null
           price?: number
           purchase_cost?: number | null
           purchase_date?: string | null
+          replacement_value?: number
           sku?: string | null
           status?: string
           storage_location?: string | null
           total_rentals?: number
           total_revenue?: number
+          tracking_mode?: Database["public"]["Enums"]["inventory_tracking_mode"]
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           branch_id?: string
+          brand?: string | null
           business_id?: string
           category?: string
           completeness_score?: number
-          condition?: string
-          condition_notes?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           deposit_amount?: number
           description?: string | null
+          designer?: string | null
+          fabric?: string | null
           id?: string
           is_active?: boolean
+          is_bundle?: boolean
           last_rented_at?: string | null
+          measurements?: Json
           metadata?: Json
           name?: string
-          notion_page_id?: string | null
+          occasion?: string | null
           price?: number
           purchase_cost?: number | null
           purchase_date?: string | null
+          replacement_value?: number
           sku?: string | null
           status?: string
           storage_location?: string | null
           total_rentals?: number
           total_revenue?: number
+          tracking_mode?: Database["public"]["Enums"]["inventory_tracking_mode"]
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "items_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "items_branch_id_fkey"
             columns: ["branch_id"]
@@ -1089,32 +2730,192 @@ export type Database = {
           },
         ]
       }
-      login_attempts: {
+      legacy_bookings_archive: {
         Row: {
-          attempted_at: string
-          email: string
+          amount_paid: number | null
+          archived_at: string
+          booking_number: string | null
+          branch_id: string | null
+          business_id: string
+          customer_name: string | null
           id: string
-          ip_address: string | null
-          success: boolean
-          user_agent: string | null
+          pickup_date: string | null
+          return_date: string | null
+          source_payload: Json
+          status: string | null
+          total_amount: number | null
         }
         Insert: {
-          attempted_at?: string
-          email: string
-          id?: string
-          ip_address?: string | null
-          success?: boolean
-          user_agent?: string | null
+          amount_paid?: number | null
+          archived_at?: string
+          booking_number?: string | null
+          branch_id?: string | null
+          business_id: string
+          customer_name?: string | null
+          id: string
+          pickup_date?: string | null
+          return_date?: string | null
+          source_payload?: Json
+          status?: string | null
+          total_amount?: number | null
         }
         Update: {
-          attempted_at?: string
-          email?: string
+          amount_paid?: number | null
+          archived_at?: string
+          booking_number?: string | null
+          branch_id?: string | null
+          business_id?: string
+          customer_name?: string | null
           id?: string
-          ip_address?: string | null
-          success?: boolean
-          user_agent?: string | null
+          pickup_date?: string | null
+          return_date?: string | null
+          source_payload?: Json
+          status?: string | null
+          total_amount?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "legacy_bookings_archive_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_bookings_archive_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_outbox: {
+        Row: {
+          attempt_count: number
+          booking_id: string | null
+          branch_id: string | null
+          business_id: string
+          channel: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          last_error: string | null
+          next_attempt_at: string | null
+          payload: Json
+          provider_message_id: string | null
+          recipient: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number
+          booking_id?: string | null
+          branch_id?: string | null
+          business_id: string
+          channel: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          payload?: Json
+          provider_message_id?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_count?: number
+          booking_id?: string | null
+          branch_id?: string | null
+          business_id?: string
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          payload?: Json
+          provider_message_id?: string | null
+          recipient?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_outbox_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_outbox_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_outbox_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_outbox_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          body: string
+          business_id: string
+          channel: string
+          created_at: string
+          enabled: boolean
+          event_type: string
+          id: string
+          timing: Json
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          business_id: string
+          channel: string
+          created_at?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          timing?: Json
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          business_id?: string
+          channel?: string
+          created_at?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          timing?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -1186,37 +2987,168 @@ export type Database = {
           },
         ]
       }
-      password_reset_tokens: {
+      payroll_entries: {
         Row: {
-          created_at: string
-          expires_at: string
+          business_id: string
+          deductions: Json
+          earnings: Json
           id: string
+          monthly_salary: number
+          net_pay: number
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payroll_run_id: string
+          present_days: number
           staff_id: string
-          token: string
-          used_at: string | null
+          working_days: number
         }
         Insert: {
-          created_at?: string
-          expires_at?: string
+          business_id: string
+          deductions?: Json
+          earnings?: Json
           id?: string
+          monthly_salary?: number
+          net_pay?: number
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payroll_run_id: string
+          present_days?: number
           staff_id: string
-          token?: string
-          used_at?: string | null
+          working_days?: number
         }
         Update: {
-          created_at?: string
-          expires_at?: string
+          business_id?: string
+          deductions?: Json
+          earnings?: Json
           id?: string
+          monthly_salary?: number
+          net_pay?: number
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          payroll_run_id?: string
+          present_days?: number
           staff_id?: string
-          token?: string
-          used_at?: string | null
+          working_days?: number
         }
         Relationships: [
           {
-            foreignKeyName: "password_reset_tokens_staff_id_fkey"
+            foreignKeyName: "payroll_entries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_entries_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_entries_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_runs: {
+        Row: {
+          business_id: string
+          created_at: string
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          month: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          month: string
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          month?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_runs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rental_price_packages: {
+        Row: {
+          business_id: string
+          category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          item_id: string | null
+          name: string
+          price: number
+          rental_days: number
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_id?: string | null
+          name: string
+          price: number
+          rental_days: number
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_id?: string | null
+          name?: string
+          price?: number
+          rental_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_price_packages_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rental_price_packages_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
         ]
@@ -1307,20 +3239,14 @@ export type Database = {
           branch_id: string | null
           business_id: string | null
           created_at: string
-          custom_permissions: Json | null
           email: string
-          failed_login_attempts: number
-          google_id: string | null
           id: string
           last_login: string | null
-          login_locked_until: string | null
           name: string | null
-          password_hash: string | null
           permissions: Json
           phone: string | null
           pin_hash: string | null
           profile_photo_url: string | null
-          push_subscription: Json | null
           role: string
           setup_completed: boolean
           status: string
@@ -1330,20 +3256,14 @@ export type Database = {
           branch_id?: string | null
           business_id?: string | null
           created_at?: string
-          custom_permissions?: Json | null
           email: string
-          failed_login_attempts?: number
-          google_id?: string | null
           id: string
           last_login?: string | null
-          login_locked_until?: string | null
           name?: string | null
-          password_hash?: string | null
           permissions?: Json
           phone?: string | null
           pin_hash?: string | null
           profile_photo_url?: string | null
-          push_subscription?: Json | null
           role?: string
           setup_completed?: boolean
           status?: string
@@ -1353,20 +3273,14 @@ export type Database = {
           branch_id?: string | null
           business_id?: string | null
           created_at?: string
-          custom_permissions?: Json | null
           email?: string
-          failed_login_attempts?: number
-          google_id?: string | null
           id?: string
           last_login?: string | null
-          login_locked_until?: string | null
           name?: string | null
-          password_hash?: string | null
           permissions?: Json
           phone?: string | null
           pin_hash?: string | null
           profile_photo_url?: string | null
-          push_subscription?: Json | null
           role?: string
           setup_completed?: boolean
           status?: string
@@ -1392,53 +3306,44 @@ export type Database = {
       staff_attendance: {
         Row: {
           approved_by: string | null
+          attendance_status: string
           branch_id: string
           business_id: string
-          clock_in_at: string | null
-          clock_in_lat: number | null
-          clock_in_lng: number | null
-          clock_out_at: string | null
           created_at: string
           date: string
-          distance_from_branch: number | null
-          hours_worked: number | null
+          gps_metadata: Json
+          gps_warning: boolean
           id: string
-          is_valid_location: boolean | null
           notes: string | null
+          recorded_at: string
           staff_id: string
         }
         Insert: {
           approved_by?: string | null
+          attendance_status?: string
           branch_id: string
           business_id: string
-          clock_in_at?: string | null
-          clock_in_lat?: number | null
-          clock_in_lng?: number | null
-          clock_out_at?: string | null
           created_at?: string
           date: string
-          distance_from_branch?: number | null
-          hours_worked?: number | null
+          gps_metadata?: Json
+          gps_warning?: boolean
           id?: string
-          is_valid_location?: boolean | null
           notes?: string | null
+          recorded_at?: string
           staff_id: string
         }
         Update: {
           approved_by?: string | null
+          attendance_status?: string
           branch_id?: string
           business_id?: string
-          clock_in_at?: string | null
-          clock_in_lat?: number | null
-          clock_in_lng?: number | null
-          clock_out_at?: string | null
           created_at?: string
           date?: string
-          distance_from_branch?: number | null
-          hours_worked?: number | null
+          gps_metadata?: Json
+          gps_warning?: boolean
           id?: string
-          is_valid_location?: boolean | null
           notes?: string | null
+          recorded_at?: string
           staff_id?: string
         }
         Relationships: [
@@ -1472,54 +3377,45 @@ export type Database = {
           },
         ]
       }
-      staff_performance_targets: {
+      staff_branch_memberships: {
         Row: {
-          bookings_target: number | null
+          branch_id: string
           business_id: string
           created_at: string
-          id: string
-          month: string
-          revenue_target: number | null
-          set_by: string | null
+          is_default: boolean
           staff_id: string
         }
         Insert: {
-          bookings_target?: number | null
+          branch_id: string
           business_id: string
           created_at?: string
-          id?: string
-          month: string
-          revenue_target?: number | null
-          set_by?: string | null
+          is_default?: boolean
           staff_id: string
         }
         Update: {
-          bookings_target?: number | null
+          branch_id?: string
           business_id?: string
           created_at?: string
-          id?: string
-          month?: string
-          revenue_target?: number | null
-          set_by?: string | null
+          is_default?: boolean
           staff_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "staff_performance_targets_business_id_fkey"
+            foreignKeyName: "staff_branch_memberships_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_branch_memberships_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "staff_performance_targets_set_by_fkey"
-            columns: ["set_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_performance_targets_staff_id_fkey"
+            foreignKeyName: "staff_branch_memberships_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
@@ -1527,109 +3423,216 @@ export type Database = {
           },
         ]
       }
-      washing_queue: {
+      staff_role_assignments: {
         Row: {
-          added_by: string | null
-          booking_id: string | null
-          branch_id: string
           business_id: string
-          completed_at: string | null
-          completed_by: string | null
-          condition_after: string | null
           created_at: string
-          id: string
-          item_id: string
-          item_variant_id: string | null
-          next_booking_date: string | null
-          notes: string | null
-          priority: string
-          stage: string
-          updated_at: string
+          role_id: string
+          staff_id: string
         }
         Insert: {
-          added_by?: string | null
-          booking_id?: string | null
-          branch_id: string
           business_id: string
-          completed_at?: string | null
-          completed_by?: string | null
-          condition_after?: string | null
           created_at?: string
-          id?: string
-          item_id: string
-          item_variant_id?: string | null
-          next_booking_date?: string | null
-          notes?: string | null
-          priority?: string
-          stage?: string
-          updated_at?: string
+          role_id: string
+          staff_id: string
         }
         Update: {
-          added_by?: string | null
-          booking_id?: string | null
-          branch_id?: string
           business_id?: string
-          completed_at?: string | null
-          completed_by?: string | null
-          condition_after?: string | null
           created_at?: string
-          id?: string
-          item_id?: string
-          item_variant_id?: string | null
-          next_booking_date?: string | null
-          notes?: string | null
-          priority?: string
-          stage?: string
-          updated_at?: string
+          role_id?: string
+          staff_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "washing_queue_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "washing_queue_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "washing_queue_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "washing_queue_business_id_fkey"
+            foreignKeyName: "staff_role_assignments_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "washing_queue_completed_by_fkey"
-            columns: ["completed_by"]
+            foreignKeyName: "staff_role_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "business_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_role_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stocktake_lines: {
+        Row: {
+          business_id: string
+          counted_at: string | null
+          counted_by: string | null
+          counted_quantity: number | null
+          expected_quantity: number
+          id: string
+          item_variant_id: string
+          note: string | null
+          stocktake_id: string
+        }
+        Insert: {
+          business_id: string
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          expected_quantity: number
+          id?: string
+          item_variant_id: string
+          note?: string | null
+          stocktake_id: string
+        }
+        Update: {
+          business_id?: string
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          expected_quantity?: number
+          id?: string
+          item_variant_id?: string
+          note?: string | null
+          stocktake_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_lines_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_lines_counted_by_fkey"
+            columns: ["counted_by"]
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "washing_queue_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "washing_queue_item_variant_id_fkey"
+            foreignKeyName: "stocktake_lines_item_variant_id_fkey"
             columns: ["item_variant_id"]
             isOneToOne: false
             referencedRelation: "item_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_lines_stocktake_id_fkey"
+            columns: ["stocktake_id"]
+            isOneToOne: false
+            referencedRelation: "stocktakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stocktakes: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          blind_count: boolean
+          branch_id: string
+          business_id: string
+          id: string
+          notes: string | null
+          started_at: string
+          started_by: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          blind_count?: boolean
+          branch_id: string
+          business_id: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+          started_by?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          blind_count?: boolean
+          branch_id?: string
+          business_id?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+          started_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktakes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktakes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktakes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktakes_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_rules: {
+        Row: {
+          business_id: string
+          charge_type: string
+          created_at: string
+          hsn_sac: string | null
+          id: string
+          is_active: boolean
+          rate: number
+        }
+        Insert: {
+          business_id: string
+          charge_type: string
+          created_at?: string
+          hsn_sac?: string | null
+          id?: string
+          is_active?: boolean
+          rate?: number
+        }
+        Update: {
+          business_id?: string
+          charge_type?: string
+          created_at?: string
+          hsn_sac?: string | null
+          id?: string
+          is_active?: boolean
+          rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rules_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -1639,60 +3642,212 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      adjust_item_stock: {
+      advance_inventory_transfer: {
         Args: {
-          p_is_reservation: boolean
-          p_quantity_change: number
-          p_variant_id: string
+          p_action: string
+          p_note?: string
+          p_received_quantity?: number
+          p_transfer_id: string
         }
-        Returns: undefined
-      }
-      cancel_booking_stock: {
-        Args: { p_quantity: number; p_variant_id: string }
-        Returns: undefined
-      }
-      complete_washing: {
-        Args: { p_quantity: number; p_variant_id: string }
-        Returns: undefined
-      }
-      generate_booking_number: {
-        Args: { p_branch_id: string; p_date: string }
-        Returns: string
-      }
-      get_my_staff_info: {
-        Args: never
         Returns: {
           business_id: string
-          role: string
+          destination_branch_id: string
+          dispatched_at: string | null
+          dispatched_by: string | null
+          id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          requested_at: string
+          requested_by: string | null
+          source_branch_id: string
+          status: Database["public"]["Enums"]["rental_transfer_status"]
+          transfer_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inventory_transfers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      approve_stocktake: {
+        Args: { p_note?: string; p_stocktake_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          blind_count: boolean
+          branch_id: string
+          business_id: string
+          id: string
+          notes: string | null
+          started_at: string
+          started_by: string | null
           status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "stocktakes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_inventory_transfer: {
+        Args: {
+          p_destination_branch_id: string
+          p_item_variant_id: string
+          p_note?: string
+          p_quantity: number
+        }
+        Returns: string
+      }
+      get_rental_availability: {
+        Args: {
+          p_branch_id: string
+          p_business_id: string
+          p_from: string
+          p_item_id?: string
+          p_requested_quantity?: number
+          p_to: string
+          p_variant_id?: string
+        }
+        Returns: {
+          available_quantity: number
+          item_id: string
+          out_quantity: number
+          peak_booked: number
+          physical_stock: number
+          shortage_quantity: number
+          size: string
+          unavailable_quantity: number
+          variant_id: string
         }[]
       }
-      lock_item_stock: {
-        Args: { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+      post_booking_payment: {
+        Args: {
+          p_amount: number
+          p_booking_id: string
+          p_idempotency_key?: string
+          p_note?: string
+          p_payment_method: string
+          p_payment_type: string
+          p_reference_number?: string
+        }
+        Returns: string
       }
-      release_item_stock: {
-        Args: { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+      record_daily_attendance: {
+        Args: {
+          p_accuracy_metres?: number
+          p_latitude: number
+          p_longitude: number
+        }
+        Returns: {
+          approved_by: string | null
+          attendance_status: string
+          branch_id: string
+          business_id: string
+          created_at: string
+          date: string
+          gps_metadata: Json
+          gps_warning: boolean
+          id: string
+          notes: string | null
+          recorded_at: string
+          staff_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "staff_attendance"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      return_item_from_booking: {
-        Args: { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+      record_stocktake_counts: {
+        Args: { p_counts: Json; p_stocktake_id: string }
+        Returns: number
       }
-      sync_all_inventory_stock:
-        | { Args: never; Returns: undefined }
-        | { Args: { p_business_id: string }; Returns: undefined }
-      sync_booking_financials_for_id: {
-        Args: { p_booking_id: string }
-        Returns: undefined
+      restore_unavailable_stock: {
+        Args: {
+          p_note?: string
+          p_quantity: number
+          p_unavailability_id: string
+        }
+        Returns: {
+          booking_item_id: string | null
+          branch_id: string
+          business_id: string
+          id: string
+          inventory_asset_id: string | null
+          item_id: string
+          item_variant_id: string
+          notes: string | null
+          quantity: number
+          reason: Database["public"]["Enums"]["rental_unavailability_reason"]
+          recorded_at: string
+          recorded_by: string | null
+          restored_at: string | null
+          restored_by: string | null
+          restored_quantity: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inventory_unavailability"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      sync_inventory_stock: {
-        Args: { p_variant_id: string }
-        Returns: undefined
+      start_stocktake: {
+        Args: { p_blind_count?: boolean; p_note?: string }
+        Returns: string
       }
     }
     Enums: {
-      [_ in never]: never
+      financial_document_type:
+        | "quote"
+        | "invoice"
+        | "receipt"
+        | "deposit_receipt"
+        | "deposit_settlement"
+        | "credit_note"
+        | "debit_note"
+        | "payslip"
+      financial_entry_type:
+        | "payment"
+        | "refund"
+        | "reversal"
+        | "deposit_collection"
+        | "deposit_refund"
+        | "deposit_deduction"
+        | "customer_credit"
+        | "customer_credit_applied"
+      fulfilment_event_type: "pickup" | "return"
+      inventory_tracking_mode: "quantity" | "asset"
+      rental_booking_status:
+        | "draft"
+        | "quote"
+        | "hold"
+        | "confirmed"
+        | "picked_up"
+        | "partially_returned"
+        | "returned"
+        | "closed"
+        | "cancelled"
+      rental_transfer_status:
+        | "requested"
+        | "dispatched"
+        | "in_transit"
+        | "received"
+        | "discrepancy"
+        | "cancelled"
+      rental_unavailability_reason: "damaged" | "missing"
+      stock_movement_type:
+        | "opening"
+        | "adjustment"
+        | "transfer_out"
+        | "transfer_in"
+        | "stocktake"
+        | "archive"
+        | "restore"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1708,12 +3863,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1737,11 +3892,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1762,11 +3917,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1787,11 +3942,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1804,11 +3959,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1819,6 +3974,58 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      financial_document_type: [
+        "quote",
+        "invoice",
+        "receipt",
+        "deposit_receipt",
+        "deposit_settlement",
+        "credit_note",
+        "debit_note",
+        "payslip",
+      ],
+      financial_entry_type: [
+        "payment",
+        "refund",
+        "reversal",
+        "deposit_collection",
+        "deposit_refund",
+        "deposit_deduction",
+        "customer_credit",
+        "customer_credit_applied",
+      ],
+      fulfilment_event_type: ["pickup", "return"],
+      inventory_tracking_mode: ["quantity", "asset"],
+      rental_booking_status: [
+        "draft",
+        "quote",
+        "hold",
+        "confirmed",
+        "picked_up",
+        "partially_returned",
+        "returned",
+        "closed",
+        "cancelled",
+      ],
+      rental_transfer_status: [
+        "requested",
+        "dispatched",
+        "in_transit",
+        "received",
+        "discrepancy",
+        "cancelled",
+      ],
+      rental_unavailability_reason: ["damaged", "missing"],
+      stock_movement_type: [
+        "opening",
+        "adjustment",
+        "transfer_out",
+        "transfer_in",
+        "stocktake",
+        "archive",
+        "restore",
+      ],
+    },
   },
 } as const

@@ -12,9 +12,8 @@ import { Upload, Download, AlertTriangle, CheckCircle2, Loader2, FileText } from
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
-const CSV_HEADERS = ['name', 'category', 'sku', 'price', 'deposit_amount', 'size', 'stock', 'storage_location', 'condition']
+const CSV_HEADERS = ['name', 'category', 'sku', 'price', 'deposit_amount', 'replacement_value', 'size', 'stock', 'storage_location']
 const VALID_CATEGORIES = ['kurtha', 'suits', 'loafers', 'shoes', 'cap', 'accessories']
-const VALID_CONDITIONS = ['excellent', 'good', 'fair', 'poor']
 
 interface ParsedRow {
   name: string
@@ -22,19 +21,19 @@ interface ParsedRow {
   sku: string
   price: number
   deposit_amount: number
+  replacement_value: number
   size: string
   stock: number
   storage_location: string
-  condition: string
   errors: string[]
 }
 
 function downloadTemplate() {
   const header = CSV_HEADERS.join(',')
   const sample = [
-    'Silk Kurtha Set,kurtha,KU-001,500,1000,M,2,Rack A Shelf 1,good',
-    'Navy Suit,suits,SU-001,800,2000,42,1,Rack B Shelf 2,excellent',
-    'Brown Loafers,loafers,LO-001,300,500,8,3,Shoe Rack 1,good',
+    'Silk Kurtha Set,kurtha,KU-001,500,1000,8000,M,2,Rack A Shelf 1',
+    'Navy Suit,suits,SU-001,800,2000,15000,42,1,Rack B Shelf 2',
+    'Brown Loafers,loafers,LO-001,300,500,4000,8,3,Shoe Rack 1',
   ].join('\n')
   const csv = `${header}\n${sample}`
   const blob = new Blob([csv], { type: 'text/csv' })
@@ -72,11 +71,11 @@ function parseCsv(text: string): ParsedRow[] {
     const deposit = parseFloat(row.deposit_amount)
     if (isNaN(deposit) || deposit < 0) errors.push('Deposit must be 0 or more')
 
+    const replacementValue = parseFloat(row.replacement_value)
+    if (isNaN(replacementValue) || replacementValue < 0) errors.push('Replacement value must be 0 or more')
+
     const stock = parseInt(row.stock)
     if (isNaN(stock) || stock < 0) errors.push('Stock must be 0 or more')
-
-    const condition = row.condition?.toLowerCase() || 'good'
-    if (!VALID_CONDITIONS.includes(condition)) errors.push(`Invalid condition. Use: ${VALID_CONDITIONS.join(', ')}`)
 
     rows.push({
       name: row.name?.trim(),
@@ -84,10 +83,10 @@ function parseCsv(text: string): ParsedRow[] {
       sku: row.sku?.trim() || '',
       price: isNaN(price) ? 0 : price,
       deposit_amount: isNaN(deposit) ? 0 : deposit,
+      replacement_value: isNaN(replacementValue) ? 0 : replacementValue,
       size: row.size?.trim(),
       stock: isNaN(stock) ? 0 : stock,
       storage_location: row.storage_location?.trim() || '',
-      condition,
       errors,
     })
   }
@@ -141,8 +140,8 @@ export function CsvImportDialog() {
             sku: row.sku || null,
             price: row.price,
             deposit_amount: row.deposit_amount,
+            replacement_value: row.replacement_value,
             storage_location: row.storage_location || null,
-            condition: row.condition,
             status: 'available',
             is_active: true,
           })
@@ -152,18 +151,34 @@ export function CsvImportDialog() {
         if (itemErr || !item) { failed++; continue }
 
         // 2. Create variant
-        const { error: variantErr } = await supabase
+        const { data: variant, error: variantErr } = await supabase
           .from('item_variants')
           .insert({
             item_id: item.id,
             business_id: staff.business_id,
+            branch_id: activeBranch.id,
             size: row.size,
             total_stock: row.stock,
-            available_stock: row.stock,
-            reserved_stock: 0,
           })
+          .select('id')
+          .single()
 
-        if (variantErr) { failed++; continue }
+        if (variantErr || !variant) { failed++; continue }
+
+        const { error: movementError } = await (supabase.from as any)('inventory_movements').insert({
+          business_id: staff.business_id,
+          branch_id: activeBranch.id,
+          item_id: item.id,
+          item_variant_id: variant.id,
+          movement_type: 'opening',
+          quantity_delta: row.stock,
+          quantity_before: 0,
+          quantity_after: row.stock,
+          reference_type: 'csv_import',
+          performed_by: staff.id,
+        })
+
+        if (movementError) { failed++; continue }
 
         success++
       } catch {

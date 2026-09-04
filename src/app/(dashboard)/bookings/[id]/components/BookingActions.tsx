@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { QRScanner } from '@/components/shared/QRScanner'
-import { QrCode, Loader2, Package, CheckCircle, RefreshCw, RefreshCcw } from 'lucide-react'
+import { QrCode, Loader2, Package, CheckCircle, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { syncFullInventory } from '@/app/(dashboard)/inventory/inventory-actions'
 import { AddPaymentDialog } from './AddPaymentDialog'
 import { CancelBookingDialog } from './CancelBookingDialog'
 import { safeJsonParse } from '@/lib/api-utils'
@@ -16,12 +15,8 @@ interface BookingActionsProps {
   booking: {
     id: string
     status: string
-    business_id: string
-    branch_id: string
-    staff_id: string
     balance_due: number
     deposit_amount: number
-    total_amount: number
     booking_items: Array<{ id: string; item_name: string; size: string; quantity: number }>
   }
 }
@@ -29,7 +24,6 @@ interface BookingActionsProps {
 export function BookingActions({ booking }: BookingActionsProps) {
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
   const router = useRouter()
 
   const handleManualStatusChange = async (newStatus: string) => {
@@ -48,19 +42,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
       toast.error(err.message)
     } finally {
       setIsUpdating(false)
-    }
-  }
-
-  const handleSync = async () => {
-    setIsSyncing(true)
-    try {
-      await syncFullInventory()
-      toast.success('Inventory stock levels reconciled')
-      router.refresh()
-    } catch (err: any) {
-      toast.error(err.message || 'Sync failed')
-    } finally {
-      setIsSyncing(false)
     }
   }
 
@@ -86,12 +67,12 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   const isActive = booking.status !== 'closed' && booking.status !== 'cancelled'
-  const canCancel = booking.status === 'booked' || booking.status === 'out'
+  const canCancel = ['draft', 'quote', 'hold', 'confirmed'].includes(booking.status)
 
   return (
     <div className="space-y-3">
       {/* Process Pickup — dedicated page */}
-      {booking.status === 'booked' && (
+      {['confirmed', 'hold'].includes(booking.status) && (
         <Button
           className="w-full bg-amber-500 hover:bg-amber-600 text-white"
           size="sm"
@@ -105,7 +86,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       )}
 
       {/* Process Return — dedicated page */}
-      {booking.status === 'out' && (
+      {['picked_up', 'partially_returned'].includes(booking.status) && (
         <Button
           className="w-full bg-green-600 hover:bg-green-700 text-white"
           size="sm"
@@ -139,12 +120,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
       {isActive && (
         <AddPaymentDialog
           bookingId={booking.id}
-          businessId={booking.business_id}
-          branchId={booking.branch_id}
-          staffId={booking.staff_id}
           balanceDue={booking.balance_due}
           depositAmount={booking.deposit_amount}
-          totalAmount={booking.total_amount}
         />
       )}
 
@@ -165,21 +142,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
       >
         <QrCode className="w-4 h-4 mr-2" />
         Scan Item Tag
-      </Button>
-
-      {/* Reconcile */}
-      <Button
-        variant="ghost"
-        className="w-full text-slate-400 hover:text-slate-600 hover:bg-slate-50 text-xs py-1 h-auto"
-        onClick={handleSync}
-        disabled={isSyncing}
-      >
-        {isSyncing ? (
-          <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-        ) : (
-          <RefreshCw className="w-3 h-3 mr-2" />
-        )}
-        {isSyncing ? 'Syncing Stock...' : 'Reconcile System Stock'}
       </Button>
 
       <QRScanner

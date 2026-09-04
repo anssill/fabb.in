@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronLeft, Plus, Trash2, Loader2, Upload, Layers } from 'lucide-react'
+import { ChevronLeft, Plus, Trash2, Loader2, Layers } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -16,8 +16,6 @@ import { ImageUpload } from '../components/ImageUpload'
 import { StorageService } from '@/lib/storage-service'
 
 const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
-const CONDITIONS = ['excellent', 'good', 'fair', 'poor']
-
 const SIZE_PRESETS = {
   'Clothing': ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'],
   'Numeric': ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'],
@@ -26,7 +24,6 @@ const SIZE_PRESETS = {
 
 interface Variant {
   size: string
-  colour: string
   total_stock: number
   price_override: number | null
 }
@@ -69,7 +66,6 @@ export default function NewItemPage() {
   const [bulkSizes, setBulkSizes] = useState<string[]>([])
   const [showBulk, setShowBulk] = useState(false)
   const [bulkQty, setBulkQty] = useState(1)
-  const [bulkColour, setBulkColour] = useState('')
 
   const [form, setForm] = useState({
     name: '',
@@ -79,19 +75,20 @@ export default function NewItemPage() {
     storage_location: '',
     price: 0,
     deposit_amount: 0,
-    condition: 'excellent',
     purchase_price: 0,
+    replacement_value: 0,
+    tracking_mode: 'quantity' as 'quantity' | 'asset',
   })
 
   const [variants, setVariants] = useState<Variant[]>([
-    { size: 'M', colour: '', total_stock: 1, price_override: null },
+    { size: 'M', total_stock: 1, price_override: null },
   ])
 
   const updateForm = (field: string, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }))
 
   const addVariant = () =>
-    setVariants([...variants, { size: '', colour: '', total_stock: 1, price_override: null }])
+    setVariants([...variants, { size: '', total_stock: 1, price_override: null }])
 
   const removeVariant = (index: number) => {
     if (variants.length <= 1) return
@@ -113,12 +110,11 @@ export default function NewItemPage() {
     const existingSizes = new Set(existing.map((v) => v.size))
     const newVariants = bulkSizes
       .filter((s) => !existingSizes.has(s))
-      .map((s) => ({ size: s, colour: bulkColour, total_stock: bulkQty, price_override: null }))
+      .map((s) => ({ size: s, total_stock: bulkQty, price_override: null }))
     const base = variants.filter((v) => v.size.trim() || variants.length === 1)
     setVariants([...base.filter((v) => v.size.trim()), ...newVariants])
     setBulkSizes([])
     setBulkQty(1)
-    setBulkColour('')
     setShowBulk(false)
     toast.success(`Added ${newVariants.length} size variant${newVariants.length !== 1 ? 's' : ''} with Qty ${bulkQty}`)
   }
@@ -239,6 +235,22 @@ export default function NewItemPage() {
               <Input type="number" value={form.deposit_amount || ''} onChange={(e) => updateForm('deposit_amount', Number(e.target.value))} placeholder="1000" min={0} />
               <p className="text-xs text-muted-foreground">Refundable deposit collected at pickup</p>
             </div>
+            <div className="space-y-2">
+              <Label>Replacement value (₹)</Label>
+              <Input type="number" value={form.replacement_value || ''} onChange={(e) => updateForm('replacement_value', Number(e.target.value))} placeholder="8000" min={0} />
+              <p className="text-xs text-muted-foreground">Suggested damage or missing charge ceiling</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Tracking mode</Label>
+              <Select value={form.tracking_mode} onValueChange={(value) => updateForm('tracking_mode', value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="quantity">Quantity by size</SelectItem>
+                  <SelectItem value="asset">Individual premium assets</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Premium assets can be assigned or scanned during pickup</p>
+            </div>
           </div>
           <div className="mt-4 pt-4 border-t border-border">
             <div className="space-y-2">
@@ -250,37 +262,13 @@ export default function NewItemPage() {
         </CardContent>
       </Card>
 
-      {/* Condition */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Condition</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {CONDITIONS.map((c) => (
-              <button
-                key={c}
-                onClick={() => updateForm('condition', c)}
-                className={`px-4 py-2 rounded-lg text-sm capitalize border transition-colors ${
-                  form.condition === c
-                    ? 'bg-primary text-primary-foreground border-primary font-medium'
-                    : 'border-input text-muted-foreground bg-transparent hover:bg-muted'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Variants */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">Size & Stock Variants</CardTitle>
-              <CardDescription>Add sizes, colours, and stock for this item</CardDescription>
+              <CardDescription>Add sizes and physical stock for this rental item</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowBulk(!showBulk)}>
@@ -298,7 +286,7 @@ export default function NewItemPage() {
             <div className="bg-muted/50 rounded-xl p-4 border border-border space-y-4">
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select sizes to add</p>
-                <p className="text-[11px] text-muted-foreground">Select multiple sizes, choose their default quantity and color, then add them all together.</p>
+                <p className="text-[11px] text-muted-foreground">Select multiple sizes and choose their default quantity.</p>
               </div>
               
               {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
@@ -330,7 +318,7 @@ export default function NewItemPage() {
                 </div>
               ))}
 
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+              <div className="pt-3 border-t border-border">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Bulk Quantity per size</Label>
                   <Input
@@ -338,15 +326,6 @@ export default function NewItemPage() {
                     value={bulkQty}
                     onChange={(e) => setBulkQty(Math.max(1, Number(e.target.value)))}
                     min={1}
-                    className="h-8 text-xs bg-background"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Bulk Colour (optional)</Label>
-                  <Input
-                    value={bulkColour}
-                    onChange={(e) => setBulkColour(e.target.value)}
-                    placeholder="e.g. Red"
                     className="h-8 text-xs bg-background"
                   />
                 </div>
@@ -361,7 +340,7 @@ export default function NewItemPage() {
                 >
                   Add {bulkSizes.length > 0 ? bulkSizes.length : ''} size{bulkSizes.length !== 1 ? 's' : ''} →
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setBulkQty(1); setBulkColour(''); setShowBulk(false) }}>
+                <Button size="sm" variant="ghost" onClick={() => { setBulkSizes([]); setBulkQty(1); setShowBulk(false) }}>
                   Cancel
                 </Button>
               </div>
@@ -379,11 +358,7 @@ export default function NewItemPage() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Colour</Label>
-                  <Input value={v.colour} onChange={(e) => updateVariant(i, 'colour', e.target.value)} placeholder="Red" />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Stock</Label>
                   <Input type="number" value={v.total_stock} onChange={(e) => updateVariant(i, 'total_stock', Number(e.target.value))} min={1} />

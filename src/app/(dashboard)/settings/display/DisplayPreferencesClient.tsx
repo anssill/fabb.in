@@ -18,23 +18,25 @@ export function DisplayPreferencesClient() {
   const [currencyFormat, setCurrencyFormat] = useState<CurrencyFormat>('indian')
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('fabb_display_prefs')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.theme) {
-          setTheme(parsed.theme as Theme)
-          // Ensure next-themes is in sync with our saved preference
-          if (nextTheme !== parsed.theme) {
-            setNextTheme(parsed.theme as Theme)
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = localStorage.getItem('fabb_display_prefs')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed.theme) {
+            setTheme(parsed.theme as Theme)
+            if (nextTheme !== parsed.theme) {
+              setNextTheme(parsed.theme as Theme)
+            }
           }
+          if (parsed.dateFormat) setDateFormat(parsed.dateFormat as DateFormat)
+          if (parsed.currencyFormat) setCurrencyFormat(parsed.currencyFormat as CurrencyFormat)
+        } else if (nextTheme) {
+          setTheme(nextTheme as Theme)
         }
-        if (parsed.dateFormat) setDateFormat(parsed.dateFormat as DateFormat)
-        if (parsed.currencyFormat) setCurrencyFormat(parsed.currencyFormat as CurrencyFormat)
-      } else if (nextTheme) {
-        setTheme(nextTheme as Theme)
-      }
-    } catch {}
+      } catch {}
+    }, 0)
+    return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
