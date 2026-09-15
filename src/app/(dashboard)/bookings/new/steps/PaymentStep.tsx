@@ -14,8 +14,7 @@ interface Props {
 }
 
 export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
-  const balanceDue = totalAmount - payment.advance_amount - (payment.deposit_amount ?? 0)
-  const minAdvance = Math.round(totalAmount * 0.3)
+  const balanceDue = totalAmount - payment.advance_amount
 
   const presets = [
     { label: '30%', value: Math.round(totalAmount * 0.3) },
@@ -45,8 +44,8 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           <Input
             type="number"
             value={payment.advance_amount || ''}
-            onChange={(e) => setPayment({ ...payment, advance_amount: Math.min(Number(e.target.value), totalAmount) })}
-            placeholder={`Min ₹${minAdvance}`}
+            onChange={(e) => setPayment({ ...payment, advance_amount: Math.max(0, Math.min(Number(e.target.value), totalAmount)) })}
+            placeholder="0"
             min={0}
             max={totalAmount}
           />
@@ -113,11 +112,11 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           <Input
             type="number"
             value={payment.deposit_amount || ''}
-            onChange={(e) => setPayment({ ...payment, deposit_amount: Number(e.target.value) })}
+            onChange={(e) => setPayment({ ...payment, deposit_amount: Math.max(0, Number(e.target.value)) })}
             placeholder="0"
             min={0}
           />
-          <p className="text-xs text-muted-foreground">Refundable deposit collected at pickup</p>
+          <p className="text-xs text-muted-foreground">Refundable deposit collected now, separate from rental payment</p>
         </div>
 
         {/* Notes */}

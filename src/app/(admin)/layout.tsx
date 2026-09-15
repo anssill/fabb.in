@@ -17,6 +17,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .eq('id', user.id)
     .single()
 
+  if (staff && !['active', 'approved'].includes(staff.status)) redirect('/suspended')
+
   if (!staff || staff.role !== 'super_admin') {
     redirect('/dashboard')
   }

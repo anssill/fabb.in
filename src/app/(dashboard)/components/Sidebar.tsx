@@ -9,11 +9,8 @@ import {
   Users,
   CreditCard,
   BarChart3,
-  ArrowLeftRight,
-  ClipboardCheck,
   Banknote,
   FileChartColumn,
-  Archive,
   UserCog,
   MapPinCheck,
   Wallet,
@@ -52,8 +49,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Bookings', href: '/bookings', icon: CalendarCheck },
   { label: 'Inventory', href: '/inventory', icon: Package },
-  { label: 'Transfers', href: '/inventory/transfers', icon: ArrowLeftRight },
-  { label: 'Stocktakes', href: '/inventory/stocktakes', icon: ClipboardCheck },
   { label: 'Customers', href: '/customers', icon: Users },
   { label: 'Payments', href: '/payments', icon: CreditCard },
   { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['owner', 'manager', 'super_admin'] },
@@ -62,7 +57,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Attendance', href: '/attendance', icon: MapPinCheck },
   { label: 'Expenses', href: '/expenses', icon: Wallet, roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Payroll', href: '/payroll', icon: Banknote, roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Legacy Archive', href: '/archive', icon: Archive, roles: ['owner', 'manager', 'super_admin'] },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [

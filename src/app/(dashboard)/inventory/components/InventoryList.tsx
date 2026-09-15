@@ -31,6 +31,7 @@ export function InventoryList({ initialItems, businessId, branchId }: Props) {
   const [category, setCategory] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
   const [availability, setAvailability] = useState<AvailabilityRow[]>([])
   const [range, setRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: addDays(new Date(), 3) })
 
@@ -38,18 +39,22 @@ export function InventoryList({ initialItems, businessId, branchId }: Props) {
     let cancelled = false
     async function loadAvailability() {
       setLoading(true)
+      setAvailabilityError(null)
+      try {
       const supabase = createClient()
-      const rpc = supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: AvailabilityRow[] | null; error: { message: string } | null }>
+      const rpc = supabase.rpc.bind(supabase) as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: AvailabilityRow[] | null; error: { message: string } | null }>
       const { data, error } = await rpc('get_rental_availability', {
         p_business_id: businessId, p_branch_id: branchId,
         p_from: format(range.from, 'yyyy-MM-dd'), p_to: format(range.to, 'yyyy-MM-dd'),
         p_item_id: null, p_requested_quantity: 0,
       })
       if (!cancelled) {
-        if (error) console.error('Availability query failed', error.message)
+        if (error) throw new Error(error.message)
         setAvailability(data ?? [])
-        setLoading(false)
       }
+      } catch (error) {
+        if (!cancelled) setAvailabilityError(error instanceof Error ? error.message : 'Availability could not be loaded')
+      } finally { if (!cancelled) setLoading(false) }
     }
     void loadAvailability()
     return () => { cancelled = true }
@@ -101,7 +106,7 @@ export function InventoryList({ initialItems, businessId, branchId }: Props) {
 
       <QRScanner isOpen={scannerOpen} onClose={() => setScannerOpen(false)} onScanSuccess={handleScan} onScanError={console.warn} />
 
-      {filtered.length ? (
+      {availabilityError ? <p role="alert" className="rounded-lg border border-destructive p-4 text-sm">Availability could not be loaded. Refresh to retry. {availabilityError}</p> : loading ? <p className="p-4 text-sm text-muted-foreground">Calculating availability…</p> : filtered.length ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {filtered.map((item) => {
             const rows = (item.item_variants ?? []).map((variant) => availabilityByVariant.get(variant.id) ?? {

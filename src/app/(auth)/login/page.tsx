@@ -30,6 +30,28 @@ function LoginForm() {
   const [loginMode, setLoginMode] = useState<'otp' | 'password'>(emailAuthEnabled ? 'otp' : 'password')
   const [loading, setLoading] = useState(false)
 
+  const handlePasswordRecovery = async () => {
+    if (!email.trim()) {
+      toast.error('Enter your email address first.')
+      return
+    }
+    setLoading(true)
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Unable to send a recovery email.')
+      toast.success('Check your email for a password reset link.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to send a recovery email.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -192,7 +214,14 @@ function LoginForm() {
 
               {loginMode === 'password' && (
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                    {emailAuthEnabled && (
+                      <button type="button" disabled={loading} onClick={handlePasswordRecovery} className="text-xs font-semibold text-[#4f46e5] hover:underline disabled:opacity-50">
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <Input

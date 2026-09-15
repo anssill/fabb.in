@@ -224,7 +224,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label>Rental rate (₹/day) *</Label>
+                <Label>Price per piece / booking (₹) *</Label>
                 <Input type="number" value={form.price || ''} onChange={(e) => updateForm('price', Number(e.target.value))} placeholder="500" min={0} />
               </div>
               <div className="space-y-2">

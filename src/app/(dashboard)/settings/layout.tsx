@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, MapPin, Users, Settings, Receipt, MessageSquare, Package, Monitor, User, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAppStore } from '@/lib/store'
+import { canAccessRoute } from '@/lib/permissions'
 
 const SETTINGS_SECTIONS = [
   { label: 'Company Profile', icon: Building2, href: '/settings/company', roles: ['owner', 'super_admin'] },
@@ -21,8 +23,10 @@ const SETTINGS_SECTIONS = [
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // We should ideally filter by role here if we use useAppStore
-  const visibleSections = SETTINGS_SECTIONS
+  const staff = useAppStore(state => state.staff)
+  const visibleSections = SETTINGS_SECTIONS.filter(section =>
+    staff && canAccessRoute(staff.role, staff.permissions, section.href)
+  )
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-5 md:flex-row">

@@ -1,115 +1,24 @@
 'use client'
-
-import { useEffect } from 'react'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calculator } from 'lucide-react'
-import type { BookingPricing, BookingItem, BookingDates } from '../page'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
-
-interface Props {
-  pricing: BookingPricing
-  setPricing: (p: BookingPricing) => void
-  items: BookingItem[]
-  dates: BookingDates
-}
-
-export function PricingStep({ pricing, setPricing, items, dates }: Props) {
-  const rentalDays = dates.pickup_date && dates.return_date
-    ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
-    : 1
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity * rentalDays, 0)
-
-  useEffect(() => {
-    const discountAmount = pricing.discount_type === 'percentage'
-      ? Math.round(subtotal * pricing.discount_value / 100)
-      : pricing.discount_value
-
-    const total = Math.max(0, subtotal - discountAmount)
-    setPricing({
-      ...pricing,
-      subtotal,
-      discount_amount: discountAmount,
-      total_amount: total,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotal, pricing.discount_type, pricing.discount_value])
-
-  return (
-    <>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-primary" />
-          Pricing Summary
-        </CardTitle>
-        <CardDescription>Review and adjust pricing for this booking</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Item breakdown */}
-        <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Item Breakdown ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
-          {items.map((item) => (
-            <div key={item.variant_id} className="flex justify-between text-sm">
-              <span className="text-foreground">
-                {item.name} ({item.size}) × {item.quantity} × {rentalDays}d
-              </span>
-              <span className="font-semibold text-foreground">₹{(item.price * item.quantity * rentalDays).toLocaleString('en-IN')}</span>
-            </div>
-          ))}
-          <div className="border-t border-border pt-2 flex justify-between text-sm font-bold text-foreground">
-            <span>Subtotal</span>
-            <span>₹{subtotal.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-
-        {/* Discount */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Discount type</Label>
-            <Select
-              value={pricing.discount_type}
-              onValueChange={(v) => setPricing({ ...pricing, discount_type: v as 'flat' | 'percentage' })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flat">Flat (₹)</SelectItem>
-                <SelectItem value="percentage">Percentage (%)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Discount value</Label>
-            <Input
-              type="number"
-              value={pricing.discount_value || ''}
-              onChange={(e) => setPricing({ ...pricing, discount_value: Number(e.target.value) })}
-              placeholder="0"
-              min={0}
-            />
-          </div>
-        </div>
-
-        {/* Total */}
-        <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-semibold text-foreground">₹{subtotal.toLocaleString('en-IN')}</span>
-          </div>
-          {pricing.discount_amount > 0 && (
-            <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-              <span>Discount</span>
-              <span>-₹{pricing.discount_amount.toLocaleString('en-IN')}</span>
-            </div>
-          )}
-          <div className="border-t border-border pt-2 flex justify-between text-lg font-bold text-foreground">
-            <span>Total</span>
-            <span>₹{pricing.total_amount.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-      </CardContent>
-    </>
-  )
+import { calculateBookingPricing, calculateItemPricing } from '@/lib/booking-pricing'
+import type { BookingItem } from '../page'
+export function PricingStep({ items, setItems }: { items: BookingItem[]; setItems: (items: BookingItem[]) => void }) {
+  const totals = calculateBookingPricing(items)
+  const update = (id: string, field: 'price' | 'discount_percent', value: string) => {
+    const number = Number(value)
+    if (!Number.isFinite(number)) return
+    setItems(items.map(item => item.variant_id === id ? { ...item, [field]: Math.min(field === 'discount_percent' ? 100 : 99999999, Math.max(0, number)) } : item))
+  }
+  return <><CardHeader><CardTitle>Item pricing</CardTitle><CardDescription>Per-piece prices cover the entire booking. Set a discount for each item.</CardDescription></CardHeader>
+    <CardContent className="space-y-4">{items.map(item => {
+      const line = calculateItemPricing(item)
+      return <div key={item.variant_id} className="rounded-xl border p-4 space-y-3">
+        <div><p className="font-medium">{item.name} · {item.size}</p><p className="text-sm text-muted-foreground">{item.quantity} piece(s) · entire booking</p></div>
+        <div className="grid grid-cols-2 gap-3"><div className="space-y-1"><Label htmlFor={item.variant_id + '-price'}>Price per piece (₹)</Label><Input id={item.variant_id + '-price'} type="number" min="0" step="0.01" value={item.price} onChange={e => update(item.variant_id, 'price', e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor={item.variant_id + '-discount'}>Discount (%)</Label><Input id={item.variant_id + '-discount'} type="number" min="0" max="100" step="0.01" value={item.discount_percent ?? 0} onChange={e => update(item.variant_id, 'discount_percent', e.target.value)} /></div></div>
+        <div className="flex justify-between text-sm"><span>₹{line.subtotal.toLocaleString('en-IN')} − ₹{line.discount_amount.toLocaleString('en-IN')}</span><strong>₹{line.total_amount.toLocaleString('en-IN')}</strong></div>
+      </div>
+    })}<div className="rounded-xl bg-muted p-4 space-y-2"><div className="flex justify-between"><span>Subtotal</span><span>₹{totals.subtotal.toLocaleString('en-IN')}</span></div><div className="flex justify-between"><span>Item discounts</span><span>−₹{totals.discount_amount.toLocaleString('en-IN')}</span></div><div className="flex justify-between font-semibold border-t pt-2"><span>Rental total</span><span>₹{totals.total_amount.toLocaleString('en-IN')}</span></div></div></CardContent></>
 }

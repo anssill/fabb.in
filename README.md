@@ -8,13 +8,21 @@ FABB is an internal, multi-tenant clothing-rental platform built with Next.js an
 - Draft/quote, hold, confirmed, picked-up, partially returned, returned, closed and cancelled booking states.
 - Quantity-tracked products, premium QR/asset pieces and multi-piece bundle definitions.
 - Partial pickup/return, exact asset returns, damaged/missing ledgers and audited restoration.
-- Customer, payment, refundable-deposit, expense, attendance, payroll, reporting and legacy-archive foundations.
+- Customer, payment, refundable-deposit, expense, attendance, payroll and reporting foundations.
 - GST/non-GST profiles, financial ledgers, document sequences and immutable posted-document structures.
-- Branch transfers, blind stocktakes, granular permissions and tenant/branch Row Level Security.
+- Granular permissions and tenant/branch Row Level Security.
 - PWA shell with online-only operational writes and queued offline attendance.
 - WhatsApp/SMS outbox foundations and protected evidence/customer-document storage.
 
-Washing, quality audits, colour variants, retail sales/POS, public booking, supplier purchasing, delivery, subscription enforcement and Notion are intentionally excluded.
+Legacy Archive, Stocktakes and Transfers have been removed from the application. Existing historical database records remain intact. Washing, quality audits, colour variants, retail sales/POS, public booking, supplier purchasing, delivery, subscription enforcement and Notion are intentionally excluded.
+
+## Booking pricing
+
+New bookings charge a price per piece for the entire booking, with an individual percentage discount for each item. Totals are calculated and saved atomically in Supabase. Existing daily-rate bookings keep their original pricing basis and stored billable days.
+
+Use **Edit item prices** on a saved booking to adjust rates and discounts. Closed/cancelled bookings cannot be repriced; stale changes and totals below recorded rental payments are rejected. Refundable deposits remain separate from rental dues. Payment posting validates balance/refund limits and synchronizes stored booking balances.
+
+The migration adds pricing columns and authenticated RPCs without deleting historical data. SQL regression checks in `supabase/tests/002_booking_pricing_rollback.sql` must be wrapped in `BEGIN` / `ROLLBACK`; they create transient fixtures and require an existing active owner and branch.
 
 ## Stack
 
@@ -29,9 +37,12 @@ Washing, quality audits, colour variants, retail sales/POS, public booking, supp
 2. Copy `.env.example` to `.env.local` and provide development Supabase credentials.
 3. Start the app with `npm run dev`.
 
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are required for both local development and production builds. Server-side account completion, invitations, and branch switching also require `SUPABASE_SECRET_KEY`. Use development credentials locally; never commit `.env.local`.
+
 Useful verification commands:
 
 ```bash
+npm test
 npx tsc --noEmit
 npm run lint -- --quiet
 npm run build
@@ -44,7 +55,7 @@ npm run build
 - Temporary canonical URL: `https://fabbin-ansils-projects-3a333fbb.vercel.app`.
 - Production branch: `main`.
 
-The complete empty-database schema is the single migration at `supabase/migrations/20260903205643_full_rental_rebuild_zero_state.sql`. Its pgTAP contract is `supabase/tests/001_rental_rebuild_contract.sql`.
+The initial empty-database schema is at `supabase/migrations/20260903205643_full_rental_rebuild_zero_state.sql`. Apply subsequent migrations in `supabase/migrations` as well. Its pgTAP contract is `supabase/tests/001_rental_rebuild_contract.sql`.
 
 Production uses the modern Supabase key names shown in `.env.example`. Real credentials belong only in Supabase/Vercel secret stores and must never be committed. Meta WhatsApp and MSG91 remain disabled until their optional server credentials are configured.
 

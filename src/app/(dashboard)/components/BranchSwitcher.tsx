@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -26,7 +27,8 @@ interface Props {
 
 export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) {
   const router = useRouter()
-  const { setActiveBranch, branches: storeBranches } = useAppStore()
+  const { staff, setStaff, setActiveBranch, branches: storeBranches } = useAppStore()
+  const [switching, setSwitching] = useState(false)
 
   if (branches.length <= 1 && !collapsed) {
     const branch = branches[0] || { name: 'Main Branch' }
@@ -47,21 +49,24 @@ export function BranchSwitcher({ branches, currentBranchId, collapsed }: Props) 
   }
 
   const handleSwitch = async (branchId: string) => {
+    if (switching) return
+    setSwitching(true)
     try {
+      await switchActiveBranch(branchId)
       const branch = storeBranches.find(b => b.id === branchId)
       if (branch) setActiveBranch(branch)
-      
-      // Update the database so server components see the new branch
-      await switchActiveBranch(branchId)
+      if (staff) setStaff({ ...staff, branch_id: branchId })
       
       router.refresh()
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Failed to switch branch')
+    } finally {
+      setSwitching(false)
     }
   }
 
   return (
-    <Select value={currentBranchId} onValueChange={handleSwitch}>
+    <Select disabled={switching} value={currentBranchId} onValueChange={handleSwitch}>
       <SelectTrigger className="w-full h-9 bg-transparent border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
         <div className="flex items-center gap-2 overflow-hidden">
           <Building2 className="w-4 h-4 shrink-0 text-slate-400" />

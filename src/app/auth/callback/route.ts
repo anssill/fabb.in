@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getPostLoginPath } from '@/lib/auth/paths'
 
 export async function GET(request: NextRequest) {
   const searchParams = new URL(request.url).searchParams
@@ -53,14 +54,15 @@ export async function GET(request: NextRequest) {
   const { data: staffRecord } = await supabase
     .from('staff')
     .select('id, status, role, setup_completed, business_id, branch_id')
-    .eq('email', session.user.email!)
+    .eq('id', session.user.id)
     .single()
 
   if (!staffRecord) {
+    await supabase.auth.signOut()
     return redirectWithSession('/login?error=no_account')
   }
 
-  if (staffRecord.status === 'suspended') {
+  if (!['active', 'approved', 'invited'].includes(staffRecord.status)) {
     return redirectWithSession('/suspended')
   }
 
@@ -73,9 +75,5 @@ export async function GET(request: NextRequest) {
     })
     .eq('id', staffRecord.id)
 
-  if (!staffRecord.setup_completed && staffRecord.role === 'owner') {
-    return redirectWithSession('/setup')
-  }
-
-  return redirectWithSession('/dashboard')
+  return redirectWithSession(getPostLoginPath(staffRecord))
 }

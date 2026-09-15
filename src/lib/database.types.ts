@@ -282,6 +282,10 @@ export type Database = {
       }
       booking_items: {
         Row: {
+          discount_percent: number
+          discount_amount: number
+          line_total: number
+          rate_basis: string
           booking_id: string
           branch_id: string
           business_id: string
@@ -304,6 +308,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          discount_percent?: number
+          rate_basis?: string
           booking_id: string
           branch_id: string
           business_id: string
@@ -326,6 +332,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          discount_percent?: number
+          rate_basis?: string
           booking_id?: string
           branch_id?: string
           business_id?: string
@@ -545,6 +553,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          creation_request_id: string | null
           actual_pickup_at: string | null
           actual_return_at: string | null
           advance_amount: number
@@ -593,6 +602,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          creation_request_id?: string | null
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
@@ -641,6 +651,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          creation_request_id?: string | null
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
@@ -3642,6 +3653,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_priced_booking: { Args: { p_input: Json }; Returns: Json }
+      update_booking_item_pricing: { Args: { p_booking_id: string; p_items: Json; p_expected_updated_at: string }; Returns: undefined }
       advance_inventory_transfer: {
         Args: {
           p_action: string

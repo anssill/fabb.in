@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { DatesStep } from './steps/DatesStep'
 import { PricingStep } from './steps/PricingStep'
 import { PaymentStep } from './steps/PaymentStep'
 import { ReceiptStep } from './steps/ReceiptStep'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { calculateBookingPricing } from '@/lib/booking-pricing'
 
 export interface BookingCustomer {
   id?: string
@@ -39,6 +39,7 @@ export interface BookingItem {
   sku?: string
   size: string
   price: number
+  discount_percent?: number
   quantity: number
   cover_image_url?: string | null
 }
@@ -83,6 +84,7 @@ const STEPS = [
 
 export default function NewBookingPage() {
   const router = useRouter()
+  const requestId = useRef<string | null>(null)
   const { activeBranch, staff } = useAppStore()
   const [currentStep, setCurrentStep] = useState(0)
   const [saving, setSaving] = useState(false)
@@ -92,10 +94,7 @@ export default function NewBookingPage() {
   const [customer, setCustomer] = useState<BookingCustomer>({ name: '', phone: '' })
   const [items, setItems] = useState<BookingItem[]>([])
   const [dates, setDates] = useState<BookingDates>({ event_date: '', pickup_date: '', return_date: '' })
-  const [pricing, setPricing] = useState<BookingPricing>({
-    subtotal: 0, discount_type: 'flat', discount_value: 0,
-    discount_amount: 0, tax_amount: 0, total_amount: 0,
-  })
+  const pricing: BookingPricing = { ...calculateBookingPricing(items), discount_type: 'flat', discount_value: 0, tax_amount: 0 }
   const [payment, setPayment] = useState<BookingPayment>({
     advance_amount: 0, deposit_amount: 0, method: 'cash',
   })
@@ -116,27 +115,17 @@ export default function NewBookingPage() {
       case 0: return !!customer.name && !!customer.phone && customer.phone.length >= 10
       case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
       case 2: return items.length > 0
-      case 3: return pricing.total_amount > 0
-      case 4: return payment.advance_amount >= 0
+      case 3: return items.length > 0 && pricing.total_amount >= 0
+      case 4: return Number.isFinite(payment.advance_amount) && payment.advance_amount >= 0 && payment.advance_amount <= pricing.total_amount && Number.isFinite(payment.deposit_amount) && payment.deposit_amount >= 0
       default: return true
     }
   }, [currentStep, customer, items, dates, pricing, payment])
 
   const handleNext = () => {
-    if (currentStep === 2) {
-      // Auto-calculate pricing when moving from dates
-      const rentalDays = calculateBillableRentalDays(dates.pickup_date, dates.return_date)
-      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity * rentalDays, 0)
-      setPricing((prev) => ({
-        ...prev,
-        subtotal,
-        total_amount: subtotal - prev.discount_amount,
-      }))
-    }
     if (currentStep === 3) {
       // Auto-calculate advance (30% default)
       const defaultAdvance = Math.round(pricing.total_amount * 0.3)
-      setPayment((prev) => ({ ...prev, advance_amount: prev.advance_amount || defaultAdvance }))
+      setPayment((prev) => ({ ...prev, advance_amount: Math.min(prev.advance_amount || defaultAdvance, pricing.total_amount) }))
     }
     setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
@@ -154,8 +143,10 @@ export default function NewBookingPage() {
         idProofUrl = await StorageService.uploadCustomerID(staff.business_id, customer.id_proof_file)
       }
 
+      requestId.current ??= crypto.randomUUID()
       const result = await createNewBookingFlow({
-        customer: { ...customer, id_proof_url: idProofUrl },
+        requestId: requestId.current,
+        customer: { ...customer, id_proof_file: undefined, id_proof_url: idProofUrl },
         items,
         dates,
         pricing,
@@ -228,7 +219,7 @@ export default function NewBookingPage() {
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
         {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
         {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} setDates={setDates} />}
-        {currentStep === 3 && <PricingStep pricing={pricing} setPricing={setPricing} items={items} dates={dates} />}
+        {currentStep === 3 && <PricingStep items={items} setItems={setItems} />}
         {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}
       </Card>

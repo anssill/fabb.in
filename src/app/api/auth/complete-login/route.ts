@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getPostLoginPath } from '@/lib/auth/paths'
 
 export async function POST() {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export async function POST() {
   const { data: staffRecord, error } = await supabaseAdmin
     .from('staff')
     .select('id, status, role, setup_completed')
-    .or(`id.eq.${user.id},email.eq.${user.email}`)
+    .eq('id', user.id)
     .maybeSingle()
 
   if (error || !staffRecord) {
@@ -38,6 +39,6 @@ export async function POST() {
 
   return NextResponse.json({
     success: true,
-    next: !staffRecord.setup_completed && staffRecord.role === 'owner' ? '/setup' : '/dashboard',
+    next: getPostLoginPath(staffRecord),
   })
 }

@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, Lock, ArrowRight, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { safeJsonParse } from '@/lib/api-utils'
 
 function getPasswordStrength(password: string): number {
   if (password.length === 0) return 0
@@ -37,25 +36,17 @@ function ResetPasswordContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // onAuthStateChange fires immediately with the current auth state,
-    // including PASSWORD_RECOVERY when the session was set by /auth/callback.
+    // A server callback has already established the recovery session.
+    // On a fresh page load Supabase emits INITIAL_SESSION, not PASSWORD_RECOVERY.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        setSessionSet(true)
+      if (event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setSessionSet(Boolean(session))
       } else if (event === 'SIGNED_OUT') {
         setSessionSet(false)
       }
     })
 
-    // Fallback: if no event fires within 3s, treat the link as invalid
-    const timer = setTimeout(() => {
-      setSessionSet((prev) => (prev === null ? false : prev))
-    }, 3000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timer)
-    }
+    return () => subscription.unsubscribe()
   }, [supabase])
 
   const strength = getPasswordStrength(password)
@@ -74,31 +65,17 @@ function ResetPasswordContent() {
     setLoading(true)
     setError('')
     try {
-      // Get the session access token to authorize the backend request
-      const { data: sessionData } = await supabase.auth.getSession()
-      if (!sessionData.session) throw new Error('Not authenticated')
-
-      // Use the built-in route so we can update BOTH Auth AND the 'staff' table password_hash simultaneously.
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
-        },
-        body: JSON.stringify({ password }),
-      })
-      const data = await safeJsonParse(res)
-      if (!res.ok) {
-        setError(data.error || 'Failed to reset password')
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) {
+        setError(updateError.message)
         return
       }
-      
-      // If the backend updated it successfully, sign them out so they can log in normally
+
       await supabase.auth.signOut()
       toast.success('Password updated successfully. Please log in.')
       setTimeout(() => router.push('/login'), 3000)
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -141,7 +118,7 @@ function ResetPasswordContent() {
             <p className="text-slate-400 mb-8 leading-relaxed">This reset link has expired or has already been used.</p>
             <Link href="/login">
               <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/30 h-16 text-lg font-black rounded-2xl group relative overflow-hidden active:scale-[0.98] transition-transform">
-                <span className="relative z-10">REQUEST NEW RESET LINK</span>
+                <span className="relative z-10">BACK TO LOGIN</span>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0" />
               </Button>
             </Link>

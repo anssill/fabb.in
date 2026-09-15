@@ -143,7 +143,7 @@ export async function updateItem(itemId: string, formData: ItemForm, variants: V
 export async function archiveItem(itemId: string) {
   const { db, user, staff } = await context()
   const now = new Date().toISOString()
-  const { error } = await db.from('items').update({ is_active: false, status: 'archived', archived_at: now, archived_by: user.id }).eq('id', itemId).eq('business_id', staff.business_id)
+  const { error } = await db.from('items').update({ is_active: false, status: 'retired', archived_at: now, archived_by: user.id }).eq('id', itemId).eq('business_id', staff.business_id)
   if (error) throw databaseError(error)
   await db.from('audit_log').insert({ business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id, action: 'item.archived', table_name: 'items', record_id: itemId })
   revalidatePath('/inventory')

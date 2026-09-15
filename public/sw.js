@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'fabb-static-v1'
-const STATIC_ASSETS = ['/login', '/brand/fabb-icon-180.png', '/brand/fabb-icon-512.png', '/brand/fabb-logo.png']
+const STATIC_CACHE = 'fabb-static-v2'
+const STATIC_ASSETS = ['/brand/fabb-icon-180.png', '/brand/fabb-icon-512.png', '/brand/fabb-logo.png']
 const DB_NAME = 'fabb-offline-v1'
 const STORE_NAME = 'attendance-queue'
 
@@ -9,7 +9,7 @@ self.addEventListener('install', (event) => {
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key)))))
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('fabb-static-') && key !== STATIC_CACHE).map((key) => caches.delete(key)))))
   self.clients.claim()
 })
 
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (event) => {
     }))
     return
   }
-  if (event.request.method === 'GET' && STATIC_ASSETS.includes(url.pathname)) {
+  if (url.origin === self.location.origin && event.request.method === 'GET' && STATIC_ASSETS.includes(url.pathname)) {
     event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)))
   }
 })

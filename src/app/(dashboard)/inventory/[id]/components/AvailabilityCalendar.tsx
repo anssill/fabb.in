@@ -16,18 +16,25 @@ export function AvailabilityCalendar({ itemId, businessId, branchId, variants }:
   const [range, setRange] = useState({ from: new Date(), to: addDays(new Date(), 14) })
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
     async function load() {
       setLoading(true)
+      setAvailabilityError(null)
+      try {
       const supabase = createClient()
-      const rpc = supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: Row[] | null }>
-      const { data } = await rpc('get_rental_availability', {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: Row[] | null; error: { message: string } | null }>
+      const { data, error } = await rpc('get_rental_availability', {
         p_business_id: businessId, p_branch_id: branchId, p_item_id: itemId,
         p_from: format(range.from, 'yyyy-MM-dd'), p_to: format(range.to, 'yyyy-MM-dd'), p_requested_quantity: 0,
       })
-      if (active) { setRows(data ?? []); setLoading(false) }
+      if (error) throw new Error(error.message)
+      if (active) setRows(data ?? [])
+      } catch (error) {
+        if (active) setAvailabilityError(error instanceof Error ? error.message : 'Availability could not be loaded')
+      } finally { if (active) setLoading(false) }
     }
     void load()
     return () => { active = false }
@@ -43,7 +50,7 @@ export function AvailabilityCalendar({ itemId, businessId, branchId, variants }:
         </Popover>
       </CardHeader>
       <CardContent>
-        {loading ? <div className="flex items-center justify-center py-10 text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Calculating dates…</div> : (
+        {availabilityError ? <p role="alert" className="text-sm text-destructive">Availability could not be loaded. Refresh to retry. {availabilityError}</p> : loading ? <div className="flex items-center justify-center py-10 text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Calculating dates…</div> : (
           <div className="overflow-x-auto rounded-xl border">
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-left text-xs text-muted-foreground"><tr><th className="p-3">Size</th><th className="p-3 text-center">Physical</th><th className="p-3 text-center">Peak booked</th><th className="p-3 text-center">Out now</th><th className="p-3 text-center">Damaged/missing</th><th className="p-3 text-center">Available</th></tr></thead>

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, Archive, ArrowLeftRight, ClipboardCheck, Package, PackageCheck, PackageOpen, Plus } from 'lucide-react'
+import { AlertTriangle, Archive, Package, PackageCheck, PackageOpen, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { InventoryList } from './components/InventoryList'
@@ -35,8 +35,6 @@ export default async function InventoryPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" asChild><Link href="/inventory/unavailable"><AlertTriangle className="mr-2 h-4 w-4" />Damaged / missing</Link></Button>
-          <Button variant="outline" asChild><Link href="/inventory/transfers"><ArrowLeftRight className="mr-2 h-4 w-4" />Transfers</Link></Button>
-          <Button variant="outline" asChild><Link href="/inventory/stocktakes"><ClipboardCheck className="mr-2 h-4 w-4" />Stocktakes</Link></Button>
           <CsvImportDialog />
           <Button asChild className="h-10 px-4"><Link href="/inventory/new"><Plus className="mr-2 h-4 w-4" />Add item</Link></Button>
         </div>

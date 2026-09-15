@@ -10,7 +10,9 @@ export function PwaRuntime() {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined)
     const handleOnline = () => {
       setOnline(true)
-      navigator.serviceWorker.controller?.postMessage({ type: 'SYNC_ATTENDANCE' })
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.controller?.postMessage({ type: 'SYNC_ATTENDANCE' })
+      }
     }
     const handleOffline = () => setOnline(false)
     window.addEventListener('online', handleOnline)

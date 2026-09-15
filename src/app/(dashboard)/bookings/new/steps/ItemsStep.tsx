@@ -42,38 +42,44 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
   const [variantTotalStocks, setVariantTotalStocks] = useState<Record<string, number>>({})
   const [checkingAvailability, setCheckingAvailability] = useState(false)
 
-  // Fetch overlapping booking quantities for selected dates
-  const fetchAvailability = async () => {
-    if (!staff?.business_id || !staff.branch_id || !dates.pickup_date || !dates.return_date) return
-    await Promise.resolve()
-    setCheckingAvailability(true)
-    try {
-      const supabase = createClient()
-      
-      const rpc = supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ data: { variant_id: string; available_quantity: number }[] | null; error: { message: string } | null }>
-      const { data, error } = await rpc('get_rental_availability', {
-        p_business_id: staff.business_id,
-        p_branch_id: staff.branch_id,
-        p_from: dates.pickup_date,
-        p_to: dates.return_date,
-        p_item_id: null,
-        p_requested_quantity: 0,
-      })
-
-      if (error) throw error
-
-      setAvailableQuantities(Object.fromEntries((data ?? []).map((row) => [row.variant_id, row.available_quantity])))
-    } catch (err) {
-      console.error('Failed to fetch calendar availability:', err)
-      toast.error('Could not verify item availability. Using default stock levels.')
-    } finally {
-      setCheckingAvailability(false)
-    }
-  }
-
+  // Ignore in-flight results when the selected dates or branch change.
   useEffect(() => {
+    let cancelled = false
+    const fetchAvailability = async () => {
+      setAvailableQuantities({})
+      if (!staff?.business_id || !staff.branch_id || !dates.pickup_date || !dates.return_date) {
+        setCheckingAvailability(false)
+        return
+      }
+      setCheckingAvailability(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase.rpc('get_rental_availability', {
+          p_business_id: staff.business_id,
+          p_branch_id: staff.branch_id,
+          p_from: dates.pickup_date,
+          p_to: dates.return_date,
+          p_item_id: null,
+          p_requested_quantity: 0,
+        })
+        if (cancelled) return
+        if (error) throw error
+        setAvailableQuantities(Object.fromEntries((data ?? []).map(
+          (row: { variant_id: string; available_quantity: number }) => [row.variant_id, row.available_quantity]
+        )))
+      } catch (error) {
+        if (cancelled) return
+        console.error('Failed to fetch calendar availability:', error)
+        toast.error('Could not verify availability. Stock shown is the total; availability will be checked again before confirmation.')
+      } finally {
+        if (!cancelled) setCheckingAvailability(false)
+      }
+    }
     const timer = window.setTimeout(() => { void fetchAvailability() }, 0)
-    return () => window.clearTimeout(timer)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [dates.pickup_date, dates.return_date, staff?.business_id, staff?.branch_id])
 
   // Synchronize missing stocks for items restored from drafts
@@ -283,7 +289,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.category} · ₹{item.price}/day</p>
+                    <p className="text-xs text-muted-foreground">{item.category} · ₹{item.price}/piece</p>
                   </div>
                 </div>
 
@@ -368,7 +374,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
                   <div>
                     <p className="text-sm font-semibold text-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.size} · ₹{item.price}/day
+                      {item.size} · ₹{item.price}/piece
                     </p>
                   </div>
                 </div>
@@ -388,7 +394,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
             ))}
             <div className="text-right pt-1">
               <p className="text-sm text-muted-foreground">
-                Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/day
+                Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/piece
               </p>
             </div>
           </div>

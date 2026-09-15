@@ -61,7 +61,6 @@ export function DataRealtime() {
       'expenses', 
       'booking_item_fulfilments',
       'inventory_unavailability',
-      'inventory_transfers',
       'financial_entries',
       'deposit_ledger',
       'staff_attendance'

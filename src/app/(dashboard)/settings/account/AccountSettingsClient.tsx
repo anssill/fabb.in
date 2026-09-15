@@ -20,8 +20,7 @@ export function AccountSettingsClient() {
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
 
-  const [name, setName] = useState(staff?.name ?? '')
-  const [phone, setPhone] = useState('') // would need phone in staff model
+  const [name, setName] = useState<string | null>(null)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -33,14 +32,19 @@ export function AccountSettingsClient() {
 
   async function handleSaveProfile() {
     if (!staff) return
+    const updatedName = (name ?? staff.name ?? '').trim()
+    if (!updatedName) {
+      toast.error('Full name is required')
+      return
+    }
     setIsSavingProfile(true)
     try {
       const { error } = await supabase
         .from('staff')
-        .update({ name })
+        .update({ name: updatedName })
         .eq('id', staff.id)
       if (error) throw error
-      setStaff({ ...staff, name })
+      setStaff({ ...staff, name: updatedName })
       toast.success('Profile updated')
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile')
@@ -50,6 +54,10 @@ export function AccountSettingsClient() {
   }
 
   async function handleChangePassword() {
+    if (!currentPassword) {
+      toast.error('Current password is required')
+      return
+    }
     if (!newPassword || newPassword.length < 8) {
       toast.error('New password must be at least 8 characters')
       return
@@ -60,13 +68,10 @@ export function AccountSettingsClient() {
     }
     setIsSavingPassword(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       })
@@ -121,7 +126,7 @@ export function AccountSettingsClient() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Full Name</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" />
+              <Input value={name ?? staff?.name ?? ''} onChange={e => setName(e.target.value)} placeholder="Your name" />
             </div>
             <div className="space-y-1.5">
               <Label>Email Address</Label>

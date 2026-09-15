@@ -1,0 +1,44 @@
+-- Execute inside BEGIN ... ROLLBACK, after the migration, to leave no test records.
+do $$
+declare s public.staff%rowtype; product uuid; variant uuid; payload jsonb; result jsonb; again jsonb; bid uuid; item uuid; stamp timestamptz; rejected boolean; n integer;
+begin
+  select st.* into s from public.staff st join public.branches br on br.id=st.branch_id and br.business_id=st.business_id where st.role='owner' and st.status in ('active','approved') limit 1;
+  if s.id is null then raise exception 'Test requires an active owner with a branch'; end if;
+  insert into public.items(business_id,branch_id,name,category,price) values(s.business_id,s.branch_id,'ROLLBACK pricing fixture','Test',100) returning id into product;
+  insert into public.item_variants(business_id,branch_id,item_id,size,total_stock) values(s.business_id,s.branch_id,product,'TEST',5) returning id into variant;
+  perform set_config('request.jwt.claim.sub',s.id::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',s.id,'role','authenticated')::text,true);
+  set local role authenticated;
+  payload:=jsonb_build_object('businessId',s.business_id,'branchId',s.branch_id,'requestId',gen_random_uuid(),'customer',jsonb_build_object('name','ROLLBACK Test','phone','9990000001'),'items',jsonb_build_array(jsonb_build_object('item_id',product,'variant_id',variant,'quantity',2,'price',100,'discount_percent',10)),'dates',jsonb_build_object('pickup_date','2098-01-01','return_date','2098-01-10','event_date','2098-01-04'),'payment',jsonb_build_object('advance_amount',50,'deposit_amount',100,'method','cash'));
+  result:=public.create_priced_booking(payload);bid:=(result->>'booking_id')::uuid;
+  if not exists(select 1 from public.bookings where id=bid and subtotal=200 and discount_amount=20 and total_amount=180 and amount_paid=50 and balance_due=130 and deposit_amount=100) then raise exception 'Booking totals/deposit separation failed'; end if;
+  if not exists(select 1 from public.booking_items where booking_id=bid and rental_days=1 and rate_basis='booking' and line_total=180 and discount_amount=20) then raise exception 'Per-booking price failed'; end if;
+  again:=public.create_priced_booking(payload);if again<>result then raise exception 'Idempotency failed'; end if;
+  select id into item from public.booking_items where booking_id=bid;
+  select updated_at into stamp from public.bookings where id=bid;
+  perform public.update_booking_item_pricing(bid,jsonb_build_array(jsonb_build_object('id',item,'price',120,'discount_percent',25)),stamp);
+  if not exists(select 1 from public.bookings where id=bid and subtotal=240 and discount_amount=60 and total_amount=180 and balance_due=130) then raise exception 'Repricing totals failed'; end if;
+  rejected:=false;begin perform public.update_booking_item_pricing(bid,jsonb_build_array(jsonb_build_object('id',item,'price',120,'discount_percent',25)),stamp);exception when others then rejected:=true;end;if not rejected then raise exception 'Stale edit accepted';end if;
+  perform public.post_booking_payment(bid,'balance',30,'cash',null,null,'rollback-balance');
+  if not exists(select 1 from public.bookings where id=bid and amount_paid=80 and balance_due=100) then raise exception 'Payment summary did not refresh'; end if;
+  perform public.post_booking_payment(bid,'balance',30,'cash',null,null,'rollback-balance');
+  if (select amount_paid from public.bookings where id=bid)<>80 then raise exception 'Duplicate payment';end if;
+  rejected:=false;begin perform public.post_booking_payment(bid,'balance',101,'cash');exception when others then rejected:=true;end;if not rejected then raise exception 'Overpayment accepted';end if;
+  rejected:=false;begin perform public.post_booking_payment(bid,'deposit_refund',101,'cash');exception when others then rejected:=true;end;if not rejected then raise exception 'Excess deposit refund accepted';end if;
+  perform public.post_booking_payment(bid,'deposit_refund',25,'cash');
+  if not exists(select 1 from public.bookings where id=bid and deposit_amount=75 and balance_due=100) then raise exception 'Refund changed rent balance';end if;
+  select updated_at into stamp from public.bookings where id=bid;
+  rejected:=false;begin perform public.update_booking_item_pricing(bid,jsonb_build_array(jsonb_build_object('id',item,'price',10,'discount_percent',0)),stamp);exception when others then rejected:=true;end;if not rejected then raise exception 'Reprice below paid accepted';end if;
+  if (select price from public.booking_items where id=item)<>120 then raise exception 'Failed reprice was not rolled back';end if;
+  select count(*) into n from public.bookings;
+  payload:=jsonb_set(payload,'{requestId}',to_jsonb(gen_random_uuid()));payload:=jsonb_set(payload,'{payment,method}','"invalid"');
+  rejected:=false;begin perform public.create_priced_booking(payload);exception when others then rejected:=true;end;if not rejected or (select count(*) from public.bookings)<>n then raise exception 'Failed payment left a partial booking';end if;
+  payload:=jsonb_set(payload,'{payment,method}','"cash"');payload:=jsonb_set(payload,'{items,0,discount_percent}','101');
+  rejected:=false;begin perform public.create_priced_booking(payload);exception when others then rejected:=true;end;if not rejected then raise exception 'Invalid discount accepted';end if;
+  set local role postgres;
+  perform set_config('request.jwt.claim.sub','',true);perform set_config('request.jwt.claims','{}',true);
+  set local role anon;
+  rejected:=false;begin perform public.create_priced_booking(payload);exception when insufficient_privilege then rejected:=true;end;if not rejected then raise exception 'Anonymous booking allowed';end if;
+  set local role postgres;
+end;
+$$;

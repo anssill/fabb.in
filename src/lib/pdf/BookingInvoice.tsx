@@ -115,11 +115,11 @@ export function BookingInvoice({ booking, business, branch }: Props) {
     : 1
 
   const totalAmount = Number(booking.total_amount ?? 0)
-  const paid = payments.reduce((acc: number, p: any) => acc + Number(p.amount), 0)
+  const paid = payments.reduce((acc: number, p: any) => acc + (['advance','balance'].includes(p.type) ? Number(p.amount) : p.type === 'refund' ? -Number(p.amount) : 0), 0)
   const balance = Math.max(0, totalAmount - paid)
   const deposit = payments
-    .filter((p: any) => p.type === 'deposit')
-    .reduce((acc: number, p: any) => acc + Number(p.amount), 0)
+    .filter((p: any) => ['deposit','deposit_refund'].includes(p.type))
+    .reduce((acc: number, p: any) => acc + (p.type === 'deposit' ? Number(p.amount) : -Number(p.amount)), 0)
   const advance = payments
     .filter((p: any) => p.type === 'advance')
     .reduce((acc: number, p: any) => acc + Number(p.amount), 0)
@@ -191,7 +191,7 @@ export function BookingInvoice({ booking, business, branch }: Props) {
           const itemRentalDays = item.rental_days ?? rentalDays
           const rate = Number(item.price ?? 0)
           const qty = Number(item.quantity ?? 1)
-          const lineTotal = item.subtotal != null
+          const lineTotal = item.line_total != null ? Number(item.line_total) : item.subtotal != null
             ? Number(item.subtotal)
             : rate * qty * itemRentalDays
 
@@ -201,7 +201,7 @@ export function BookingInvoice({ booking, business, branch }: Props) {
                 {i + 1}. {item.item_name || '-'}{item.size ? ` (${item.size})` : ''}
               </Text>
               <View style={styles.itemMeta}>
-                <Text style={styles.muted}>{qty} x {itemRentalDays}d x {fmt(rate)}</Text>
+                <Text style={styles.muted}>{qty} x {fmt(rate)}/pc {item.rate_basis === 'booking' ? '(entire booking)' : 'x ' + itemRentalDays + 'd'} · {Number(item.discount_percent ?? 0)}% off</Text>
                 <Text style={styles.value}>{fmt(lineTotal)}</Text>
               </View>
             </View>

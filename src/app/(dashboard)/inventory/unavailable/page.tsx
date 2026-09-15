@@ -22,7 +22,7 @@ export default async function UnavailableStockPage() {
     const id = String(formData.get('id'))
     const quantity = Number(formData.get('quantity'))
     const note = String(formData.get('note') || '')
-    const rpc = client.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+    const rpc = client.rpc.bind(client) as unknown as (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
     const { error } = await rpc('restore_unavailable_stock', { p_unavailability_id: id, p_quantity: quantity, p_note: note || null })
     if (error) throw new Error(error.message)
     revalidatePath('/inventory/unavailable'); revalidatePath('/inventory')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { IndianRupee } from 'lucide-react'
@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
@@ -51,6 +52,7 @@ export function AddPaymentDialog({
   depositAmount,
 }: Props) {
   const router = useRouter()
+  const request = useRef<{ payload: string; key: string } | null>(null)
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -81,6 +83,8 @@ export function AddPaymentDialog({
       return
     }
 
+    const payload = JSON.stringify({ paymentType, parsedAmount, method, reference, notes })
+    if (request.current?.payload !== payload) request.current = { payload, key: crypto.randomUUID() }
     setIsSubmitting(true)
     try {
       const response = await fetch(`/api/bookings/${bookingId}/payments`, {
@@ -92,12 +96,13 @@ export function AddPaymentDialog({
         method,
         reference: reference.trim() || null,
         notes: notes.trim() || null,
-        idempotencyKey: crypto.randomUUID(),
+        idempotencyKey: request.current.key,
         }),
       })
       const result = await safeJsonParse(response)
       if (!response.ok) throw new Error(result.error || 'Payment failed')
 
+      request.current = null
       toast.success('Payment recorded successfully')
       setOpen(false)
       router.refresh()
@@ -119,6 +124,7 @@ export function AddPaymentDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
+          <DialogDescription>Record rental payments and refundable deposits separately.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {/* Payment Type */}

@@ -21,9 +21,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!staff) redirect('/login')
   
-  // Mandatory setup check
-  // If the owner/staff hasn't completed the setup wizard, force them back
-  if (staff.setup_completed === false) {
+  if (!['active', 'approved', 'invited'].includes(staff.status)) redirect('/suspended')
+  if (staff.role === 'super_admin') redirect('/admin/dashboard')
+
+  // Business onboarding is only required for owners.
+  if (staff.role === 'owner' && staff.setup_completed === false) {
     redirect('/setup')
   }
 

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getPostLoginPath, safeAuthNextPath } from '@/lib/auth/paths'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const tokenHash = requestUrl.searchParams.get('token_hash')
   const type = requestUrl.searchParams.get('type') as EmailOtpType | null
-  const next = requestUrl.searchParams.get('next') || '/dashboard'
+  const next = safeAuthNextPath(requestUrl.searchParams.get('next'))
 
   const supabaseResponse = NextResponse.next({ request })
   const supabase = createServerClient(
@@ -25,6 +26,12 @@ export async function GET(request: NextRequest) {
     }
   )
 
+  const redirectWithSession = (path: string) => {
+    const response = NextResponse.redirect(new URL(path, request.url))
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+    return response
+  }
+
   if (!tokenHash || !type) {
     return NextResponse.redirect(new URL('/login?error=missing_token', request.url))
   }
@@ -41,17 +48,17 @@ export async function GET(request: NextRequest) {
   const { data: staffRecord } = await supabaseAdmin
     .from('staff')
     .select('id, status, role, setup_completed')
-    .or(`id.eq.${data.user.id},email.eq.${data.user.email}`)
+    .eq('id', data.user.id)
     .maybeSingle()
 
   if (!staffRecord) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/login?error=no_account', request.url))
+    return redirectWithSession('/login?error=no_account')
   }
 
-  if (staffRecord.status === 'suspended') {
+  if (!['active', 'approved', 'invited'].includes(staffRecord.status)) {
     await supabase.auth.signOut()
-    return NextResponse.redirect(new URL('/suspended', request.url))
+    return redirectWithSession('/suspended')
   }
 
   await supabaseAdmin
@@ -62,10 +69,7 @@ export async function GET(request: NextRequest) {
     })
     .eq('id', staffRecord.id)
 
-  const destination = !staffRecord.setup_completed && staffRecord.role === 'owner' ? '/setup' : next
-  const redirectResponse = NextResponse.redirect(new URL(destination, request.url))
-  supabaseResponse.cookies.getAll().forEach((cookie) => {
-    redirectResponse.cookies.set(cookie)
-  })
-  return redirectResponse
+  const landingPath = getPostLoginPath(staffRecord)
+  const destination = type === 'recovery' ? '/reset-password' : landingPath === '/dashboard' ? next : landingPath
+  return redirectWithSession(destination)
 }

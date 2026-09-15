@@ -7,10 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ChevronLeft, User, Package, CreditCard, Clock, AlertTriangle,
-  CalendarDays, IndianRupee, MessageSquare, Plus, CheckCircle2,
+  CalendarDays, IndianRupee, MessageSquare, CheckCircle2,
   Shield, Camera
 } from 'lucide-react'
 import Link from 'next/link'
+import { EditPricingDialog } from './components/EditPricingDialog'
+import { AddPaymentDialog } from './components/AddPaymentDialog'
+import { hasPermission } from '@/lib/permissions'
 import { BookingActions } from './components/BookingActions'
 import { DownloadInvoiceButton } from './components/DownloadInvoiceButton'
 import { BookingSmsButton } from './components/BookingSmsButton'
@@ -49,7 +52,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       branch:branches(name, city),
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
-        id, quantity, picked_up_quantity, returned_quantity, price, rental_days, subtotal, item_name, size,
+        id, quantity, picked_up_quantity, returned_quantity, price, rental_days, subtotal, discount_percent, discount_amount, line_total, rate_basis, item_name, size,
         item:items(id, name, cover_image_url, sku),
         variant:item_variants(size)
       ),
@@ -70,6 +73,10 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     .limit(20)
 
   if (!booking) notFound()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: staff } = await supabase.from('staff').select('role, permissions').eq('id', user!.id).single()
+  const canPrice = !!staff && hasPermission(staff.role, staff.permissions as Record<string, boolean>, 'manage_bookings')
+  const canPay = !!staff && hasPermission(staff.role, staff.permissions as Record<string, boolean>, 'manage_payments')
 
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
@@ -121,10 +128,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             returnDate={booking.return_date}
           />
           <DownloadInvoiceButton booking={booking} />
+          {canPrice && !['closed','cancelled'].includes(booking.status) && <EditPricingDialog bookingId={booking.id} updatedAt={booking.updated_at} existingDiscount={Number(booking.discount_amount)} tax={Number(booking.tax_amount)} items={(booking.booking_items || []).map((bi: { id: string; item_name: string; size: string | null; price: number; quantity: number; rental_days: number; discount_percent: number; rate_basis: string }) => ({ id: bi.id, item_name: bi.item_name, size: bi.size || '', price: Number(bi.price), quantity: bi.quantity, rental_days: bi.rental_days, discount_percent: Number(bi.discount_percent), rate_basis: bi.rate_basis }))} />}
           <BookingActions booking={{
             id: booking.id,
             status: booking.status,
-            balance_due: Number(booking.balance_due ?? balanceDue),
+            balance_due: balanceDue,
             deposit_amount: Number((booking as any).deposit_amount ?? 0),
             booking_items: ((booking.booking_items || []) as any[]).map((bi: any) => ({
               id: bi.id,
@@ -238,7 +246,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   <div className="space-y-2">
                     {((booking.booking_items || []) as any[]).map((bi: any) => {
                       const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
-                      const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
+                      const subtotal = bi.line_total ?? bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
                       return (
                         <div key={bi.id} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
                           <div className="flex items-center gap-2">
@@ -251,7 +259,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                             )}
                             <div>
                               <p className="font-medium">{bi.item_name || item?.name || '—'}</p>
-                              <p className="text-xs text-slate-500">{bi.size} × {bi.quantity} · ₹{bi.price}/day</p>
+                              <p className="text-xs text-slate-500">{bi.size} × {bi.quantity} · ₹{bi.price}/pc{bi.rate_basis === 'day' ? '/day' : ' for booking'} · {bi.discount_percent}% off</p>
                             </div>
                           </div>
                           <p className="font-semibold">₹{Number(subtotal).toLocaleString('en-IN')}</p>
@@ -344,9 +352,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-blue-600" />Payment History
                 </CardTitle>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-1" />Add Payment
-                </Button>
+                {canPay && <AddPaymentDialog bookingId={booking.id} balanceDue={balanceDue} depositAmount={Number(booking.deposit_amount)} />}
               </div>
             </CardHeader>
             <CardContent>
@@ -414,7 +420,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
               <div className="space-y-3">
                 {((booking.booking_items || []) as any[]).map((bi: any) => {
                   const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
-                  const subtotal = bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
+                  const subtotal = bi.line_total ?? bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
                   return (
                     <div key={bi.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
                       {item?.cover_image_url ? (
@@ -426,7 +432,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-900">{bi.item_name || item?.name}</p>
-                        <p className="text-xs text-slate-500">Size: {bi.size} · Qty: {bi.quantity} · ₹{bi.price}/day × {bi.rental_days ?? rentalDays} days</p>
+                        <p className="text-xs text-slate-500">Size: {bi.size} · Qty: {bi.quantity} · ₹{bi.price}/pc · {bi.discount_percent}% off · {bi.rate_basis === 'day' ? (bi.rental_days ?? rentalDays) + ' billable days' : 'entire booking'}</p>
                         <p className="text-xs text-slate-600 mt-1">
                           Picked up: {bi.picked_up_quantity || 0} · Returned: {bi.returned_quantity || 0} · Out: {Math.max(0, (bi.picked_up_quantity || 0) - (bi.returned_quantity || 0))}
                         </p>

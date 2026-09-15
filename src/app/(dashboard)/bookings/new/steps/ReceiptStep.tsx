@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Printer, Share2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { BookingCustomer, BookingItem, BookingDates, BookingPricing, BookingPayment } from '../page'
-import { calculateBillableRentalDays } from '@/lib/booking-utils'
+import { calculateItemPricing } from '@/lib/booking-pricing'
 
 interface Props {
   bookingId: string | null
@@ -18,10 +18,7 @@ interface Props {
 }
 
 export function ReceiptStep({ bookingId, customer, items, dates, pricing, payment }: Props) {
-  const balanceDue = Math.max(0, pricing.total_amount - payment.advance_amount - (payment.deposit_amount ?? 0))
-  const rentalDays = dates.pickup_date && dates.return_date
-    ? calculateBillableRentalDays(dates.pickup_date, dates.return_date)
-    : 1
+  const balanceDue = Math.max(0, pricing.total_amount - payment.advance_amount)
 
   return (
     <>
@@ -68,17 +65,18 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
 
           {/* Items */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase">Items ({rentalDays} day{rentalDays !== 1 ? 's' : ''})</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">Items · entire booking</p>
             {items.map((item) => (
               <div key={item.variant_id} className="flex justify-between text-sm">
-                <span>{item.name} ({item.size}) ×{item.quantity}</span>
-                <span className="font-medium">₹{(item.price * item.quantity * rentalDays).toLocaleString('en-IN')}</span>
+                <span>{item.name} ({item.size}) ×{item.quantity} · ₹{item.price}/pc · {item.discount_percent ?? 0}% off</span>
+                <span className="font-medium">₹{calculateItemPricing(item).total_amount.toLocaleString('en-IN')}</span>
               </div>
             ))}
           </div>
 
           {/* Totals */}
           <div className="border-t pt-3 space-y-1.5">
+            {payment.deposit_amount > 0 && <div className="flex justify-between text-sm"><span>Refundable deposit collected</span><span>₹{payment.deposit_amount.toLocaleString('en-IN')}</span></div>}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
               <span>₹{pricing.subtotal.toLocaleString('en-IN')}</span>

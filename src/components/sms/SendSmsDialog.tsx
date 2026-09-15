@@ -44,6 +44,7 @@ const SMS_TEMPLATES = [
 ]
 
 const EMPTY_VARIABLES: Record<string, string> = {}
+const EMPTY_TEMPLATES = {}
 
 export function SendSmsDialog({
   isOpen,
@@ -63,7 +64,7 @@ export function SendSmsDialog({
 
   const smsSettings = (activeBranch?.settings as any)?.sms
   const isEnabled = smsSettings?.enabled
-  const templates = smsSettings?.templates || {}
+  const templates = smsSettings?.templates || EMPTY_TEMPLATES
 
   const preview = useMemo(() => {
     if (selectedTemplate && templates[selectedTemplate]) {
