@@ -123,7 +123,7 @@ export function InventoryList({ initialItems, businessId, branchId }: Props) {
               <Link key={item.id} href={`/inventory/${item.id}`}>
                 <Card className="group h-full overflow-hidden border-0 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                    {item.cover_image_url ? <Image src={item.cover_image_url} alt={item.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition group-hover:scale-105" /> : <div className="grid h-full place-items-center"><Package className="h-12 w-12 text-muted-foreground/30" /></div>}
+                    {item.cover_image_url ? <Image unoptimized src={item.cover_image_url} alt={item.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition group-hover:scale-105" /> : <div className="grid h-full place-items-center"><Package className="h-12 w-12 text-muted-foreground/30" /></div>}
                     <Badge className="absolute right-3 top-3 bg-background/90 text-foreground">{totals.available} available</Badge>
                   </div>
                   <CardContent className="space-y-3 p-4">

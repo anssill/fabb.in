@@ -1,3 +1,4 @@
+import { DashboardOverview } from './components/DashboardOverview'
 import Link from 'next/link'
 import { ArrowDownCircle, ArrowUpCircle, CalendarCheck, ChevronRight, CircleDollarSign, Clock3, Package, Plus, TriangleAlert, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -12,7 +13,7 @@ export default async function DashboardPage() {
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id, name').eq('id', user.id).single()
   if (!staff?.business_id || !staff.branch_id) return null
   const db = supabase as any
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
 
   const [pickups, returns, functions, overdue, active, customers, payments, unavailable] = await Promise.all([
     db.from('bookings').select('id, booking_number, status, pickup_date, customer:customers(name)').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('pickup_date', today).not('status', 'in', '(cancelled,closed)'),
@@ -21,17 +22,19 @@ export default async function DashboardPage() {
     db.from('bookings').select('id, booking_number, return_date, customer:customers(name)').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).lt('return_date', today).in('status', ['picked_up', 'partially_returned']),
     db.from('bookings').select('id', { count: 'exact', head: true }).eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).in('status', ['hold', 'confirmed', 'picked_up', 'partially_returned']),
     db.from('customers').select('id', { count: 'exact', head: true }).eq('business_id', staff.business_id),
-    db.from('financial_entries').select('amount').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('entry_type', 'payment').gte('posted_at', `${today}T00:00:00`),
+    db.from('financial_entries').select('amount').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).eq('entry_type', 'payment').gte('posted_at', `${today}T00:00:00+05:30`),
     db.from('inventory_unavailability').select('quantity, restored_quantity, reason').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id),
   ])
+  if ([pickups, returns, functions, overdue, active, customers, payments, unavailable].some(result => result.error)) throw new Error('Dashboard could not load. Please retry.')
   const collected = (payments.data ?? []).reduce((sum: number, entry: { amount: number }) => sum + Number(entry.amount), 0)
   const blocked = (unavailable.data ?? []).reduce((sum: number, entry: { quantity: number; restored_quantity: number }) => sum + Math.max(0, entry.quantity - entry.restored_quantity), 0)
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="text-sm text-muted-foreground">Welcome back, {staff.name || 'team'}</p><h1 className="text-2xl font-semibold tracking-tight">Rental command centre</h1></div><Button asChild><Link href="/bookings/new"><Plus className="mr-2 h-4 w-4" />New rental</Link></Button></div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric icon={CalendarCheck} label="Active rentals" value={active.count ?? 0} /><Metric icon={CircleDollarSign} label="Collected today" value={`₹${collected.toLocaleString('en-IN')}`} /><Metric icon={Users} label="Customers" value={customers.count ?? 0} /><Metric icon={TriangleAlert} label="Damaged / missing" value={blocked} /></div>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><p className="text-sm text-muted-foreground">Welcome back, {staff.name || 'team'}</p><h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1></div><Button asChild><Link href="/bookings/new"><Plus className="mr-2 h-4 w-4" />New booking</Link></Button></div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric icon={CalendarCheck} label="Bookings" value={active.count ?? 0} /><Metric icon={CircleDollarSign} label="Collected today" value={`₹${collected.toLocaleString('en-IN')}`} /><Metric icon={Users} label="Customers" value={customers.count ?? 0} /><Metric icon={TriangleAlert} label="Damaged / missing" value={blocked} /></div>
 
+      <DashboardOverview businessId={staff.business_id} branchId={staff.branch_id} today={today} />
       <div className="grid gap-5 xl:grid-cols-3">
         <Schedule title="Pickups today" icon={ArrowUpCircle} rows={pickups.data ?? []} empty="No pickups scheduled" />
         <Schedule title="Returns today" icon={ArrowDownCircle} rows={returns.data ?? []} empty="No returns scheduled" />

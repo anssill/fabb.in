@@ -123,7 +123,7 @@ export default function NewItemPage() {
     if (!form.name.trim()) { toast.error('Item name is required'); return }
     if (!form.price) { toast.error('Price is required'); return }
     if (variants.some((v) => !v.size.trim())) { toast.error('All variants need a size'); return }
-    if (variants.some((v) => !Number.isFinite(v.total_stock) || v.total_stock < 1)) {
+    if (variants.some((v) => !Number.isFinite(v.total_stock) || !Number.isInteger(v.total_stock) || v.total_stock < 1)) {
       toast.error('Each variant must have stock of at least 1')
       return
     }
@@ -138,12 +138,13 @@ export default function NewItemPage() {
 
       const formSubmitData = { ...form, cover_image_url: coverImageUrl }
       const result = await createItem(formSubmitData, variants)
+      if ('error' in result) throw new Error(result.error)
       toast.success('Item added successfully!')
       router.push(`/inventory/${result.id}`)
       router.refresh()
     } catch (err) {
       console.error('Item creation error:', err)
-      toast.error('Failed to add item')
+      toast.error(err instanceof Error ? err.message : 'Failed to add item')
     } finally {
       setSaving(false)
     }

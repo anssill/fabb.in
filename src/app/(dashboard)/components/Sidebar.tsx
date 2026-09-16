@@ -9,10 +9,8 @@ import {
   Users,
   CreditCard,
   BarChart3,
-  Banknote,
   FileChartColumn,
   UserCog,
-  MapPinCheck,
   Wallet,
   Settings,
   Bell,
@@ -28,7 +26,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { BranchSwitcher } from './BranchSwitcher'
 import { hasPermission, ROUTE_PERMISSION_MAP } from '@/lib/permissions'
-import { BrandLogo } from '@/components/brand/BrandLogo'
+import Image from 'next/image'
 
 interface NavItem {
   label: string
@@ -54,9 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Reports', href: '/reports', icon: FileChartColumn, roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Staff', href: '/staff', icon: UserCog, roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Attendance', href: '/attendance', icon: MapPinCheck },
   { label: 'Expenses', href: '/expenses', icon: Wallet, roles: ['owner', 'manager', 'super_admin'] },
-  { label: 'Payroll', href: '/payroll', icon: Banknote, roles: ['owner', 'manager', 'super_admin'] },
 ]
 
 const BOTTOM_ITEMS: NavItem[] = [
@@ -85,6 +81,7 @@ function NavContent({
   unreadNotifications: number
   initials: string
 }) {
+  const business = useAppStore(state => state.business) ?? staff.business
   const isVisible = (item: NavItem) => {
     if (!item.roles) {
       // Check individual permissions
@@ -109,10 +106,10 @@ function NavContent({
       <div className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-9 w-9 shrink-0 transition-transform hover:scale-105" />
+            {business?.logo_url ? <Image src={business.logo_url} alt={business.name} width={36} height={36} unoptimized className="h-9 w-9 rounded object-contain" /> : <span className="grid h-9 w-9 place-items-center rounded bg-primary/10 font-bold">{business?.name?.charAt(0) || "B"}</span>}
             {!sidebarCollapsed && (
               <p className="truncate text-sm font-bold text-slate-950 dark:text-white">
-                {staff.business?.name || 'Fabb'}
+                {business?.name || 'Your business'}
               </p>
             )}
           </div>

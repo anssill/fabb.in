@@ -16,7 +16,6 @@ export const PERMISSION_KEYS = [
   'manage_analytics',
   'manage_expenses',
   'manage_staff',
-  'manage_payroll',
   'manage_reports',
   'override_availability',
   'settle_deposits',
@@ -40,7 +39,6 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: 'manage_analytics', label: 'Analytics', description: 'Access reports and analytics' },
   { key: 'manage_expenses', label: 'Expenses', description: 'Record and view business expenses' },
   { key: 'manage_staff', label: 'Staff Management', description: 'View and manage team members' },
-  { key: 'manage_payroll', label: 'Payroll', description: 'Calculate payroll and record payouts' },
   { key: 'manage_reports', label: 'Reports', description: 'View and export operational reports' },
   { key: 'override_availability', label: 'Overbook Rentals', description: 'Confirm a rental when date availability is insufficient' },
   { key: 'settle_deposits', label: 'Settle Deposits', description: 'Refund or deduct refundable deposits' },
@@ -57,7 +55,6 @@ export const ROUTE_PERMISSION_MAP: Record<string, PermissionKey> = {
   '/analytics': 'manage_analytics',
   '/expenses': 'manage_expenses',
   '/staff': 'manage_staff',
-  '/payroll': 'manage_payroll',
   '/reports': 'manage_reports',
   '/settings': 'manage_settings',
   '/settings/staff': 'manage_staff',
@@ -101,13 +98,13 @@ export function canAccessRoute(
   permissions: Record<string, boolean> | null | undefined,
   pathname: string
 ): boolean {
-  if (['/archive', '/inventory/transfers', '/inventory/stocktakes'].some(route => pathname === route || pathname.startsWith(route + '/'))) return false
+  if (['/archive', '/inventory/transfers', '/inventory/stocktakes', '/attendance', '/payroll'].some(route => pathname === route || pathname.startsWith(route + '/'))) return false
 
   // Owners and super_admins can access everything
   if (role === 'owner' || role === 'super_admin') return true
 
-  // Staff can always view their notifications, attendance, and own account.
-  if (['/notifications', '/attendance', '/settings/account', '/settings/display'].some(
+  // Staff can always view their notifications and own account.
+  if (['/notifications', '/settings/account', '/settings/display'].some(
     route => pathname === route || pathname.startsWith(route + '/')
   )) return true
 

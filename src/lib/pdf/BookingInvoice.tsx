@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Image,
   Document,
   Page,
   Text,
@@ -9,7 +10,7 @@ import {
 } from '@react-pdf/renderer'
 import { calculateBillableRentalDays } from '@/lib/booking-utils'
 
-const THERMAL_WIDTH = 226.77 // 80mm in PDF points.
+const THERMAL_WIDTH = 226.77 // 80mm thermal paper, commonly sold as 3-inch.
 
 const styles = StyleSheet.create({
   page: {
@@ -124,18 +125,19 @@ export function BookingInvoice({ booking, business, branch }: Props) {
     .filter((p: any) => p.type === 'advance')
     .reduce((acc: number, p: any) => acc + Number(p.amount), 0)
 
-  const pageHeight = Math.max(430, 300 + items.length * 34 + payments.length * 16)
+  const pageHeight = Math.max(430, 480 + items.length * 65 + payments.length * 20 + Math.ceil(String(settings.terms_text || '').length / 40) * 12 + Math.ceil(String(settings.footer_text || '').length / 40) * 12)
   const fmt = (n: number) => `Rs.${n.toLocaleString('en-IN')}`
 
   return (
     <Document>
       <Page size={[THERMAL_WIDTH, pageHeight]} style={styles.page}>
-        <Text style={styles.businessName}>{business?.name || 'Fabb.booking'}</Text>
+        {settings.show_logo !== false && business?.logo_url ? <Image src={business.logo_url} style={{ width: 48, height: 48, objectFit: 'contain', alignSelf: 'center', marginBottom: 5 }} /> : null}
+        <Text style={styles.businessName}>{business?.name || 'Your business'}</Text>
         {branch?.address ? <Text style={styles.center}>{branch.address}</Text> : null}
         <Text style={styles.center}>
           {[branch?.city, business?.state].filter(Boolean).join(', ')}
         </Text>
-        {business?.gst_number ? <Text style={styles.center}>GSTIN: {business.gst_number}</Text> : null}
+        {business?.gst_number && Number(booking.tax_amount)>0 ? <Text style={styles.center}>GSTIN: {business.gst_number}</Text> : null}
         {business?.phone ? <Text style={styles.center}>Ph: {business.phone}</Text> : null}
 
         <View style={styles.divider} />
@@ -143,7 +145,7 @@ export function BookingInvoice({ booking, business, branch }: Props) {
         <Text style={[styles.center, { fontWeight: 'bold' }]}>BOOKING INVOICE</Text>
         <View style={styles.row}>
           <Text style={styles.label}>Bill No</Text>
-          <Text style={styles.value}>{booking.booking_number}</Text>
+          <Text style={styles.value}>{`${settings.prefix || 'INV'}-${booking.booking_number}`}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Date</Text>
@@ -210,6 +212,8 @@ export function BookingInvoice({ booking, business, branch }: Props) {
 
         <View style={styles.divider} />
 
+        <View style={styles.totalRow}><Text>Subtotal after discount</Text><Text>{fmt(totalAmount - Number(booking.tax_amount || 0))}</Text></View>
+        {Number(booking.tax_amount)>0 ? <View style={styles.totalRow}><Text>GST</Text><Text>{fmt(Number(booking.tax_amount))}</Text></View> : null}
         <View style={styles.totalRow}>
           <Text>Total Amount</Text>
           <Text style={styles.value}>{fmt(totalAmount)}</Text>
@@ -246,6 +250,8 @@ export function BookingInvoice({ booking, business, branch }: Props) {
 
         <View style={styles.divider} />
 
+        {settings.show_bank_details ? <View><Text>Bank: {settings.bank_name || '-'}</Text><Text>A/C: {settings.bank_account || '-'}</Text><Text>IFSC: {settings.bank_ifsc || '-'}</Text></View> : null}
+        {settings.signature_line !== false ? <Text style={[styles.footer, { marginTop: 25 }]}>Authorised Signatory</Text> : null}
         <Text style={styles.footer}>
           {settings.footer_text || `Thank you for choosing ${business?.name || 'us'}.`}
         </Text>

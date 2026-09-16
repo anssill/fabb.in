@@ -36,12 +36,7 @@ interface SendSmsDialogProps {
   variables?: Record<string, string>
 }
 
-const SMS_TEMPLATES = [
-  { key: 'booking_confirmed', label: 'Booking Confirmed' },
-  { key: 'pickup_reminder', label: 'Pickup Reminder' },
-  { key: 'return_reminder', label: 'Return Reminder' },
-  { key: 'overdue_notice', label: 'Overdue Notice' },
-]
+import { SMS_TEMPLATES } from '@/lib/sms/templates'
 
 const EMPTY_VARIABLES: Record<string, string> = {}
 const EMPTY_TEMPLATES = {}
@@ -98,32 +93,9 @@ export function SendSmsDialog({
 
     setIsSending(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      const payload = {
-        to: phone,
-        template_id: templateData.templateId,
-        variables: {
-          name: customerName || 'Customer',
-          booking_id: bookingNumber || 'Booking',
-          business_name: activeBranch?.name || 'Fabb.booking',
-          ...Object.fromEntries(
-            Object.entries(variables).map(([k, v]) => [k.replace(/[{}]/g, ''), v])
-          )
-        },
-        business_id: (activeBranch as any)?.business_id || (activeBranch?.settings as any)?.business_id,
-        branch_id: activeBranch?.id,
-        customer_id: customerId,
-        booking_id: bookingId,
-        sent_by: user?.id
-      }
-
-      const { data, error } = await supabase.functions.invoke('send-sms', {
-        body: payload
-      })
-
-      if (error) throw error
-      
+      const response = await fetch('/api/notifications/sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId, templateKey: selectedTemplate }) })
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.error || 'SMS could not be sent')
       toast.success('SMS sent successfully')
       onClose()
     } catch (error: any) {

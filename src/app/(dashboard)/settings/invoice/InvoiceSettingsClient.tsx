@@ -27,6 +27,8 @@ function InvoicePreview({
   signatureLine,
   businessName,
   gstin,
+  logoUrl,
+  address,
 }: {
   invoicePrefix: string
   gstEnabled: boolean
@@ -41,22 +43,24 @@ function InvoicePreview({
   signatureLine: boolean
   businessName: string
   gstin: string
+  logoUrl: string
+  address: string
 }) {
-  const sampleAmount = 5000
+  const sampleAmount = 2500
   const gstAmount = gstEnabled ? Math.round(sampleAmount * gstRate / 100) : 0
   const total = sampleAmount + gstAmount
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-[10px] font-sans" style={{ minHeight: '560px', padding: '20px' }}>
+    <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-[10px] font-sans" style={{ width: '80mm', maxWidth: '100%', margin: '0 auto', padding: '3mm', color: '#000' }}>
       {/* Header */}
       <div className="flex justify-between items-start border-b border-slate-200 pb-3 mb-3">
         <div>
           {showLogo && (
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold mb-1">F</div>
+            logoUrl ? <img src={logoUrl} alt={businessName} className="h-10 max-w-24 object-contain mb-1" /> : null
           )}
           <p className="font-bold text-slate-900 text-xs">{businessName || 'Your Business Name'}</p>
           {gstin && gstEnabled && <p className="text-slate-500">GSTIN: {gstin}</p>}
-          <p className="text-slate-500">Kerala, India</p>
+          <p className="text-slate-500">{address}</p>
         </div>
         <div className="text-right">
           <p className="font-bold text-blue-600 text-sm">INVOICE</p>
@@ -75,7 +79,7 @@ function InvoicePreview({
         <div>
           <p className="text-slate-500 uppercase tracking-wide" style={{ fontSize: '8px' }}>Booking</p>
           <p className="font-mono text-slate-900">BK-2026-0001</p>
-          <p className="text-slate-500">26 Mar – 28 Mar 2026 (2 days)</p>
+          <p className="text-slate-500">Pickup / return: sample dates</p>
         </div>
       </div>
 
@@ -85,7 +89,7 @@ function InvoicePreview({
           <tr style={{ backgroundColor: '#f8fafc' }}>
             <th className="text-left p-1 text-slate-500">Item</th>
             <th className="text-right p-1 text-slate-500">Qty</th>
-            <th className="text-right p-1 text-slate-500">Rate/day</th>
+            <th className="text-right p-1 text-slate-500">Rate/pc</th>
             <th className="text-right p-1 text-slate-500">Amount</th>
           </tr>
         </thead>
@@ -94,7 +98,7 @@ function InvoicePreview({
             <td className="p-1 text-slate-700">Bridal Lehenga Set · Size M</td>
             <td className="p-1 text-right text-slate-700">1</td>
             <td className="p-1 text-right text-slate-700">₹2,500</td>
-            <td className="p-1 text-right text-slate-700">₹5,000</td>
+            <td className="p-1 text-right text-slate-700">₹2,500</td>
           </tr>
         </tbody>
       </table>
@@ -164,6 +168,12 @@ function InvoicePreview({
 }
 
 export function InvoiceSettingsClient() {
+  const branch = useAppStore(state => state.activeBranch)
+  if (!branch) return <p className="text-sm text-muted-foreground">Loading branch settings...</p>
+  return <InvoiceSettingsClientForm key={branch.id} />
+}
+
+function InvoiceSettingsClientForm() {
   const { activeBranch, setBranches, branches, business } = useAppStore()
   const supabase = createClient()
   const settings = ((activeBranch?.settings as any)?.invoice) || {}
@@ -183,6 +193,7 @@ export function InvoiceSettingsClient() {
 
   async function handleSave() {
     if (!activeBranch) return
+    if (!Number.isFinite(gstRate) || gstRate < 0 || gstRate > 100) { toast.error('Enter a GST rate from 0 to 100'); return }
     setIsSaving(true)
     try {
       const branchSettings = (activeBranch.settings as any) || {}
@@ -205,7 +216,7 @@ export function InvoiceSettingsClient() {
       const { error } = await supabase
         .from('branches')
         .update({ settings: newSettings })
-        .eq('id', activeBranch.id)
+        .eq('id', activeBranch.id).select('id').single()
       if (error) throw error
       setBranches(branches.map(b => b.id === activeBranch.id ? { ...b, settings: newSettings } : b))
       toast.success('Invoice settings saved')
@@ -370,7 +381,7 @@ export function InvoiceSettingsClient() {
         <div className="flex items-center gap-2 mb-3">
           <Eye className="w-4 h-4 text-slate-500" />
           <p className="text-sm font-semibold text-slate-700">Live Preview</p>
-          <span className="text-xs text-slate-400">(sample data)</span>
+          <span className="text-xs text-slate-400">(80 mm thermal · sample data)</span>
         </div>
         <InvoicePreview
           invoicePrefix={invoicePrefix}
@@ -386,6 +397,8 @@ export function InvoiceSettingsClient() {
           signatureLine={signatureLine}
           businessName={business?.name || ''}
           gstin={business?.gst_number || ''}
+          logoUrl={business?.logo_url || ''}
+          address={[business?.address, business?.city, business?.state].filter(Boolean).join(', ')}
         />
       </div>
     </div>

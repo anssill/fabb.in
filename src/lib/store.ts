@@ -95,9 +95,9 @@ export const useAppStore = create<AppState>((set) => ({
   ...initialState,
 
   setStaff: (staff) => set({ staff }),
-  setBusiness: (business) => set({ business }),
+  setBusiness: (business) => set(state => ({ business, staff: state.staff && business ? { ...state.staff, business } : state.staff })),
   setActiveBranch: (branch) => set({ activeBranch: branch }),
-  setBranches: (branches) => set({ branches }),
+  setBranches: (branches) => set(state => ({ branches, activeBranch: branches.find(branch => branch.id === state.activeBranch?.id) ?? state.activeBranch })),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
   setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),

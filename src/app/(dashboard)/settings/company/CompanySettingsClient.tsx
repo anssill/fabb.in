@@ -88,7 +88,7 @@ export function CompanySettingsClient() {
       const { error } = await supabase
         .from('businesses')
         .update({ logo_url: logoUrl })
-        .eq('id', business.id)
+        .eq('id', business.id).select('id').single()
 
       if (error) throw error
 
@@ -113,7 +113,7 @@ export function CompanySettingsClient() {
       const { error } = await supabase
         .from('businesses')
         .update({ logo_url: null })
-        .eq('id', business.id)
+        .eq('id', business.id).select('id').single()
 
       if (error) throw error
 
@@ -149,7 +149,7 @@ export function CompanySettingsClient() {
       const { error } = await supabase
         .from('businesses')
         .update(nextBusiness)
-        .eq('id', business.id)
+        .eq('id', business.id).select('id').single()
 
       if (error) throw error
 

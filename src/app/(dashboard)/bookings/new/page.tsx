@@ -18,7 +18,7 @@ import { DatesStep } from './steps/DatesStep'
 import { PricingStep } from './steps/PricingStep'
 import { PaymentStep } from './steps/PaymentStep'
 import { ReceiptStep } from './steps/ReceiptStep'
-import { calculateBookingPricing } from '@/lib/booking-pricing'
+import { calculateBookingPricing, applyBookingTax } from '@/lib/booking-pricing'
 
 export interface BookingCustomer {
   id?: string
@@ -94,7 +94,7 @@ export default function NewBookingPage() {
   const [customer, setCustomer] = useState<BookingCustomer>({ name: '', phone: '' })
   const [items, setItems] = useState<BookingItem[]>([])
   const [dates, setDates] = useState<BookingDates>({ event_date: '', pickup_date: '', return_date: '' })
-  const pricing: BookingPricing = { ...calculateBookingPricing(items), discount_type: 'flat', discount_value: 0, tax_amount: 0 }
+  const pricing: BookingPricing = { ...applyBookingTax(calculateBookingPricing(items), activeBranch?.settings?.invoice), discount_type: 'flat', discount_value: 0 }
   const [payment, setPayment] = useState<BookingPayment>({
     advance_amount: 0, deposit_amount: 0, method: 'cash',
   })

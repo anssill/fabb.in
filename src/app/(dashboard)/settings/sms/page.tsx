@@ -7,7 +7,7 @@ export default function SmsSettingsPage() {
     <div className="max-w-3xl space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-slate-900">SMS Notifications</h2>
-        <p className="text-sm text-slate-500">Configure MSG91 to send automated SMS to customers for booking events.</p>
+        <p className="text-sm text-slate-500">Configure MSG91 to send approved booking and payment messages to customers.</p>
       </div>
       <SmsSettingsClient />
     </div>

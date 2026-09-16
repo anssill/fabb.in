@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreditCard } from 'lucide-react'
+import { useAppStore } from '@/lib/store'
 import type { BookingPayment } from '../page'
 
 interface Props {
@@ -14,10 +15,13 @@ interface Props {
 }
 
 export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
+  const settings = useAppStore(state => state.activeBranch?.settings)
+  const minPct = Number(settings?.min_advance_pct ?? 0)
+  const depositPct = Number(settings?.deposit_default_pct ?? 0)
   const balanceDue = totalAmount - payment.advance_amount
 
   const presets = [
-    { label: '30%', value: Math.round(totalAmount * 0.3) },
+    { label: `Minimum ${minPct}%`, value: Math.ceil(totalAmount * minPct) / 100 },
     { label: '50%', value: Math.round(totalAmount * 0.5) },
     { label: 'Full', value: totalAmount },
   ]
@@ -40,7 +44,7 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
 
         {/* Advance amount */}
         <div className="space-y-2">
-          <Label>Advance amount *</Label>
+          <Label>Advance amount * (minimum {minPct}%)</Label>
           <Input
             type="number"
             value={payment.advance_amount || ''}
@@ -106,6 +110,7 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           <p className="text-xs text-muted-foreground">Use the number from the paper bill so it can be searched later.</p>
         </div>
 
+        <button type="button" className="text-sm text-primary underline" onClick={() => setPayment({ ...payment, deposit_amount: Math.round(totalAmount * depositPct) / 100 })}>Use default deposit ({depositPct}%)</button>
         {/* Security deposit */}
         <div className="space-y-2">
           <Label>Security deposit <span className="text-muted-foreground">(optional)</span></Label>

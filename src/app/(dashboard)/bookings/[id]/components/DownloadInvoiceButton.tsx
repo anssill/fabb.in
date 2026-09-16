@@ -33,7 +33,7 @@ export function DownloadInvoiceButton({ booking }: Props) {
           ) : (
             <Printer className="w-4 h-4 mr-1" />
           )}
-          {loading ? 'Generating...' : 'Print Invoice'}
+          {loading ? 'Generating...' : '3-inch Invoice PDF'}
         </Button>
       )}
     </PDFDownloadLink>

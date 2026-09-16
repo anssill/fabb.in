@@ -77,7 +77,7 @@ export function MediaUpload({
           .from(bucket)
           .getPublicUrl(filePath)
 
-        onUploadComplete(publicUrl)
+        onUploadComplete(bucket === 'customer-private' ? '/api/customer-document?path=' + encodeURIComponent(filePath) : publicUrl)
       }
       
       toast.success(acceptedFiles.length > 1 ? 'Images uploaded successfully' : 'Image uploaded successfully')

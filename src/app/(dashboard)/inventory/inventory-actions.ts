@@ -42,44 +42,10 @@ async function context() {
 
 export async function createItem(formData: ItemForm, variants: VariantForm[]) {
   const { db, user, staff } = await context()
-  const sku = formData.sku || `${formData.category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
-  const { data: item, error } = await db.from('items').insert({
-    business_id: staff.business_id, branch_id: staff.branch_id, name: formData.name, sku,
-    category: formData.category, description: formData.description || null, price: formData.price,
-    deposit_amount: formData.deposit_amount ?? 0, purchase_cost: formData.purchase_price || null,
-    storage_location: formData.storage_location || null, cover_image_url: formData.cover_image_url || null,
-    tracking_mode: formData.tracking_mode ?? 'quantity', designer: formData.designer || null,
-    brand: formData.brand || null, occasion: formData.occasion || null, fabric: formData.fabric || null,
-    replacement_value: formData.replacement_value ?? 0, is_bundle: formData.is_bundle ?? false,
-    is_active: true, status: 'available', created_by: user.id,
-  }).select('id').single()
-  if (error || !item) throw databaseError(error)
-
-  const rows = variants.map((variant) => ({
-    business_id: staff.business_id, branch_id: staff.branch_id, item_id: item.id,
-    size: variant.size, total_stock: variant.total_stock, price_override: variant.price_override ?? null, status: 'available',
-  }))
-  const { data: createdVariants, error: variantError } = await db.from('item_variants').insert(rows).select('id, total_stock')
-  if (variantError) throw databaseError(variantError)
-
-  if (createdVariants?.length) {
-    await db.from('inventory_movements').insert(createdVariants.map((variant: { id: string; total_stock: number }) => ({
-      business_id: staff.business_id, branch_id: staff.branch_id, item_id: item.id,
-      item_variant_id: variant.id, movement_type: 'opening', quantity_delta: variant.total_stock,
-      quantity_before: 0, quantity_after: variant.total_stock, performed_by: user.id,
-    })))
-  }
-
-  if (formData.cover_image_url) {
-    await db.from('item_images').insert({ item_id: item.id, url: formData.cover_image_url, is_cover: true, display_order: 0, uploaded_by: user.id })
-  }
-  await db.from('audit_log').insert({
-    business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id,
-    action: 'item.created', table_name: 'items', record_id: item.id,
-    new_value: { name: formData.name, sku, tracking_mode: formData.tracking_mode ?? 'quantity', variants: variants.length },
-  })
+  const { data: id, error } = await db.rpc('create_inventory_item', { p_item: formData, p_variants: variants })
+  if (error || !id) return { error: error?.message || 'Could not save inventory item' }
   revalidatePath('/inventory')
-  return { id: item.id }
+  return { id: String(id) }
 }
 
 export async function updateItem(itemId: string, formData: ItemForm, variants: VariantForm[]) {

@@ -1,5 +1,6 @@
 'use client'
 
+import { useAppStore } from '@/lib/store'
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MediaUpload } from '@/components/shared/MediaUpload'
@@ -18,6 +19,7 @@ export function CustomerDocumentSection({
   initialIdProofUrl,
   initialProfilePhotoUrl
 }: CustomerDocumentSectionProps) {
+  const businessId = useAppStore(state => state.business?.id)
   const [idProofUrl, setIdProofUrl] = useState(initialIdProofUrl)
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(initialProfilePhotoUrl)
 
@@ -45,8 +47,8 @@ export function CustomerDocumentSection({
         </CardHeader>
         <CardContent>
           <MediaUpload
-            bucket="documents"
-            path={`customers/${customerId}/id_proof`}
+            bucket="customer-private"
+            path={`${businessId}/customers`}
             value={idProofUrl}
             onUploadComplete={(url) => {
               setIdProofUrl(url)
@@ -69,8 +71,8 @@ export function CustomerDocumentSection({
         </CardHeader>
         <CardContent>
           <MediaUpload
-            bucket="images"
-            path={`customers/${customerId}/profile`}
+            bucket="customer-private"
+            path={`${businessId}/customers`}
             value={profilePhotoUrl}
             onUploadComplete={(url) => {
               setProfilePhotoUrl(url)

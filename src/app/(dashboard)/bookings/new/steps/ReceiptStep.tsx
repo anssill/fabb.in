@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Printer, Share2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import type { BookingCustomer, BookingItem, BookingDates, BookingPricing, BookingPayment } from '../page'
+import { useAppStore } from '@/lib/store'
 import { calculateItemPricing } from '@/lib/booking-pricing'
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function ReceiptStep({ bookingId, customer, items, dates, pricing, payment }: Props) {
+  const business = useAppStore(state => state.business)
   const balanceDue = Math.max(0, pricing.total_amount - payment.advance_amount)
 
   return (
@@ -36,7 +38,7 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
         <div data-thermal-receipt className="border rounded-lg p-4 space-y-4 bg-muted/40">
           {/* Header */}
           <div className="text-center pb-3 border-b border-dashed">
-            <p className="font-bold text-lg text-foreground">Fabb.booking</p>
+            <p className="font-bold text-lg text-foreground">{business?.name || 'Your business'}</p>
             <p className="text-xs text-muted-foreground">Booking Receipt</p>
           </div>
 

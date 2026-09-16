@@ -24,3 +24,5 @@ test('zero price and full discount are valid',()=>{
 test('invalid prices, quantities and discounts are rejected',()=>{
  for(const bad of [{price:-1},{price:NaN},{price:Infinity},{quantity:0},{quantity:1.5},{discount_percent:-1},{discount_percent:101},{discount_percent:NaN},{rental_days:0}]) assert.throws(()=>line({price:100,quantity:1,...bad}))
 })
+
+test('GST uses discounted booking price and stays disabled until configured',()=>{const base=total([{price:100,quantity:2,discount_percent:10}]);assert.equal(loaded.exports.applyBookingTax(base).total_amount,180);assert.equal(loaded.exports.applyBookingTax(base,{gst_enabled:true,gst_rate:18}).total_amount,212.4);assert.throws(()=>loaded.exports.applyBookingTax(base,{gst_enabled:true,gst_rate:-1}));})

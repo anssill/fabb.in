@@ -68,7 +68,7 @@ test('partial staff permissions never grant omitted permissions', () => {
   assert.equal(permissions.hasPermission('owner', null, 'manage_bookings'), true)
 })
 test('staff retain personal pages but cannot access business settings', () => {
-  for (const route of ['/attendance', '/notifications', '/settings/account', '/settings/display']) {
+  for (const route of ['/notifications', '/settings/account', '/settings/display']) {
     assert.equal(permissions.canAccessRoute('staff', {}, route), true, route)
   }
   assert.equal(permissions.canAccessRoute('staff', {}, '/settings/company'), false)
@@ -373,3 +373,5 @@ test('middleware retains later sign-out cookies and forwards refreshed request c
   await supabase.auth.signOut()
   assert.equal(supabaseResponse.cookies.get('test-session').value, '')
 })
+
+test('removed attendance and payroll routes are unavailable for every role',()=>{for(const role of ['owner','staff','manager','super_admin']) for(const route of ['/attendance','/payroll']) assert.equal(permissions.canAccessRoute(role,{},route),false)})

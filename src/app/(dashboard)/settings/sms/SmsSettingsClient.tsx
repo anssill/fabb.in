@@ -15,32 +15,7 @@ import { toast } from 'sonner'
 import { Save, MessageSquare, TestTube, ShieldCheck } from 'lucide-react'
 import { testSMSConnection } from './sms-actions'
 
-const SMS_TEMPLATES = [
-  {
-    key: 'booking_confirmed',
-    label: 'Booking Confirmed',
-    default: 'Dear {name}, your booking {booking_id} is confirmed. Pickup: {pickup_date}. - {business_name}',
-    variables: ['{name}', '{booking_id}', '{pickup_date}', '{business_name}'],
-  },
-  {
-    key: 'pickup_reminder',
-    label: 'Pickup Reminder',
-    default: 'Hi {name}, reminder: pickup for booking {booking_id} is tomorrow at {time}. - {business_name}',
-    variables: ['{name}', '{booking_id}', '{time}', '{business_name}'],
-  },
-  {
-    key: 'return_reminder',
-    label: 'Return Reminder',
-    default: 'Hi {name}, please return items for booking {booking_id} by {return_date}. - {business_name}',
-    variables: ['{name}', '{booking_id}', '{return_date}', '{business_name}'],
-  },
-  {
-    key: 'overdue_notice',
-    label: 'Overdue Notice',
-    default: 'Dear {name}, your booking {booking_id} items are overdue since {return_date}. Please return immediately. - {business_name}',
-    variables: ['{name}', '{booking_id}', '{return_date}', '{business_name}'],
-  },
-]
+import { SMS_TEMPLATES } from '@/lib/sms/templates'
 
 type SavedSmsTemplate = string | { body?: string; templateId?: string }
 type SavedSmsSettings = {
@@ -49,7 +24,13 @@ type SavedSmsSettings = {
 }
 
 export function SmsSettingsClient() {
-  const { activeBranch, setBranches, branches } = useAppStore()
+  const branch = useAppStore(state => state.activeBranch)
+  if (!branch) return <p className="text-sm text-muted-foreground">Loading branch settings...</p>
+  return <SmsSettingsClientForm key={branch.id} />
+}
+
+function SmsSettingsClientForm() {
+  const { activeBranch, setBranches, branches, business } = useAppStore()
   const supabase = createClient()
   const rawBranchSettings = (activeBranch?.settings ?? {}) as unknown as Record<string, unknown>
   const settings = (rawBranchSettings.sms ?? {}) as SavedSmsSettings
@@ -62,7 +43,7 @@ export function SmsSettingsClient() {
       return {
         ...acc,
         [t.key]: {
-          body: typeof saved === 'string' ? saved : saved?.body ?? t.default,
+          body: typeof saved === 'string' ? saved : saved?.body ?? t.default.replace('FABB', business?.name || 'Your registered brand'),
           templateId: typeof saved === 'string' ? '' : saved?.templateId ?? '',
         },
       }
@@ -81,7 +62,7 @@ export function SmsSettingsClient() {
       const { error } = await supabase
         .from('branches')
         .update({ settings: newSettings })
-        .eq('id', activeBranch.id)
+        .eq('id', activeBranch.id).select('id').single()
       if (error) throw error
       setBranches(branches.map(b => b.id === activeBranch.id ? { ...b, settings: newSettings } : b))
       toast.success('SMS settings saved')
@@ -93,14 +74,12 @@ export function SmsSettingsClient() {
   }
 
   async function handleTestSms() {
-    const phone = window.prompt('Enter 10-digit mobile number to send test SMS:')
-    if (!phone) return
 
-    toast.promise(testSMSConnection(phone), {
-      loading: 'Sending test SMS...',
+    toast.promise(testSMSConnection(), {
+      loading: 'Checking server configuration...',
       success: (res) => {
         if (!res.success) throw new Error(res.error as string)
-        return 'Test SMS sent successfully!'
+        return res.message || 'Server configuration checked'
       },
       error: (err) => err.message || 'Failed to send test SMS'
     })
@@ -108,6 +87,7 @@ export function SmsSettingsClient() {
 
   return (
     <div className="space-y-6">
+      <p className="rounded border p-3 text-sm">Register these messages with your exact business name on DLT, using {"{#var#}"} for each variable. In MSG91 use {"##booking_id##"}, {"##pickup_date##"}, {"##return_date##"} and {"##amount##"}. Paste each approved MSG91 Flow ID below. Add MSG91_AUTH_KEY securely in Vercel environment settings. Saving templates does not schedule reminders.</p>
       <Card className="shadow-sm border-slate-200">
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -118,7 +98,7 @@ export function SmsSettingsClient() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Enable SMS Notifications</p>
-              <p className="text-xs text-slate-400 mt-0.5">Send automated SMS to customers for booking events</p>
+              <p className="text-xs text-slate-400 mt-0.5">Use approved MSG91 templates for customer booking messages</p>
             </div>
             <Switch checked={smsEnabled} onCheckedChange={setSmsEnabled} />
           </div>
@@ -131,7 +111,7 @@ export function SmsSettingsClient() {
                 MSG91 credentials are server-only Vercel environment variables. They are never saved in branch settings.
               </div>
               <Button variant="outline" size="sm" onClick={handleTestSms} className="h-8 text-xs">
-                <TestTube className="w-3.5 h-3.5 mr-1.5" /> Send Test SMS
+                <TestTube className="w-3.5 h-3.5 mr-1.5" /> Check server configuration
               </Button>
             </>
           )}
@@ -159,14 +139,14 @@ export function SmsSettingsClient() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-1 space-y-1.5">
-                      <Label className="text-xs text-slate-500">Template ID</Label>
+                      <Label className="text-xs text-slate-500">MSG91 Flow ID</Label>
                       <Input
                         value={templates[template.key].templateId}
                         onChange={(e) => setTemplates(p => ({ 
                           ...p, 
                           [template.key]: { ...p[template.key], templateId: e.target.value } 
                         }))}
-                        placeholder="e.g. 1207..."
+                        placeholder="Approved MSG91 Flow ID"
                         className="text-xs font-mono"
                       />
                     </div>

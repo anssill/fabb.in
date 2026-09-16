@@ -13,6 +13,12 @@ import { toast } from 'sonner'
 import { Save } from 'lucide-react'
 
 export function BookingRulesClient() {
+  const branch = useAppStore(state => state.activeBranch)
+  if (!branch) return <p className="text-sm text-muted-foreground">Loading branch settings...</p>
+  return <BookingRulesClientForm key={branch.id} />
+}
+
+function BookingRulesClientForm() {
   const { activeBranch, setBranches, branches } = useAppStore()
   const supabase = createClient()
 
@@ -26,6 +32,7 @@ export function BookingRulesClient() {
 
   async function handleSave() {
     if (!activeBranch) return
+    if (![advancePct, depositPct].every(v => Number.isFinite(v) && v >= 0 && v <= 100) || !Number.isInteger(maxBookingWindow) || maxBookingWindow < 1 || maxBookingWindow > 730 || !Number.isInteger(minRentalDays) || minRentalDays < 1 || minRentalDays > 30) { toast.error('Enter percentages from 0 to 100, advance days from 1 to 730, and rental days from 1 to 30'); return }
     setIsSaving(true)
     try {
       const newSettings = {
@@ -38,7 +45,7 @@ export function BookingRulesClient() {
       const { error } = await supabase
         .from('branches')
         .update({ settings: newSettings })
-        .eq('id', activeBranch.id)
+        .eq('id', activeBranch.id).select('id').single()
       if (error) throw error
 
       setBranches(branches.map(b =>
@@ -63,11 +70,12 @@ export function BookingRulesClient() {
             <div className="flex justify-between items-center">
               <Label>Minimum Advance Payment</Label>
               <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{advancePct}%</span>
+              <Input aria-label="Minimum advance percentage" type="number" min={0} max={100} className="w-24" value={advancePct} onChange={e => setAdvancePct(Number(e.target.value))} />
             </div>
             <Slider
               value={[advancePct]}
               onValueChange={([v]) => setAdvancePct(v)}
-              min={0} max={100} step={5}
+              min={0} max={100} step={1}
               className="w-full"
             />
             <p className="text-xs text-slate-400">Minimum percentage of total amount collected at booking time.</p>
@@ -79,11 +87,12 @@ export function BookingRulesClient() {
             <div className="flex justify-between items-center">
               <Label>Default Deposit Percentage</Label>
               <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{depositPct}%</span>
+              <Input aria-label="Deposit percentage" type="number" min={0} max={100} className="w-24" value={depositPct} onChange={e => setDepositPct(Number(e.target.value))} />
             </div>
             <Slider
               value={[depositPct]}
               onValueChange={([v]) => setDepositPct(v)}
-              min={0} max={50} step={5}
+              min={0} max={100} step={1}
               className="w-full"
             />
             <p className="text-xs text-slate-400">Security deposit collected at pickup, returned when items come back undamaged.</p>
@@ -99,9 +108,10 @@ export function BookingRulesClient() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Max Advance Booking (days)</Label>
+              <Slider aria-label="Advance booking days" value={[maxBookingWindow]} onValueChange={([v]) => setMaxBookingWindow(v)} min={1} max={730} step={1} />
               <Input
                 type="number"
-                min={7} max={730}
+                min={1} max={730}
                 value={maxBookingWindow}
                 onChange={e => setMaxBookingWindow(Number(e.target.value))}
               />
@@ -110,6 +120,7 @@ export function BookingRulesClient() {
 
             <div className="space-y-2">
               <Label>Minimum Rental Days</Label>
+              <Slider aria-label="Minimum rental days" value={[minRentalDays]} onValueChange={([v]) => setMinRentalDays(v)} min={1} max={30} step={1} />
               <Input
                 type="number"
                 min={1} max={30}

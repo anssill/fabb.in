@@ -71,7 +71,7 @@ export function ImageUpload({ value, onChange, disabled, className = '' }: Image
     <div className={`space-y-4 w-full ${className}`}>
       {preview ? (
         <div className="relative w-full aspect-video sm:aspect-[4/3] md:aspect-[16/9] lg:aspect-auto lg:h-[250px] rounded-lg overflow-hidden border border-slate-200 bg-slate-50 group">
-          <Image
+          <Image unoptimized
             src={preview}
             alt="Upload preview"
             fill
