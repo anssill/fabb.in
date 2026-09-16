@@ -72,3 +72,36 @@ test('inventory creation calls one atomic RPC and returns database errors',async
  const {createItem}=loadSource('src/app/(dashboard)/inventory/inventory-actions.ts',{'@/lib/supabase/server':{createClient:async()=>db},'next/cache':{revalidatePath(){}}});
  const result=await createItem({name:'Suit',category:'Suit',price:100},[{size:'M',total_stock:1}]);assert.equal(result.error,'Each size must be unique');assert.equal(call.name,'create_inventory_item');assert.equal(call.input.p_item.name,'Suit');
 });
+
+test('rental evidence requires login, a scoped booking path, and a permitted image', async () => {
+  let user = null, downloadError = null, mime = 'image/png', downloads = 0, downloaded;
+  const { GET } = loadSource('src/app/api/rental-evidence/route.ts', {
+    '@/lib/supabase/server': { createClient: async () => ({
+      auth: { getUser: async () => ({ data: { user } }) },
+      storage: { from: bucket => ({ download: async path => { downloads++; downloaded = {bucket,path}; return { data: new Blob(['photo'], {type:mime}), error: downloadError } } }) },
+    }) },
+  });
+  const path = '11111111-1111-4111-8111-111111111111/bookings/22222222-2222-4222-8222-222222222222/pickup/photo.png';
+  const request = p => new Request('https://fabb.test/api/rental-evidence?path=' + encodeURIComponent(p));
+  assert.equal((await GET(request(path))).status,401); assert.equal(downloads,0);
+  user = {id:'staff'};
+  for (const invalid of ['../../secret', 'bookings/id/pickup/photo.png',path.replace('/pickup/','/unscoped/')]) assert.equal((await GET(request(invalid))).status,400);
+  assert.equal(downloads,0);
+  const response = await GET(request(path));
+  assert.equal(response.status,200); assert.equal(downloaded.bucket,'rental-evidence'); assert.equal(downloaded.path,path);
+  assert.equal(response.headers.get('cache-control'),'private, no-store');
+  downloadError = {message:'RLS denied'}; assert.equal((await GET(request(path))).status,404);
+  downloadError = null; mime = 'text/html'; assert.equal((await GET(request(path))).status,415);
+});
+
+test('tabs render Radix orientation and active state with content below the list', () => {
+  const React = loadPackage('react'); const {renderToStaticMarkup} = loadPackage('react-dom/server');
+  const {Tabs,TabsList,TabsTrigger,TabsContent} = loadSource('src/components/ui/tabs.tsx');
+  const html = renderToStaticMarkup(React.createElement(Tabs,{defaultValue:'overview'},
+    React.createElement(TabsList,null,React.createElement(TabsTrigger,{value:'overview'},'Overview')),
+    React.createElement(TabsContent,{value:'overview'},'Booking details')));
+  assert.match(html,/data-orientation="horizontal"/);
+  assert.match(html,/data-\[orientation=horizontal\]:flex-col/);
+  assert.match(html,/data-state="active"/); assert.match(html,/data-\[state=active\]:bg-/);
+  assert.match(html,/role="tabpanel"/); assert.match(html,/Booking details/);
+});

@@ -102,7 +102,7 @@ export default function PickupPage() {
         .select(`
           id, booking_number, status, total_amount, advance_amount,
           balance_due, deposit_amount, pickup_date, return_date,
-          business_id, branch_id,
+          business_id, branch_id, pickup_photos,
           customer:customers(id, name, phone),
           booking_items(id, item_name, size, quantity, price, item:items(tracking_mode), booking_item_assets(asset_id, released_at, asset:inventory_assets(asset_code, status))),
           booking_payments(type, amount, is_voided)
@@ -134,6 +134,7 @@ export default function PickupPage() {
           rental_balance: rentalBalance, 
           deposit_balance: depositBalance 
         })
+        setPickupPhotos(Array.isArray(bk.pickup_photos) ? bk.pickup_photos : [])
         setBalanceAmount(String(rentalBalance))
         setDepositAmount(String(depositBalance))
         const collected = depositBalance <= 0
@@ -169,15 +170,16 @@ export default function PickupPage() {
             deposit_amount: parseFloat(newDepositTotal),
             pickup_photos: pickupPhotos 
           })
-          .eq('id', booking.id)
+          .eq('id', booking.id).select('id').single()
         
         if (updError) throw updError
       } else {
         // Just update photos if not editing deposit
-        await supabase
+        const { error: photoError } = await supabase
           .from('bookings')
           .update({ pickup_photos: pickupPhotos })
-          .eq('id', booking.id)
+          .eq('id', booking.id).select('id').single()
+        if (photoError) throw photoError
       }
 
       // 1. Record balance payment if applicable
@@ -606,8 +608,8 @@ export default function PickupPage() {
             <p className="text-sm text-slate-500">Take photos of the customer with the items or any specific condition notes.</p>
             
             <MediaUpload
-              bucket="images"
-              path={`bookings/${id}/pickup`}
+              bucket="rental-evidence"
+              path={`${booking.business_id}/bookings/${id}/pickup`}
               value={pickupPhotos}
               onUploadComplete={(url) => setPickupPhotos(prev => [...prev, url])}
               onRemove={(url) => setPickupPhotos(prev => prev.filter(p => p !== url))}

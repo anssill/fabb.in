@@ -99,16 +99,16 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   void branch
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/bookings"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
           </Button>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-semibold text-slate-900 font-mono">{booking.booking_number}</h1>
+              <h1 className="break-all text-base sm:text-xl font-semibold text-slate-900 font-mono">{booking.booking_number}</h1>
               <Badge className={`${statusConfig.color} text-xs`}>{statusConfig.label}</Badge>
               {isOverdue && <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>}
             </div>
@@ -148,7 +148,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
       {!['cancelled', 'draft'].includes(booking.status) && (
         <div className="flex items-center gap-0 bg-white border border-slate-200 rounded-lg p-4">
           {statusSteps.map((step, idx) => (
-            <div key={step} className="flex items-center flex-1">
+            <div key={step} className="flex min-w-0 items-center flex-1">
               <div className={`flex items-center gap-1.5 ${idx <= currentStepIdx ? 'text-blue-600' : 'text-slate-400'}`}>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
                   ${idx < currentStepIdx ? 'bg-blue-600 text-white' :
@@ -156,7 +156,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     'bg-slate-100 text-slate-400'}`}>
                   {idx < currentStepIdx ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
                 </div>
-                <span className="text-xs font-medium capitalize hidden sm:block">{step}</span>
+                <span className="text-xs font-medium capitalize hidden xl:block">{step}</span>
               </div>
               {idx < statusSteps.length - 1 && (
                 <div className={`flex-1 h-0.5 mx-2 ${idx < currentStepIdx ? 'bg-blue-400' : 'bg-slate-200'}`} />
@@ -168,7 +168,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
       {/* Main content with tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="bg-white border border-slate-200">
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-white border border-slate-200 sm:grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
@@ -181,7 +181,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
         <TabsContent value="overview" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left col */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="min-w-0 lg:col-span-2 space-y-4">
               {/* Customer */}
               <Card>
                 <CardHeader className="pb-3">
@@ -212,7 +212,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div>
                       <p className="text-xs text-slate-500">Pickup</p>
                       <p className="text-sm font-semibold">{booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p>

@@ -58,14 +58,14 @@ export function Header({ staff }: Props) {
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold capitalize text-slate-950 dark:text-white">
-            {pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
+            {pathSegments[0] === 'bookings' && pathSegments.length === 2 && pathSegments[1] !== 'new' ? 'Booking details' : pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
           </p>
           <p className="hidden text-xs text-slate-500 sm:block">Fabb workspace</p>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <Button variant="ghost" size="sm" onClick={toggleDarkMode} className="h-10 w-10 rounded-full bg-white text-slate-500 shadow-sm">
           {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>

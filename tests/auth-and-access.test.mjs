@@ -311,7 +311,7 @@ test('service worker activation only deletes outdated Fabb caches', async () => 
   let pending
   handlers.activate({ waitUntil(promise) { pending = promise } })
   await pending
-  assert.deepEqual(removedCaches, ['fabb-static-v1'])
+  assert.deepEqual(removedCaches, ['fabb-static-v1', 'fabb-static-v2'])
 })
 
 

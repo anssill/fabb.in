@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DataRealtime />
       <div className="lg:ml-[17.5rem] flex flex-col min-h-screen transition-all duration-300">
         <Header staff={staff} />
-        <main className="flex-1 p-3 pt-16 sm:p-5 sm:pt-18 lg:p-7 lg:pt-20">
+        <main className="min-w-0 flex-1 p-3 pt-16 sm:p-5 sm:pt-18 lg:p-7 lg:pt-20">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

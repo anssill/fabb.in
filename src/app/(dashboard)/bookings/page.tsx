@@ -146,7 +146,7 @@ export default function BookingsPage() {
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input
-          placeholder="Search by booking ID, bill number, or customer..."
+          placeholder="Search" aria-label="Search bookings by booking ID, bill number, or customer"
           className="pl-10"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -179,11 +179,11 @@ export default function BookingsPage() {
                 <div className={`w-1 flex-shrink-0 ${STATUS_BAR[statusKey] || 'bg-slate-300'}`} />
 
                 {/* Content */}
-                <div className="flex flex-1 items-center gap-4 p-4">
+                <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex">
                   {/* Column 1: booking info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-mono font-semibold text-slate-700">{booking.booking_number}</span>
+                  <div className="col-span-2 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <span className="break-all text-sm font-mono font-semibold text-slate-700">{booking.booking_number}</span>
                       {booking.physical_bill_number && (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">Bill {booking.physical_bill_number}</span>
                       )}
@@ -194,14 +194,14 @@ export default function BookingsPage() {
                       )}
                     </div>
                     <p className="text-base font-semibold text-slate-900 truncate">{(customer as any)?.name || 'Unknown'}</p>
-                    <p className="text-sm text-slate-500 truncate">
+                    <p className="line-clamp-2 text-sm text-slate-500">
                       {(customer as any)?.phone || ''}
                       {itemSummary ? ` · ${itemSummary.slice(0, 50)}${itemSummary.length > 50 ? '…' : ''}` : ''}
                     </p>
                   </div>
 
                   {/* Column 2: dates */}
-                  <div className="w-44 hidden sm:block">
+                  <div className="min-w-0 sm:w-44">
                     <div className="flex items-center gap-1.5 text-sm text-slate-600">
                       <CalendarArrowUp className="w-3.5 h-3.5 text-blue-500" />
                       {booking.pickup_date ? new Date(booking.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
@@ -214,7 +214,7 @@ export default function BookingsPage() {
                   </div>
 
                   {/* Column 3: amount */}
-                  <div className="w-28 text-right">
+                  <div className="min-w-0 text-right sm:w-28">
                     <p className="text-base font-semibold text-slate-900">₹{Number(booking.total_amount ?? 0).toLocaleString('en-IN')}</p>
                     {balanceDue > 0 ? (
                       <p className="text-xs text-red-600 font-medium">Balance ₹{balanceDue.toLocaleString('en-IN')}</p>
@@ -223,7 +223,7 @@ export default function BookingsPage() {
                     )}
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                  <ChevronRight className="hidden sm:block w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
                 </div>
               </Link>
             )

@@ -20,6 +20,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<BookingCustomer[]>([])
   const [recentCustomers, setRecentCustomers] = useState<BookingCustomer[]>([])
+  const [recentLimit, setRecentLimit] = useState(3)
   const [isNew, setIsNew] = useState(false)
   const [searching, setSearching] = useState(false)
   const [loadingRecent, setLoadingRecent] = useState(false)
@@ -37,7 +38,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(recentLimit + 1)
         setRecentCustomers(data || [])
       } catch (err) {
         console.error('Failed to fetch recent customers:', err)
@@ -46,7 +47,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       }
     }
     fetchRecentCustomers()
-  }, [staff?.business_id, staff?.branch_id, activeBranch?.id])
+  }, [staff?.business_id, staff?.branch_id, activeBranch?.id, recentLimit])
 
   // Live search debounced query
   useEffect(() => {
@@ -127,14 +128,14 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         {!customer.id && !isNew && (
           <>
             <div className="flex gap-2">
-              <div className="relative flex-1">
+              <div className="relative min-w-0 flex-1">
                 {searching ? (
                   <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
                 ) : (
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 )}
                 <Input
-                  placeholder="Search by name or phone number..."
+                  placeholder="Search" aria-label="Search customers by name or phone"
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => {
@@ -183,7 +184,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
               <div className="space-y-2 pt-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Customers</p>
                 <div className="space-y-2">
-                  {recentCustomers.map((c) => (
+                  {recentCustomers.slice(0, recentLimit).map((c) => (
                     <button
                       key={c.id}
                       onClick={() => selectCustomer(c)}
@@ -202,6 +203,8 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 </div>
               </div>
             )}
+
+            {!searchQuery.trim() && recentCustomers.length > recentLimit && <Button variant="outline" className="w-full" disabled={loadingRecent} onClick={() => setRecentLimit(n => n + 3)}>Show more</Button>}
 
             {searchQuery.trim().length < 1 && loadingRecent && (
               <div className="flex items-center justify-center py-6 gap-2 text-sm text-muted-foreground">
