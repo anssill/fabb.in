@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Bell, LogOut, User, Settings, Moon, Sun, Search } from 'lucide-react'
 import { useState } from 'react'
+import { disableDevicePush } from '@/lib/push/client'
+import { toast } from 'sonner'
 
 interface Props {
   staff: {
@@ -33,6 +35,7 @@ export function Header({ staff }: Props) {
 
   const handleSignOut = async () => {
     const supabase = createClient()
+    try { await disableDevicePush() } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not disable device notifications'); return }
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()

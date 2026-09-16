@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,48 +16,40 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const filtered = customers
   useEffect(() => {
-    async function fetchCustomers() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('business_id, branch_id')
-        .eq('id', user.id)
-        .single()
-      if (!staff) return
-
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, phone, email, total_bookings, total_spent, outstanding_balance, blacklisted, created_at')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
-        .order('created_at', { ascending: false })
-        .limit(200)
-
-      setCustomers(data || [])
-      setLoading(false)
-    }
-    fetchCustomers()
-  }, [activeBranch?.id])
-
-  // Filter by name or phone client-side
-  const filtered = useMemo(() => {
-    if (!search.trim()) return customers
-    const q = search.toLowerCase()
-    return customers.filter((c) =>
-      c.name?.toLowerCase().includes(q) || c.phone?.includes(q)
-    )
-  }, [customers, search])
+    let cancelled = false
+    setLoading(true); setError('')
+    const timer = setTimeout(async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Please sign in again')
+        const { data: staff, error: staffError } = await supabase.from('staff').select('business_id,branch_id').eq('id', user.id).single()
+        if (staffError || !staff) throw new Error('Could not load your branch')
+        let query = (supabase as any).from('customer_branch_summary').select('id,name,phone,email,total_bookings,total_spent,outstanding_balance,blacklisted,created_at', { count: 'exact' })
+          .eq('business_id', staff.business_id).eq('branch_id', activeBranch?.id || staff.branch_id).is('archived_at', null)
+        const term = search.trim().replace(/[^\p{L}\p{N} @.+-]/gu, '').slice(0, 100)
+        if (term) query = query.or('name.ilike.%' + term + '%,phone.ilike.%' + term + '%')
+        const result = await query.order('created_at', { ascending: false }).order('id').range(page * 25, page * 25 + 24)
+        if (result.error) throw result.error
+        if (!cancelled) { setCustomers(result.data || []); setTotal(result.count || 0) }
+      } catch (failure: any) { if (!cancelled) setError(failure.message || 'Could not load customers') }
+      finally { if (!cancelled) setLoading(false) }
+    }, 200)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [activeBranch?.id, search, page, retry])
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Customers</h1>
-          <p className="text-sm text-slate-500">{customers.length} customer profiles in this branch</p>
+          <p className="text-sm text-slate-500">{total} customer profiles in this branch</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="h-10 px-4" asChild>
@@ -83,7 +75,7 @@ export default function CustomersPage() {
               placeholder="Search by name or phone..."
               className="pl-10"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             />
           </div>
         </CardContent>
@@ -91,7 +83,7 @@ export default function CustomersPage() {
 
       <Card>
         <CardContent className="p-0">
-          {loading ? (
+          {error ? <div role="alert" className="p-6 text-red-600">{error}<Button variant="outline" onClick={() => setRetry(retry + 1)}>Retry</Button></div> : loading ? (
           <div className="text-center py-16 text-slate-400 text-sm">Loading customers...</div>
         ) : filtered.length > 0 ? (
           <div className="divide-y divide-slate-100">
@@ -151,6 +143,7 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+      <div className="flex items-center justify-between"><Button variant="outline" disabled={page === 0 || loading} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm">Page {page + 1} of {Math.max(1, Math.ceil(total / 25))}</span><Button variant="outline" disabled={(page + 1) * 25 >= total || loading} onClick={() => setPage(page + 1)}>Next</Button></div>
     </div>
   )
 }

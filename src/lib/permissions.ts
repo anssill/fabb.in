@@ -20,6 +20,7 @@ export const PERMISSION_KEYS = [
   'override_availability',
   'settle_deposits',
   'manage_settings',
+  'switch_branches',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -31,6 +32,7 @@ export interface PermissionDef {
 }
 
 export const PERMISSIONS: PermissionDef[] = [
+  { key: 'switch_branches', label: 'Branch Switching', description: 'Switch between branches selected by the owner' },
   { key: 'manage_dashboard', label: 'Dashboard', description: 'View the main dashboard and stats' },
   { key: 'manage_bookings', label: 'Bookings', description: 'Create, view, and manage bookings' },
   { key: 'manage_inventory', label: 'Inventory', description: 'Add, edit, and view inventory items' },

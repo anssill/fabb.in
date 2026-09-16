@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, ChevronLeft, Loader2, Package } from 'lucide-react'
 import { toast } from 'sonner'
@@ -53,6 +53,8 @@ export default function ReturnPage() {
     void load()
   }, [id])
 
+  const requestId = useRef<string | null>(null)
+  const [settleNow, setSettleNow] = useState(false)
   const depositHeld = Number(booking?.deposit_amount ?? 0)
   const refund = Math.max(0, depositHeld - deduction)
   const totalReturning = useMemo(() => Object.values(lines).reduce((sum, line) => sum + Number(line.quantity || 0), 0), [lines])
@@ -63,25 +65,15 @@ export default function ReturnPage() {
 
   async function submit() {
     if (!booking || totalReturning <= 0) return toast.error('Choose at least one quantity to return')
-    if (deduction > 0 && !deductionReason.trim()) return toast.error('Enter a reason for the deposit deduction')
+    if (settleNow && deduction > 0 && !deductionReason.trim()) return toast.error('Enter a reason for the deposit deduction')
     setSubmitting(true)
     try {
       const response = await fetch(`/api/bookings/${booking.id}/status`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'returned', returns: booking.booking_items.map((item) => ({ bookingItemId: item.id, ...lines[item.id] })) }),
+        body: JSON.stringify({ status: 'returned', idempotencyKey: requestId.current ?? (requestId.current = crypto.randomUUID()), settlement: settleNow ? { refund, deduction, method: refundMethod, note: deductionReason || 'Deposit refund' } : null, returns: booking.booking_items.map((item) => ({ bookingItemId: item.id, ...lines[item.id] })) }),
       })
       if (!response.ok) { const body = await safeJsonParse(response); throw new Error(body.error || 'Return failed') }
 
-      const supabase = createClient()
-      const db = supabase as any
-      const { data: { user } } = await supabase.auth.getUser()
-      if (deduction > 0) await db.from('deposit_ledger').insert({ business_id: booking.business_id, branch_id: booking.branch_id, booking_id: booking.id, entry_type: 'deduction', amount: deduction, note: deductionReason, created_by: user?.id })
-      if (refund > 0) {
-        await Promise.all([
-          db.from('deposit_ledger').insert({ business_id: booking.business_id, branch_id: booking.branch_id, booking_id: booking.id, entry_type: 'refund', amount: refund, payment_method: refundMethod, reference_number: refundReference || null, created_by: user?.id }),
-          db.from('booking_payments').insert({ business_id: booking.business_id, branch_id: booking.branch_id, booking_id: booking.id, type: 'deposit_refund', amount: refund, method: refundMethod, reference_number: refundReference || null, collected_by: user?.id, notes: deduction ? `Refund after ₹${deduction} deduction` : 'Full deposit refund' }),
-        ])
-      }
       toast.success('Return recorded. Available quantities were released immediately.')
       router.push(`/bookings/${booking.id}`); router.refresh()
     } catch (error) {
@@ -105,13 +97,13 @@ export default function ReturnPage() {
           const activeAssets = (item.booking_item_assets ?? []).filter((entry) => !entry.released_at && entry.asset?.status === 'out')
           return <div key={item.id} className="space-y-3 rounded-2xl border bg-muted/20 p-4"><div className="flex justify-between"><div><p className="font-semibold">{item.item_name}</p><p className="text-xs text-muted-foreground">Size {item.size} · {remaining} currently out</p></div><div className="w-28"><Label className="text-xs">Returning now</Label><Input type="number" min={0} max={remaining} value={line?.quantity ?? 0} disabled={isAssetTracked} onChange={(event) => updateLine(item.id, { quantity: Math.min(remaining, Math.max(0, Number(event.target.value))) })} /></div></div>
             {isAssetTracked ? <div className="space-y-2 rounded-xl border bg-background p-3"><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Exact asset pieces</p>{activeAssets.length ? activeAssets.map((assignment) => { const asset = Array.isArray(assignment.asset) ? assignment.asset[0] : assignment.asset; const checked = line?.assetIds.includes(assignment.asset_id) ?? false; return <label key={assignment.asset_id} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 hover:bg-muted"><span className="font-mono text-sm">{asset?.asset_code || assignment.asset_id}</span><Checkbox checked={checked} onCheckedChange={(value) => { const nextIds = value ? [...(line?.assetIds ?? []), assignment.asset_id] : (line?.assetIds ?? []).filter((assetId) => assetId !== assignment.asset_id); updateLine(item.id, { assetIds: nextIds, quantity: nextIds.length, unavailableQuantity: Math.min(line?.unavailableQuantity ?? 0, nextIds.length) }) }} /></label> }) : <p className="text-sm text-amber-700">No issued asset records found. Check the pickup audit before returning.</p>}</div> : null}
-            <div className="grid gap-3 sm:grid-cols-[1fr_140px]"><div><Label className="text-xs">Exception</Label><Select value={line?.reason || 'none'} onValueChange={(value) => updateLine(item.id, { reason: value === 'none' ? '' : value as 'damaged' | 'missing', unavailableQuantity: value === 'none' ? 0 : line.quantity })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No exception</SelectItem><SelectItem value="damaged">Damaged</SelectItem><SelectItem value="missing">Missing</SelectItem></SelectContent></Select></div>{line?.reason && <div><Label className="text-xs">Affected quantity</Label><Input type="number" min={1} max={line.quantity} value={line.unavailableQuantity} onChange={(event) => updateLine(item.id, { unavailableQuantity: Math.min(line.quantity, Math.max(0, Number(event.target.value))) })} /></div>}</div>
+            <div className="grid gap-3 sm:grid-cols-[1fr_140px]"><div><Label className="text-xs">Exception</Label><Select value={line?.reason || 'none'} onValueChange={(value) => updateLine(item.id, { reason: value === 'none' ? '' : value as 'damaged' | 'missing', unavailableQuantity: value === 'none' ? 0 : line.quantity })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No exception</SelectItem><SelectItem value="damaged">Damaged</SelectItem></SelectContent></Select></div>{line?.reason && <div><Label className="text-xs">Affected quantity</Label><Input type="number" min={1} max={line.quantity} value={line.unavailableQuantity} onChange={(event) => updateLine(item.id, { unavailableQuantity: Math.min(line.quantity, Math.max(0, Number(event.target.value))) })} /></div>}</div>
             {line?.reason && <Textarea value={line.notes} onChange={(event) => updateLine(item.id, { notes: event.target.value })} placeholder={`Describe the ${line.reason} item`} />}
           </div>
         })}
       </CardContent></Card>
 
-      <Card><CardHeader><CardTitle className="text-base">Deposit settlement</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-3 gap-3 rounded-2xl bg-muted/50 p-4 text-center"><Value label="Held" value={depositHeld} /><Value label="Deduction" value={deduction} /><Value label="Refund" value={refund} /></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Deduction amount</Label><Input type="number" min={0} max={depositHeld} value={deduction} onChange={(event) => setDeduction(Math.min(depositHeld, Math.max(0, Number(event.target.value))))} /></div><div><Label>Refund method</Label><Select value={refundMethod} onValueChange={setRefundMethod}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="upi">UPI</SelectItem><SelectItem value="card">Card</SelectItem><SelectItem value="bank_transfer">Bank transfer</SelectItem></SelectContent></Select></div></div>{deduction > 0 && <Textarea value={deductionReason} onChange={(event) => setDeductionReason(event.target.value)} placeholder="Mandatory deduction reason" />}<Input value={refundReference} onChange={(event) => setRefundReference(event.target.value)} placeholder="Refund reference (optional)" /></CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">Deposit settlement</CardTitle></CardHeader><CardContent className="space-y-4"><label className="flex items-center gap-2"><input type="checkbox" checked={settleNow} onChange={e => setSettleNow(e.target.checked)} />Settle deposit now</label><p className="text-sm text-muted-foreground">You can settle the deposit later, including after the booking closes. Only record items physically received; leave missing pieces outstanding.</p><div className="grid grid-cols-3 gap-3 rounded-2xl bg-muted/50 p-4 text-center"><Value label="Held" value={depositHeld} /><Value label="Deduction" value={deduction} /><Value label="Refund" value={refund} /></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Deduction amount</Label><Input type="number" min={0} max={depositHeld} value={deduction} onChange={(event) => setDeduction(Math.min(depositHeld, Math.max(0, Number(event.target.value))))} /></div><div><Label>Refund method</Label><Select value={refundMethod} onValueChange={setRefundMethod}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="upi">UPI</SelectItem><SelectItem value="card">Card</SelectItem><SelectItem value="bank_transfer">Bank transfer</SelectItem></SelectContent></Select></div></div>{deduction > 0 && <Textarea value={deductionReason} onChange={(event) => setDeductionReason(event.target.value)} placeholder="Mandatory deduction reason" />}<Input value={refundReference} onChange={(event) => setRefundReference(event.target.value)} placeholder="Refund reference (optional)" /></CardContent></Card>
       <Button className="w-full" size="lg" disabled={submitting || totalReturning <= 0} onClick={submit}>{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording…</> : <><CheckCircle2 className="mr-2 h-4 w-4" />Confirm return</>}</Button>
     </div>
   )

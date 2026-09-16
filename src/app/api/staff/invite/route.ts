@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const { email, name, password, role, phone, permissions } = validated.data
     const allowedPermissions = new Set<string>(PERMISSION_KEYS)
-    const safePermissions = Object.fromEntries(Object.entries(permissions || {}).filter(([key]) => allowedPermissions.has(key)))
+    const safePermissions = Object.fromEntries(Object.entries(permissions || {}).filter(([key]) => allowedPermissions.has(key) && key !== 'switch_branches'))
 
     // 1. Check if user already exists in staff table
     const { data: existingStaff } = await supabaseAdmin

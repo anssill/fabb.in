@@ -195,7 +195,7 @@ test('password service errors are returned to the form', async () => {
 
 async function switchBranch(options = {}) {
   const client = database({
-    staff: { data: { ...activeStaff, ...options.staff }, error: null },
+    staff: { data: { ...activeStaff, permissions: { switch_branches: true }, ...options.staff }, error: null },
     branches: filters => ({ data: options.denied || (options.deniedSource && filters.id === options.staff?.branch_id) ? null : { id: filters.id }, error: null }),
   }, { getUser: async () => ({ data: { user: options.noUser ? null : user } }) })
   const admin = database({
@@ -226,27 +226,25 @@ test('branch switching scopes both authorization and the update to the current b
   assert.ok(result.admin.calls.some(call => call[1] === 'eq' && call[2] === 'business_id' && call[3] === 'business-a'))
 })
 
-test("switching preserves a staff member's original branch assignment before changing the active branch", async () => {
-  const previousBranchId = '33333333-3333-4333-8333-333333333333'
-  const result = await switchBranch({ staff: { branch_id: previousBranchId } })
+test('switching changes only the active branch and never grants membership', async () => {
+  const result = await switchBranch({ staff: { branch_id: '33333333-3333-4333-8333-333333333333' } })
   assert.equal(result.error, undefined)
-  const membership = result.admin.calls.find(call => call[1] === 'upsert')
-  assert.deepEqual(membership, ['staff_branch_memberships', 'upsert', {
-    staff_id: user.id, business_id: 'business-a', branch_id: previousBranchId,
-  }, { onConflict: 'staff_id,branch_id', ignoreDuplicates: true }])
-  assert.ok(result.admin.calls.indexOf(membership) < result.admin.calls.findIndex(call => call[1] === 'update'))
+  assert.equal(result.admin.calls.some(call => call[0] === 'staff_branch_memberships'), false)
+  const write = result.admin.calls.find(call => call[1] === 'update')
+  assert.deepEqual(write[2], { branch_id: branchId })
 })
 
-test('a failed membership save prevents switching away from the original branch', async () => {
-  const result = await switchBranch({ staff: { branch_id: '33333333-3333-4333-8333-333333333333' }, membershipError: true })
-  assert.match(result.error.message, /preserve your branch access/)
-  assert.equal(result.admin.calls.some(call => call[1] === 'update'), false)
+test('staff without an explicit switching grant cannot switch branches', async () => {
+  for (const permissions of [{}, { switch_branches: false }]) {
+    const result = await switchBranch({ staff: { permissions } })
+    assert.match(result.error.message, /not enabled/)
+    assert.equal(result.adminCalls, 0)
+  }
 })
 
-test('switching never grants membership in an inaccessible original branch', async () => {
-  const result = await switchBranch({ staff: { branch_id: '33333333-3333-4333-8333-333333333333' }, deniedSource: true })
+test('owner can select a branch without a staff switching grant', async () => {
+  const result = await switchBranch({ staff: { role: 'owner', permissions: {} } })
   assert.equal(result.error, undefined)
-  assert.equal(result.admin.calls.some(call => call[1] === 'upsert'), false)
 })
 
 async function confirmAuth(next, type = 'email', staff = activeStaff) {

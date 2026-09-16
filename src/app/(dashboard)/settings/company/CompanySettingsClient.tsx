@@ -1,5 +1,6 @@
 'use client'
 
+import { LogoEditor } from '@/components/shared/LogoEditor'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -37,6 +38,7 @@ export function CompanySettingsClient() {
   const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [editingFile, setEditingFile] = useState<File|null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -80,6 +82,14 @@ export function CompanySettingsClient() {
     const file = e.target.files?.[0]
     if (!file || !business) return
 
+    if (!['image/png','image/jpeg','image/webp'].includes(file.type)) return toast.error('Choose a PNG, JPEG, or WebP image')
+    if(file.size>5*1024*1024) return toast.error('Choose an image smaller than 5 MB')
+    setEditingFile(file)
+    e.target.value=''
+  }
+
+  async function saveEditedLogo(file: File) {
+    if(!business) return
     setIsUploading(true)
     try {
       const { StorageService } = await import('@/lib/storage-service')
@@ -93,6 +103,7 @@ export function CompanySettingsClient() {
       if (error) throw error
 
       setBusiness({ ...business, logo_url: logoUrl })
+      setEditingFile(null)
       toast.success('Logo uploaded successfully')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to upload logo')
@@ -108,7 +119,7 @@ export function CompanySettingsClient() {
     setIsUploading(true)
     try {
       const { StorageService } = await import('@/lib/storage-service')
-      await StorageService.deleteImage(business.logo_url)
+      const previousLogo = business.logo_url
 
       const { error } = await supabase
         .from('businesses')
@@ -118,6 +129,7 @@ export function CompanySettingsClient() {
       if (error) throw error
 
       setBusiness({ ...business, logo_url: null })
+      await StorageService.deleteImage(previousLogo).catch(() => undefined)
       toast.success('Logo removed successfully')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to remove logo')
@@ -171,6 +183,8 @@ export function CompanySettingsClient() {
   }
 
   return (
+    <>
+    {editingFile && <LogoEditor file={editingFile} onCancel={()=>setEditingFile(null)} onSave={saveEditedLogo} saving={isUploading} />}
     <Card className="rounded-[1.65rem] border-0 bg-white shadow-sm ring-0">
       <CardContent className="p-5 sm:p-6">
         <Form {...form}>
@@ -201,6 +215,12 @@ export function CompanySettingsClient() {
                   <ImageUp className="mr-2 h-3.5 w-3.5" />
                   {isUploading ? 'Uploading...' : 'Upload'}
                 </Button>
+                {business.logo_url && <Button type="button" variant="outline" size="sm" disabled={isUploading} onClick={async () => {
+                  try {
+                    const response = await fetch(business.logo_url!); if (!response.ok) throw new Error('Could not load the current logo')
+                    const blob = await response.blob(); setEditingFile(new File([blob], 'current-logo.png', { type: blob.type }))
+                  } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not open logo editor') }
+                }}>Edit logo</Button>}
                 {business.logo_url && (
                   <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full text-xs text-red-600 hover:bg-red-50 hover:text-red-700" onClick={handleRemoveLogo} disabled={isUploading}>
                     <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -297,6 +317,7 @@ export function CompanySettingsClient() {
         </Form>
       </CardContent>
     </Card>
+    </>
   )
 }
 

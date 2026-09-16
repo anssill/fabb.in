@@ -13,6 +13,7 @@ const SETTINGS_SECTIONS = [
   { label: 'Staff', icon: Users, href: '/staff', roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Booking Rules', icon: Settings, href: '/settings/booking-rules', roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Invoice Settings', icon: Receipt, href: '/settings/invoice', roles: ['owner', 'manager', 'super_admin'] },
+  { label: 'Push Notifications', icon: MessageSquare, href: '/settings/notifications', roles: ['owner', 'manager', 'super_admin'] },
   { label: 'SMS Notifications', icon: MessageSquare, href: '/settings/sms', roles: ['owner', 'super_admin'] },
   { label: 'Inventory Settings', icon: Package, href: '/settings/inventory', roles: ['owner', 'manager', 'super_admin'] },
   { label: 'Display Preferences', icon: Monitor, href: '/settings/display', roles: ['all'] },

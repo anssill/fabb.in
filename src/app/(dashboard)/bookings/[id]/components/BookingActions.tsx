@@ -7,6 +7,7 @@ import { QrCode, Loader2, Package, CheckCircle, RefreshCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { SettleDepositDialog } from './SettleDepositDialog'
 import { AddPaymentDialog } from './AddPaymentDialog'
 import { CancelBookingDialog } from './CancelBookingDialog'
 import { safeJsonParse } from '@/lib/api-utils'
@@ -17,7 +18,7 @@ interface BookingActionsProps {
     status: string
     balance_due: number
     deposit_amount: number
-    booking_items: Array<{ id: string; item_name: string; size: string; quantity: number }>
+    booking_items: Array<{ id: string; item_name: string; size: string; quantity: number; picked_up_quantity?: number; returned_quantity?: number }>
   }
 }
 
@@ -71,6 +72,12 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
   return (
     <div className="space-y-3">
+      <div className="grid gap-2 rounded-xl bg-slate-50 p-3 text-xs">
+        <span>Items received: {booking.booking_items.length > 0 && booking.booking_items.every(item => (item.returned_quantity ?? 0) >= (item.picked_up_quantity || item.quantity)) ? 'Complete' : 'Pending'}</span>
+        <span>Payment complete: {Number(booking.balance_due) === 0 ? 'Yes' : 'No'}</span>
+        <span>Deposit: {Number(booking.deposit_amount) > 0 ? 'Settlement pending' : 'No deposit held'}</span>
+      </div>
+      {Number(booking.deposit_amount) > 0 && ['returned', 'closed', 'cancelled'].includes(booking.status) && <SettleDepositDialog bookingId={booking.id} held={Number(booking.deposit_amount)} />}
       {/* Process Pickup — dedicated page */}
       {['confirmed', 'hold'].includes(booking.status) && (
         <Button

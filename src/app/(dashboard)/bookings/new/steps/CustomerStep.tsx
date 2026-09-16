@@ -17,6 +17,7 @@ interface Props {
 
 export function CustomerStep({ customer, setCustomer }: Props) {
   const { staff, activeBranch } = useAppStore()
+  const [loadError, setLoadError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<BookingCustomer[]>([])
   const [recentCustomers, setRecentCustomers] = useState<BookingCustomer[]>([])
@@ -32,16 +33,18 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       setLoadingRecent(true)
       try {
         const supabase = createClient()
-        const { data } = await supabase
-          .from('customers')
+        const { data, error } = await (supabase as any)
+          .from('customer_branch_summary')
           .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
           .order('created_at', { ascending: false })
           .limit(recentLimit + 1)
+        if (error) throw error
+        setLoadError('')
         setRecentCustomers(data || [])
       } catch (err) {
-        console.error('Failed to fetch recent customers:', err)
+        setLoadError('Could not load recent customers. Please retry.')
       } finally {
         setLoadingRecent(false)
       }
@@ -51,7 +54,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
 
   // Live search debounced query
   useEffect(() => {
-    const query = searchQuery.trim()
+    const query = searchQuery.trim().replace(/[^\p{L}\p{N} @.+-]/gu, '').slice(0, 100)
     if (!query || !staff?.business_id) {
       return
     }
@@ -60,16 +63,19 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       setSearching(true)
       try {
         const supabase = createClient()
-        const { data } = await supabase
-          .from('customers')
+        const { data, error } = await (supabase as any)
+          .from('customer_branch_summary')
           .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
           .eq('business_id', staff.business_id)
           .eq('branch_id', activeBranch?.id || staff.branch_id)
           .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
           .order('name', { ascending: true })
           .limit(5)
+        if (error) throw error
+        setLoadError('')
         setSearchResults(data || [])
       } catch {
+      setLoadError('Customer search failed. Please retry.')
         setSearchResults([])
       } finally {
         setSearching(false)
@@ -80,13 +86,13 @@ export function CustomerStep({ customer, setCustomer }: Props) {
   }, [searchQuery, staff?.business_id, staff?.branch_id, activeBranch?.id])
 
   const handleSearch = async () => {
-    const query = searchQuery.trim()
+    const query = searchQuery.trim().replace(/[^\p{L}\p{N} @.+-]/gu, '').slice(0, 100)
     if (!query || !staff?.business_id) return
     setSearching(true)
     try {
       const supabase = createClient()
-      const { data } = await supabase
-        .from('customers')
+      const { data, error } = await (supabase as any)
+        .from('customer_branch_summary')
         .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
         .eq('business_id', staff.business_id)
         .eq('branch_id', activeBranch?.id || staff.branch_id)
@@ -94,8 +100,11 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         .order('name', { ascending: true })
         .limit(5)
 
-      setSearchResults(data || [])
+      if (error) throw error
+        setLoadError('')
+        setSearchResults(data || [])
     } catch {
+      setLoadError('Customer search failed. Please retry.')
       setSearchResults([])
     } finally {
       setSearching(false)
@@ -124,6 +133,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
         <CardDescription>Search for an existing customer or add a new one</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {loadError && <p role="alert" className="text-sm text-red-600">{loadError}</p>}
         {/* Search */}
         {!customer.id && !isNew && (
           <>

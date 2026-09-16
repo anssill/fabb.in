@@ -8,7 +8,8 @@ import { BlacklistActions } from './BlacklistActions'
 
 export const metadata = { title: 'Blacklisted Customers | Fabb.booking' }
 
-export default async function BlacklistPage() {
+export default async function BlacklistPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const page = Math.max(0, Math.floor(Number((await searchParams).page) || 0))
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -16,13 +17,14 @@ export default async function BlacklistPage() {
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
   if (!staff) return null
 
-  const { data: blacklisted, count } = await supabase
-    .from('customers')
+  const { data: blacklisted, count, error } = await (supabase as any)
+    .from('customer_branch_summary')
     .select('id, name, phone, email, total_bookings, total_spent, outstanding_balance, blacklisted_reason, blacklisted_at, created_at', { count: 'exact' })
     .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
     .eq('blacklisted', true)
-    .order('blacklisted_at', { ascending: false })
+    .order('blacklisted_at', { ascending: false }).order('id').range(page * 25, page * 25 + 24)
+  if (error) throw new Error('Could not load the blacklist. Please retry.')
 
   return (
     <div className="space-y-6">
@@ -107,6 +109,7 @@ export default async function BlacklistPage() {
           </CardContent>
         </Card>
       )}
+      <div className="flex justify-between text-sm">{page > 0 && <Link href={`/customers/blacklist?page=${page - 1}`}>Previous</Link>}{(page + 1) * 25 < (count || 0) && <Link href={`/customers/blacklist?page=${page + 1}`}>Next</Link>}</div>
     </div>
   )
 }

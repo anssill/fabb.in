@@ -10,8 +10,9 @@ import { ChevronLeft, User, Phone, Mail, MapPin, CreditCard, CalendarCheck, Indi
 import Link from 'next/link'
 import { CustomerSmsButton } from './components/CustomerSmsButton'
 
-export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> }) {
   const { id } = await params
+  const page = Math.max(0, Math.floor(Number((await searchParams).page) || 0))
   if (!isValidUuid(id)) {
     notFound()
   }
@@ -24,21 +25,23 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
   if (!staff?.branch_id) notFound()
 
-  const { data: customer } = await supabase
-    .from('customers')
+  const { data: customer, error: customerError } = await (supabase as any)
+    .from('customer_branch_summary')
     .select('*')
     .eq('id', id)
     .eq('branch_id', staff.branch_id)
     .single()
+  if (customerError && customerError.code !== 'PGRST116') throw new Error('Could not load customer profile. Please retry.')
   if (!customer) notFound()
 
-  const { data: bookings } = await supabase
+  const { data: bookings, error: bookingsError, count } = await supabase
     .from('bookings')
-    .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due')
+    .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due', { count: 'exact' })
     .eq('customer_id', id)
     .eq('branch_id', staff.branch_id)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .order('id').range(page * 20, page * 20 + 19)
+  if (bookingsError) throw new Error('Could not load booking history. Please retry.')
 
   const initials = customer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
 
@@ -89,7 +92,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-blue-600" />Booking History ({bookings?.length || 0})</CardTitle>
+              <CardTitle className="text-base font-medium flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-blue-600" />Booking History ({count || 0})</CardTitle>
             </CardHeader>
             <CardContent>
               {bookings && bookings.length > 0 ? (
@@ -108,6 +111,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   ))}
                 </div>
               ) : <p className="text-sm text-slate-400 text-center py-6">No bookings yet</p>}
+              <div className="mt-4 flex justify-between text-sm">{page > 0 && <Link href={`/customers/${id}?page=${page - 1}`}>Previous</Link>}{(page + 1) * 20 < (count || 0) && <Link href={`/customers/${id}?page=${page + 1}`}>Next</Link>}</div>
             </CardContent>
           </Card>
         </div>

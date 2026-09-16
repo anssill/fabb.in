@@ -11,10 +11,12 @@ export async function switchActiveBranch(branchId: string) {
   if (!user) throw new Error('Not authenticated')
 
   const { data: staff, error: staffError } = await supabase.from('staff')
-    .select('business_id, branch_id, role, status').eq('id', user.id).single()
+    .select('business_id, branch_id, role, status, permissions').eq('id', user.id).single()
   if (staffError || !staff?.business_id || !['active', 'approved'].includes(staff.status)) {
     throw new Error('An active staff account is required')
   }
+
+  if (!['owner','super_admin'].includes(staff.role) && !(staff.permissions as Record<string,boolean>)?.switch_branches) throw new Error('Branch switching is not enabled for your account')
 
   // The user's RLS-scoped client must authorize the destination before any admin write.
   const { data: branch, error: branchError } = await supabase.from('branches')
@@ -23,23 +25,6 @@ export async function switchActiveBranch(branchId: string) {
   if (branchError || !branch) throw new Error('You do not have access to this branch')
 
   const admin = getSupabaseAdmin()
-  // branch_id also grants the original assignment. Keep that grant when changing
-  // the active branch, so staff can return to it after the next RLS query.
-  if (staff.branch_id && staff.branch_id !== branch.id && !['owner', 'super_admin'].includes(staff.role)) {
-    const { data: previousBranch, error: previousBranchError } = await supabase.from('branches')
-      .select('id').eq('id', staff.branch_id).eq('business_id', staff.business_id)
-      .eq('status', 'active').maybeSingle()
-    if (previousBranchError) throw new Error('Could not verify your current branch. Please try again.')
-    if (previousBranch) {
-      const { error: membershipError } = await admin.from('staff_branch_memberships').upsert({
-        staff_id: user.id,
-        business_id: staff.business_id,
-        branch_id: previousBranch.id,
-      }, { onConflict: 'staff_id,branch_id', ignoreDuplicates: true })
-      if (membershipError) throw new Error('Could not preserve your branch access. Please try again.')
-    }
-  }
-
   const { data: updated, error } = await admin.from('staff')
     .update({ branch_id: branch.id }).eq('id', user.id)
     .eq('business_id', staff.business_id).in('status', ['active', 'approved'])

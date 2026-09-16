@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     rows = (data || []).map((row: any) => { const item = Array.isArray(row.item) ? row.item[0] : row.item; return { sku: item?.sku, product: item?.name, category: item?.category, tracking_mode: item?.tracking_mode, size: row.size, physical_quantity: row.total_stock } })
   } else if (report === 'customers') {
-    const { data, error } = await db.from('customers').select('name,phone,email,address,risk_status,total_bookings,total_spent,last_booking_at,created_at').eq('business_id', staff.business_id).is('archived_at', null).order('created_at', { ascending: false }).limit(10000)
+    const { data, error } = await db.from('customer_branch_summary').select('name,phone,email,address,risk_status,total_bookings,total_spent,last_booking_at,created_at').eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).is('archived_at', null).order('created_at', { ascending: false }).limit(10000)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     rows = data || []
   } else if (report === 'payments') {

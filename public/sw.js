@@ -16,3 +16,20 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)))
   }
 })
+
+self.addEventListener('push', (event) => {
+  let payload
+  try { payload = event.data.json() } catch { return }
+  if (!payload || typeof payload.title !== 'string') return
+  event.waitUntil(self.registration.showNotification(payload.title, {
+    body: typeof payload.body === 'string' ? payload.body : 'FABB',
+    icon: '/brand/fabb-icon-180.png', badge: '/brand/fabb-icon-180.png',
+    tag: payload.tag || 'fabb', data: { url: payload.url },
+  }))
+})
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const path = event.notification.data?.url
+  const safePath = typeof path === 'string' && /^\/bookings\/[0-9a-f-]{36}$/.test(path) ? path : '/notifications'
+  event.waitUntil(self.clients.openWindow(new URL(safePath, self.location.origin).href))
+})

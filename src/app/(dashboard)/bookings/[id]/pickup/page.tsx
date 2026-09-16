@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -154,100 +154,19 @@ export default function PickupPage() {
   const [isEditingDeposit, setIsEditingDeposit] = useState(false)
   const [newDepositTotal, setNewDepositTotal] = useState('')
 
+  const pickupRequest = useRef<string | null>(null)
   const handleConfirmPickup = async () => {
     if (!booking) return
     setSubmitting(true)
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      const staffId = user?.id
-
-      // 0. Update deposit amount if edited
-      if (isEditingDeposit && newDepositTotal) {
-        const { error: updError } = await supabase
-          .from('bookings')
-          .update({ 
-            deposit_amount: parseFloat(newDepositTotal),
-            pickup_photos: pickupPhotos 
-          })
-          .eq('id', booking.id).select('id').single()
-        
-        if (updError) throw updError
-      } else {
-        // Just update photos if not editing deposit
-        const { error: photoError } = await supabase
-          .from('bookings')
-          .update({ pickup_photos: pickupPhotos })
-          .eq('id', booking.id).select('id').single()
-        if (photoError) throw photoError
-      }
-
-      // 1. Record balance payment if applicable
-      if (balanceDue > 0 && !skipBalance) {
-        const amt = parseFloat(balanceAmount)
-        if (amt > 0) {
-          const paymentResponse = await fetch(`/api/bookings/${booking.id}/payments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-            type: 'balance',
-            amount: amt,
-            method: balanceMethod,
-            reference: balanceRef.trim() || null,
-            notes: balanceNotes.trim() || null,
-            idempotencyKey: crypto.randomUUID(),
-            }),
-          })
-          if (!paymentResponse.ok) {
-            const result = await safeJsonParse(paymentResponse)
-            throw new Error(result.error || 'Balance payment failed')
-          }
-        }
-      }
-
-      // 2. Record deposit payment if applicable
-      if (depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected) {
-        const amt = parseFloat(depositAmount)
-        if (amt > 0) {
-          const paymentResponse = await fetch(`/api/bookings/${booking.id}/payments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-            type: 'deposit',
-            amount: amt,
-            method: depositMethod,
-            reference: depositRef.trim() || null,
-            notes: depositNotes.trim() || null,
-            idempotencyKey: crypto.randomUUID(),
-            }),
-          })
-          if (!paymentResponse.ok) {
-            const result = await safeJsonParse(paymentResponse)
-            throw new Error(result.error || 'Deposit payment failed')
-          }
-        }
-      }
-
-      // 3. Record fulfilment and mark the rental as picked up.
+      const payments = []
+      if (balanceDue > 0 && !skipBalance && Number(balanceAmount) > 0) payments.push({ type: 'balance', amount: Number(balanceAmount), method: balanceMethod, reference: balanceRef.trim() || null, notes: balanceNotes.trim() || null })
+      if (depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected && Number(depositAmount) > 0) payments.push({ type: 'deposit', amount: Number(depositAmount), method: depositMethod, reference: depositRef.trim() || null, notes: depositNotes.trim() || null })
       const res = await fetch(`/api/bookings/${booking.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'picked_up' }),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'picked_up', idempotencyKey: pickupRequest.current ?? (pickupRequest.current = crypto.randomUUID()), payments, pickupPhotos }),
       })
-      if (!res.ok) {
-        const d = await safeJsonParse(res)
-        throw new Error(d.error || 'Failed to update booking status')
-      }
-
-      // 4. Insert timeline event
-      await supabase.from('booking_timeline').insert({
-        booking_id: booking.id,
-        business_id: booking.business_id,
-        event_type: 'PICKUP_COMPLETED',
-        event_description: 'Pickup completed — items handed to customer',
-        performed_by: staffId,
-      }).then(() => {})  // non-critical
-
+      if (!res.ok) { const result = await safeJsonParse(res); throw new Error(result.error || 'Failed to confirm pickup') }
       toast.success('Pickup confirmed! Booking is now active.')
       router.push(`/bookings/${booking.id}`)
     } catch (err: any) {

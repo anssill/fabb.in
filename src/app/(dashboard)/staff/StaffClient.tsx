@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { BranchAccessDialog } from './BranchAccessDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +46,8 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
   const router = useRouter()
   const supabase = createClient()
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
+  useEffect(() => setStaff(initialStaff), [initialStaff])
+  const [branchStaffId, setBranchStaffId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -185,6 +188,8 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
   }
 
   return (
+    <>
+    <BranchAccessDialog staffId={branchStaffId} onClose={() => { setBranchStaffId(null); router.refresh() }} />
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex-1 max-w-sm">
@@ -243,6 +248,7 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
                         <DropdownMenuItem onClick={() => openPermissions(member)} className="text-sm rounded-lg cursor-pointer">
                           <Shield className="w-4 h-4 mr-2 text-slate-500" /> Manage Permissions
                         </DropdownMenuItem>
+                        {['owner', 'super_admin'].includes(currentUserRole) && !['owner', 'super_admin'].includes(member.role) && <DropdownMenuItem onClick={() => setBranchStaffId(member.id)}>Branch access</DropdownMenuItem>}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDelete(member.id)} className="text-sm rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
                           <UserMinus className="w-4 h-4 mr-2" /> Delete Staff
@@ -351,7 +357,7 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
             <div className="space-y-2">
               <Label>Permissions</Label>
               <div className="space-y-1 max-h-64 overflow-y-auto rounded-xl border border-slate-100 p-2">
-                {PERMISSIONS.map((perm) => {
+                {PERMISSIONS.filter(perm => perm.key !== 'switch_branches').map((perm) => {
                   const isEnabled = inviteData.permissions[perm.key] !== false
                   return (
                     <button
@@ -474,7 +480,7 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-1 max-h-[400px] overflow-y-auto">
-            {PERMISSIONS.map((perm) => {
+            {PERMISSIONS.filter(perm => perm.key !== 'switch_branches').map((perm) => {
               const isEnabled = editData.permissions[perm.key] !== false
               return (
                 <button
@@ -542,5 +548,6 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }
