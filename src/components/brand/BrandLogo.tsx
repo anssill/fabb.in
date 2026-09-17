@@ -11,9 +11,9 @@ export function BrandLogo({ className = '', imageClassName = '', priority = fals
     <span className={`inline-flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 ${className}`}>
       <Image
         src="/brand/fabb-logo.png"
-        alt="Fabb"
-        width={96}
-        height={96}
+        alt="Fabb booking"
+        width={192}
+        height={64}
         priority={priority}
         className={`h-full w-full object-contain p-1.5 ${imageClassName}`}
       />

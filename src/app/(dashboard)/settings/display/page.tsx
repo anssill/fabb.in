@@ -1,6 +1,6 @@
 import { DisplayPreferencesClient } from './DisplayPreferencesClient'
 
-export const metadata = { title: 'Display Preferences | Fabb.booking' }
+export const metadata = { title: 'Display Preferences | Fabb booking' }
 
 export default function DisplayPreferencesPage() {
   return (

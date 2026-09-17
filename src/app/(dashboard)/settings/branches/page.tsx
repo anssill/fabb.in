@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { BranchesClient } from './BranchesClient'
 
-export const metadata = { title: 'Branches | Fabb.booking' }
+export const metadata = { title: 'Branches | Fabb booking' }
 
 export default async function BranchesPage() {
   const supabase = await createClient()

@@ -126,7 +126,7 @@ export function ReceiptStep({ bookingId, customer, items, dates, pricing, paymen
               className="flex-1"
               onClick={() => {
                 const msg = encodeURIComponent(
-                  `Dear ${customer.name}, your booking is confirmed at Fabb.booking.\nPickup: ${dates.pickup_date}\nReturn: ${dates.return_date}\nTotal: ₹${pricing.total_amount.toLocaleString('en-IN')}\nAdvance Paid: ₹${payment.advance_amount.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}`
+                  `Dear ${customer.name}, your booking is confirmed at Fabb booking.\nPickup: ${dates.pickup_date}\nReturn: ${dates.return_date}\nTotal: ₹${pricing.total_amount.toLocaleString('en-IN')}\nAdvance Paid: ₹${payment.advance_amount.toLocaleString('en-IN')}\nBalance Due: ₹${balanceDue.toLocaleString('en-IN')}`
                 )
                 window.open(`https://wa.me/91${customer.phone.replace(/\D/g, '')}?text=${msg}`, '_blank')
               }}

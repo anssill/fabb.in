@@ -1,6 +1,6 @@
 import { IntegrationsSettingsClient } from './integrations-settings-client'
 
-export const metadata = { title: 'Messaging Integrations | Fabb' }
+export const metadata = { title: 'Messaging Integrations | Fabb booking' }
 
 export default function IntegrationsSettingsPage() {
   return (

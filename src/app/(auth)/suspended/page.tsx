@@ -53,7 +53,7 @@ export default function SuspendedPage() {
 
           <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
             <a
-              href="https://wa.me/919876543210?text=Hi%2C%20my%20Fabb.booking%20account%20has%20been%20suspended"
+              href="https://wa.me/919876543210?text=Hi%2C%20my%20Fabb%20booking%20account%20has%20been%20suspended"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full"

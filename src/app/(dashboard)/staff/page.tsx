@@ -17,7 +17,7 @@ export default async function StaffPage() {
   // Fetch all staff members
   const { data: staffMembers } = await supabase
     .from('staff')
-    .select('id, name, email, phone, role, status, profile_photo_url, last_login, permissions')
+    .select('id, name, email, phone, role, status, profile_photo_url, last_login, last_active_at, presence_expires_at, permissions')
     .eq('business_id', currentStaff.business_id)
     .order('created_at')
 
@@ -25,7 +25,7 @@ export default async function StaffPage() {
     <div className="mx-auto max-w-[1440px] space-y-5">
       <div>
         <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Team Management</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage your team members, roles, passwords, and access permissions.</p>
+        <p className="mt-1 text-sm text-slate-500">Manage your team members, see who is online, and update access permissions.</p>
       </div>
 
       <StaffClient 

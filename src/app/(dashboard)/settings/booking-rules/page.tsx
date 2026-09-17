@@ -1,6 +1,6 @@
 import { BookingRulesClient } from './BookingRulesClient'
 
-export const metadata = { title: 'Booking Rules | Fabb.booking' }
+export const metadata = { title: 'Booking Rules | Fabb booking' }
 
 export default function BookingRulesPage() {
   return (

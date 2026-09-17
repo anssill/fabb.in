@@ -26,6 +26,14 @@ test('rental transactions, branch isolation and notification scheduling', async 
   const payment=(id,type,amount,key=randomUUID())=>db.query("select post_booking_payment($1,$2,$3,'cash',null,null,$4) id",[id,type,amount,key])
   const bookingState=async id=>(await db.query('select * from bookings where id=$1',[id])).rows[0]
   async function isolated(name,fn){await t.test(name,async()=>{await db.exec('begin');try{await fn()}finally{await db.exec('rollback')}})}
+  await isolated('staff cannot forge online activity',async()=>{
+    await db.query("select set_config('request.jwt.claim.sub',$1,true)",[staff]);await db.exec('set local role authenticated')
+    await db.exec('savepoint forged_presence')
+    await assert.rejects(db.query("update staff set last_active_at=now(),presence_expires_at=now()+interval '2 minutes' where id=$1",[staff]),/Staff presence is managed by the server/)
+    await db.exec('rollback to savepoint forged_presence')
+    await db.exec('reset role')
+    assert.equal((await db.query('select last_active_at from staff where id=$1',[staff])).rows[0].last_active_at,null)
+  })
   await isolated('partial returns stay open; retries do not duplicate stock movements',async()=>{
     const f=await fixture();await receive(f,1,'partial');assert.equal((await bookingState(f.booking)).status,'partially_returned');await receive(f,1,'partial');assert.equal((await db.query('select returned_quantity from booking_items where id=$1',[f.line])).rows[0].returned_quantity,1);await receive(f,1,'complete');assert.equal((await bookingState(f.booking)).status,'closed')
   })

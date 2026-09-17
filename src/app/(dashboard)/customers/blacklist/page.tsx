@@ -6,7 +6,7 @@ import { ShieldAlert, User, Phone, ChevronLeft, IndianRupee } from 'lucide-react
 import Link from 'next/link'
 import { BlacklistActions } from './BlacklistActions'
 
-export const metadata = { title: 'Blacklisted Customers | Fabb.booking' }
+export const metadata = { title: 'Blacklisted Customers | Fabb booking' }
 
 export default async function BlacklistPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const page = Math.max(0, Math.floor(Number((await searchParams).page) || 0))

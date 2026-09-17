@@ -1,6 +1,6 @@
 import { AccountSettingsClient } from './AccountSettingsClient'
 
-export const metadata = { title: 'My Account | Fabb.booking' }
+export const metadata = { title: 'My Account | Fabb booking' }
 
 export default function AccountSettingsPage() {
   return (

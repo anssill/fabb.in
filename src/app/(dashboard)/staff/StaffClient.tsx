@@ -32,6 +32,8 @@ interface StaffMember {
   role: string
   status: string
   last_login: string | null
+  last_active_at: string | null
+  presence_expires_at: string | null
   permissions?: Record<string, boolean> | null
 }
 
@@ -44,9 +46,28 @@ interface StaffClientProps {
 
 export function StaffClient({ initialStaff, businessId, currentUserId, currentUserRole }: StaffClientProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
   useEffect(() => setStaff(initialStaff), [initialStaff])
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    let running = true
+    const refreshPresence = async () => {
+      setNow(Date.now())
+      if (document.visibilityState !== 'visible') return
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, status, last_login, last_active_at, presence_expires_at')
+        .eq('business_id', businessId)
+      if (error || !data || !running) return
+      const activity = new Map(data.map(member => [member.id, member]))
+      setStaff(current => current.map(member => ({ ...member, ...activity.get(member.id) })))
+    }
+    const initialTimer = window.setTimeout(refreshPresence, 2_000)
+    const timer = window.setInterval(refreshPresence, 30_000)
+    document.addEventListener('visibilitychange', refreshPresence)
+    return () => { running = false; window.clearTimeout(initialTimer); window.clearInterval(timer); document.removeEventListener('visibilitychange', refreshPresence) }
+  }, [businessId, supabase])
   const [branchStaffId, setBranchStaffId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -215,6 +236,8 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStaff.map((member) => {
           const initials = member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
+          const online = ['active', 'approved'].includes(member.status) && !!member.presence_expires_at && new Date(member.presence_expires_at).getTime() > now
+          const lastActive = member.last_active_at || member.last_login
           
           return (
             <Card key={member.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -271,9 +294,19 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
                   )}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 uppercase font-medium tracking-wider">
-                  <span>Status: {member.status}</span>
-                  <span suppressHydrationWarning>{member.last_login ? `Last login: ${new Date(member.last_login).toLocaleDateString()}` : 'Never logged in'}</span>
+                <div className="mt-6 border-t border-slate-100 pt-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`inline-flex items-center gap-2 font-medium ${online ? 'text-emerald-700' : 'text-slate-600'}`}>
+                      <span className={`h-2 w-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                      {online ? 'Online' : 'Offline'}
+                    </span>
+                    {member.status !== 'active' && <span className="capitalize text-xs text-slate-500">Account: {member.status}</span>}
+                  </div>
+                  {!online && (
+                    <p className="mt-2 text-xs text-slate-500" suppressHydrationWarning>
+                      {lastActive ? `Last active: ${new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lastActive))}` : 'No activity recorded yet'}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

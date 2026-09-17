@@ -10,12 +10,12 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://fabbin-xi.vercel.app'),
-  title: 'Fabb — Clothing Rental Management',
+  metadataBase: new URL('https://www.fabbclothing.com'),
+  title: 'Fabb booking',
   description: 'Internal rental operations for inventory, bookings, customers, finance and staff.',
   manifest: '/manifest.webmanifest',
-  applicationName: 'Fabb Rental',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Fabb Rental' },
+  applicationName: 'Fabb booking',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Fabb booking' },
   authors: [{ name: 'Fabb Team' }],
   icons: {
     icon: [
@@ -25,16 +25,16 @@ export const metadata: Metadata = {
     apple: [{ url: '/brand/fabb-icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Fabb — Clothing Rental Management',
+    title: 'Fabb booking',
     description: 'Internal rental operations platform.',
-    url: 'https://fabbin-xi.vercel.app',
-    siteName: 'Fabb',
+    url: 'https://www.fabbclothing.com',
+    siteName: 'Fabb booking',
     images: [
       {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Fabb Dashboard Preview',
+        url: '/brand/fabb-booking-source.png',
+        width: 1206,
+        height: 1206,
+        alt: 'Fabb booking logo',
       },
     ],
     locale: 'en_IN',
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Fabb — Clothing Rental Management',
+    title: 'Fabb booking',
     description: 'Internal rental operations platform.',
-    images: ['/og-image.png'],
+    images: ['/brand/fabb-booking-source.png'],
   },
 }
 

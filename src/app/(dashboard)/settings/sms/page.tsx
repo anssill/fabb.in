@@ -1,6 +1,6 @@
 import { SmsSettingsClient } from './SmsSettingsClient'
 
-export const metadata = { title: 'SMS Notifications | Fabb.booking' }
+export const metadata = { title: 'SMS Notifications | Fabb booking' }
 
 export default function SmsSettingsPage() {
   return (

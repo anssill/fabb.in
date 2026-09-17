@@ -5,6 +5,7 @@ import { Header } from './components/Header'
 import { StoreInitializer } from './components/StoreInitializer'
 import { NotificationRealtime } from '@/components/notifications/NotificationRealtime'
 import { DataRealtime } from '@/components/shared/DataRealtime'
+import { StaffActivityHeartbeat } from './components/StaffActivityHeartbeat'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -47,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
       <StoreInitializer staff={staff} business={business} branches={branches || []} />
       <SidebarWrapper staff={staff} branches={branches || []} />
+      <StaffActivityHeartbeat />
       <NotificationRealtime />
       <DataRealtime />
       <div className="lg:ml-[17.5rem] flex flex-col min-h-screen transition-all duration-300">

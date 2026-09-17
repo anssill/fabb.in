@@ -1,7 +1,7 @@
 import { CompanySettingsClient } from './CompanySettingsClient'
 
 export const metadata = {
-  title: 'Company Settings | Fabb.booking',
+  title: 'Company Settings | Fabb booking',
 }
 
 export default function CompanySettingsPage() {

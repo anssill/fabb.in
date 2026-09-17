@@ -227,7 +227,7 @@ export function AccountSettingsClient() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-slate-600 mb-4">
-            To delete your account or transfer ownership, please contact the business owner or reach out to Fabb.booking support.
+            To delete your account or transfer ownership, please contact the business owner or reach out to Fabb booking support.
           </p>
           <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
             Contact Support

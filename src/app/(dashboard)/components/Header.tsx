@@ -36,6 +36,7 @@ export function Header({ staff }: Props) {
   const handleSignOut = async () => {
     const supabase = createClient()
     try { await disableDevicePush() } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not disable device notifications'); return }
+    await fetch('/api/staff/presence', { method: 'DELETE' }).catch(() => {})
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
@@ -63,7 +64,7 @@ export function Header({ staff }: Props) {
           <p className="truncate text-sm font-semibold capitalize text-slate-950 dark:text-white">
             {pathSegments[0] === 'bookings' && pathSegments.length === 2 && pathSegments[1] !== 'new' ? 'Booking details' : pathSegments.at(-1)?.replace(/-/g, ' ') || 'Dashboard'}
           </p>
-          <p className="hidden text-xs text-slate-500 sm:block">Fabb workspace</p>
+          <p className="hidden text-xs text-slate-500 sm:block">Fabb booking</p>
         </div>
       </div>
 

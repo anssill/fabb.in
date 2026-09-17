@@ -9,7 +9,7 @@ export default function AdminSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">System Settings</h1>
-        <p className="text-sm text-slate-500">Global configuration for the Fabb.booking platform.</p>
+        <p className="text-sm text-slate-500">Global configuration for the Fabb booking platform.</p>
       </div>
 
       <div className="grid gap-6 max-w-2xl">

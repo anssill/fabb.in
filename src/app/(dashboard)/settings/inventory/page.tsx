@@ -1,6 +1,6 @@
 import { InventorySettingsClient } from './InventorySettingsClient'
 
-export const metadata = { title: 'Inventory Settings | Fabb.booking' }
+export const metadata = { title: 'Inventory Settings | Fabb booking' }
 
 export default function InventorySettingsPage() {
   return (

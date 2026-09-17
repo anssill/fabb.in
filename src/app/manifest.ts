@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Fabb Rental Management',
-    short_name: 'Fabb',
+    name: 'Fabb booking',
+    short_name: 'Fabb booking',
     description: 'Internal clothing rental operations',
     start_url: '/dashboard',
     scope: '/',

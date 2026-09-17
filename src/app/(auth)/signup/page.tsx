@@ -50,6 +50,7 @@ export default function SignupPage() {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[430px_1fr]">
         <section className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
           <div className="rounded-[1.65rem] bg-white p-6 shadow-sm sm:p-8">
+            <div className="mb-5 lg:hidden"><BrandLogo className="h-11 w-32" priority /></div>
             <div className="mb-7 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">New workspace</p>
@@ -80,9 +81,9 @@ export default function SignupPage() {
 
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-10 w-10" priority />
+            <BrandLogo className="h-10 w-28" priority />
             <div>
-              <p className="text-sm font-bold">Fabb</p>
+              <p className="text-sm font-bold">Fabb booking</p>
               <p className="text-xs text-slate-500">Supabase powered setup</p>
             </div>
           </div>

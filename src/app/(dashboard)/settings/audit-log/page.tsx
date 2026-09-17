@@ -22,7 +22,7 @@ function getActionColor(action: string) {
   return 'bg-slate-100 text-slate-600'
 }
 
-export const metadata = { title: 'Audit Log | Fabb.booking' }
+export const metadata = { title: 'Audit Log | Fabb booking' }
 
 export default async function AuditLogPage() {
   const supabase = await createClient()

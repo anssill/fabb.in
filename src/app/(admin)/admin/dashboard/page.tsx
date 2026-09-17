@@ -131,7 +131,7 @@ export default async function AdminDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Platform Overview</h1>
-          <p className="text-slate-500 mt-1">Real-time health of the Fabb.booking network.</p>
+          <p className="text-slate-500 mt-1">Real-time health of the Fabb booking network.</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 py-1">

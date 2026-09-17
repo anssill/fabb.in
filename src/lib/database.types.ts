@@ -3253,6 +3253,8 @@ export type Database = {
           email: string
           id: string
           last_login: string | null
+          last_active_at: string | null
+          presence_expires_at: string | null
           name: string | null
           permissions: Json
           phone: string | null
@@ -3270,6 +3272,8 @@ export type Database = {
           email: string
           id: string
           last_login?: string | null
+          last_active_at?: string | null
+          presence_expires_at?: string | null
           name?: string | null
           permissions?: Json
           phone?: string | null
@@ -3287,6 +3291,8 @@ export type Database = {
           email?: string
           id?: string
           last_login?: string | null
+          last_active_at?: string | null
+          presence_expires_at?: string | null
           name?: string | null
           permissions?: Json
           phone?: string | null

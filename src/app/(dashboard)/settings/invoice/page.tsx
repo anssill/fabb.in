@@ -1,6 +1,6 @@
 import { InvoiceSettingsClient } from './InvoiceSettingsClient'
 
-export const metadata = { title: 'Invoice Settings | Fabb.booking' }
+export const metadata = { title: 'Invoice Settings | Fabb booking' }
 
 export default function InvoiceSettingsPage() {
   return (

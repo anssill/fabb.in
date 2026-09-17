@@ -130,9 +130,9 @@ function LoginForm() {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[1fr_430px]">
         <section className="hidden rounded-[1.75rem] bg-[#f7f8fd] p-5 shadow-sm ring-1 ring-white/80 lg:block">
           <div className="flex items-center gap-2">
-            <BrandLogo className="h-10 w-10" priority />
+            <BrandLogo className="h-10 w-28" priority />
             <div>
-              <p className="text-sm font-bold">Fabb</p>
+              <p className="text-sm font-bold">Fabb booking</p>
               <p className="text-xs text-slate-500">Rental command center</p>
             </div>
           </div>
@@ -168,10 +168,11 @@ function LoginForm() {
 
         <section className="rounded-[1.75rem] bg-[#f7f8fd] p-4 shadow-sm ring-1 ring-white/80">
           <div className="rounded-[1.65rem] bg-white p-6 shadow-sm sm:p-8">
+            <div className="mb-5 lg:hidden"><BrandLogo className="h-11 w-32" priority /></div>
             <div className="mb-8 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Welcome back</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Log in to Fabb</h2>
+                <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Log in to Fabb booking</h2>
               </div>
               <Link href="/signup" className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-500 hover:text-[#4f46e5]" aria-label="Create an account">
                 <UserPlus className="h-4 w-4" />
@@ -258,7 +259,7 @@ function LoginForm() {
             )}
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              New to Fabb?{' '}
+              New to Fabb booking?{' '}
               <Link href="/signup" className="font-semibold text-[#4f46e5] hover:underline">Create a workspace</Link>
             </p>
           </div>

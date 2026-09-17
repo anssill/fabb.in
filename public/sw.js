@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'fabb-static-v3'
+const STATIC_CACHE = 'fabb-static-v4'
 const STATIC_ASSETS = ['/brand/fabb-icon-180.png', '/brand/fabb-icon-512.png', '/brand/fabb-logo.png']
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)))
