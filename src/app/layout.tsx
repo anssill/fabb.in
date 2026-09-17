@@ -31,9 +31,9 @@ export const metadata: Metadata = {
     siteName: 'Fabb booking',
     images: [
       {
-        url: '/brand/fabb-booking-white.png',
-        width: 1206,
-        height: 1206,
+        url: '/brand/fabb-booking-social.png',
+        width: 1200,
+        height: 630,
         alt: 'Fabb booking logo',
       },
     ],
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Fabb booking',
     description: 'Internal rental operations platform.',
-    images: ['/brand/fabb-booking-white.png'],
+    images: ['/brand/fabb-booking-social.png'],
   },
 }
 
