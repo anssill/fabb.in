@@ -237,7 +237,7 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
         {filteredStaff.map((member) => {
           const initials = member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
           const online = ['active', 'approved'].includes(member.status) && !!member.presence_expires_at && new Date(member.presence_expires_at).getTime() > now
-          const lastActive = member.last_active_at || member.last_login
+          const lastActive = member.last_active_at
           
           return (
             <Card key={member.id} className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -303,9 +303,10 @@ export function StaffClient({ initialStaff, businessId, currentUserId, currentUs
                     {member.status !== 'active' && <span className="capitalize text-xs text-slate-500">Account: {member.status}</span>}
                   </div>
                   {!online && (
-                    <p className="mt-2 text-xs text-slate-500" suppressHydrationWarning>
-                      {lastActive ? `Last active: ${new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lastActive))}` : 'No activity recorded yet'}
-                    </p>
+                    <div className="mt-2 space-y-1 text-xs text-slate-500" suppressHydrationWarning>
+                      <p>{lastActive ? `Last active: ${new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lastActive))}` : 'No activity recorded yet'}</p>
+                      {member.last_login && <p>Last sign-in: {new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(member.last_login))}</p>}
+                    </div>
                   )}
                 </div>
               </CardContent>

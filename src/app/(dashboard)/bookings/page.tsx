@@ -37,26 +37,25 @@ const STATUS_BAR: Record<string, string> = {
 type StatusFilter = 'all' | 'draft' | 'quote' | 'hold' | 'confirmed' | 'picked_up' | 'partially_returned' | 'returned' | 'closed' | 'cancelled'
 
 export default function BookingsPage() {
-  const { activeBranch } = useAppStore()
+  const activeBranch = useAppStore(state => state.activeBranch)
+  const staff = useAppStore(state => state.staff)
+  const businessId = staff?.business_id
+  const branchId = activeBranch?.id
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
+    if (!businessId || !branchId) return
+    let cancelled = false
     async function fetchBookings() {
+      setLoading(true)
+      setError('')
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: staff } = await supabase
-        .from('staff')
-        .select('business_id, branch_id')
-        .eq('id', user.id)
-        .single()
-      if (!staff) return
-
-      const { data } = await supabase
+      const { data, error: loadError } = await supabase
         .from('bookings')
         .select(`
           id, booking_number, physical_bill_number, status, pickup_date, return_date, total_amount, balance_due, advance_amount, created_at,
@@ -64,16 +63,18 @@ export default function BookingsPage() {
           customer:customers(id, name, phone),
           booking_items(item_name, size, quantity)
         `)
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', staff.branch_id)
+        .eq('business_id', businessId)
+        .eq('branch_id', branchId)
         .order('created_at', { ascending: false })
         .limit(200)
-
-      setBookings(data || [])
+      if (cancelled) return
+      if (loadError) setError('Could not load bookings. Please retry.')
+      else setBookings(data || [])
       setLoading(false)
     }
-    fetchBookings()
-  }, [activeBranch?.id])
+    void fetchBookings()
+    return () => { cancelled = true }
+  }, [businessId, branchId, retry])
 
   // Count per status
   const counts = useMemo(() => {
@@ -155,7 +156,9 @@ export default function BookingsPage() {
 
       {/* Booking Cards */}
       <div className="space-y-2">
-        {loading ? (
+        {error ? (
+          <div role="alert" className="py-16 text-center text-sm text-red-600">{error} <Button variant="outline" onClick={() => setRetry(value => value + 1)}>Retry</Button></div>
+        ) : loading ? (
           <div className="text-center py-20 text-slate-400 text-sm">Loading bookings...</div>
         ) : filtered.length > 0 ? (
           filtered.map((booking) => {

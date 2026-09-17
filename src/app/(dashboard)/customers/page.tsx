@@ -11,7 +11,8 @@ import Link from 'next/link'
 import { useAppStore } from '@/lib/store'
 
 export default function CustomersPage() {
-  const { activeBranch } = useAppStore()
+  const activeBranch = useAppStore(state => state.activeBranch)
+  const staff = useAppStore(state => state.staff)
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -23,16 +24,13 @@ export default function CustomersPage() {
   const filtered = customers
   useEffect(() => {
     let cancelled = false
+    if (!staff?.business_id || !activeBranch?.id) return
     setLoading(true); setError('')
     const timer = setTimeout(async () => {
       try {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Please sign in again')
-        const { data: staff, error: staffError } = await supabase.from('staff').select('business_id,branch_id').eq('id', user.id).single()
-        if (staffError || !staff) throw new Error('Could not load your branch')
         let query = (supabase as any).from('customer_branch_summary').select('id,name,phone,email,total_bookings,total_spent,outstanding_balance,blacklisted,created_at', { count: 'exact' })
-          .eq('business_id', staff.business_id).eq('branch_id', activeBranch?.id || staff.branch_id).is('archived_at', null)
+          .eq('business_id', staff.business_id).eq('branch_id', activeBranch.id).is('archived_at', null)
         const term = search.trim().replace(/[^\p{L}\p{N} @.+-]/gu, '').slice(0, 100)
         if (term) query = query.or('name.ilike.%' + term + '%,phone.ilike.%' + term + '%')
         const result = await query.order('created_at', { ascending: false }).order('id').range(page * 25, page * 25 + 24)
@@ -42,7 +40,7 @@ export default function CustomersPage() {
       finally { if (!cancelled) setLoading(false) }
     }, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [activeBranch?.id, search, page, retry])
+  }, [staff?.business_id, activeBranch?.id, search, page, retry])
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-5">

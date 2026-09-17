@@ -30,19 +30,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/setup')
   }
 
-  // Fetch business data
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('*')
-    .eq('id', staff.business_id)
-    .single()
-
-  // Get all branches for this business
-  const { data: branches } = await supabase
-    .from('branches')
-    .select('id, name, prefix, address, city, state, phone, email, is_default, status, settings, gps_radius_metres, lat, lng')
-    .eq('business_id', staff.business_id)
-    .eq('status', 'active')
+  const [{ data: business }, { data: branches }] = await Promise.all([
+    supabase.from('businesses').select('*').eq('id', staff.business_id).single(),
+    supabase.from('branches')
+      .select('id, name, prefix, address, city, state, phone, email, is_default, status, settings, gps_radius_metres, lat, lng')
+      .eq('business_id', staff.business_id).eq('status', 'active'),
+  ])
 
   return (
     <div className="min-h-screen bg-[#e9ebf5] text-slate-950 dark:bg-slate-950">
