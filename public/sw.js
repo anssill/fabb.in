@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'fabb-static-v4'
-const STATIC_ASSETS = ['/brand/fabb-icon-180.png', '/brand/fabb-icon-512.png', '/brand/fabb-logo.png']
+const STATIC_CACHE = 'fabb-static-v5'
+const STATIC_ASSETS = ['/brand/fabb-booking-icon-180.png', '/brand/fabb-booking-icon-512.png', '/brand/fabb-booking-logo.png']
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)))
   self.skipWaiting()
@@ -23,7 +23,7 @@ self.addEventListener('push', (event) => {
   if (!payload || typeof payload.title !== 'string') return
   event.waitUntil(self.registration.showNotification(payload.title, {
     body: typeof payload.body === 'string' ? payload.body : 'FABB',
-    icon: '/brand/fabb-icon-180.png', badge: '/brand/fabb-icon-180.png',
+    icon: '/brand/fabb-booking-icon-180.png', badge: '/brand/fabb-booking-icon-180.png',
     tag: payload.tag || 'fabb', data: { url: payload.url },
   }))
 })

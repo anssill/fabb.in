@@ -19,10 +19,10 @@ export const metadata: Metadata = {
   authors: [{ name: 'Fabb Team' }],
   icons: {
     icon: [
-      { url: '/brand/fabb-icon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/brand/fabb-icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/brand/fabb-booking-icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/brand/fabb-booking-icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: [{ url: '/brand/fabb-icon-180.png', sizes: '180x180', type: 'image/png' }],
+    apple: [{ url: '/brand/fabb-booking-icon-180.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
     title: 'Fabb booking',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: 'Fabb booking',
     images: [
       {
-        url: '/brand/fabb-booking-source.png',
+        url: '/brand/fabb-booking-white.png',
         width: 1206,
         height: 1206,
         alt: 'Fabb booking logo',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Fabb booking',
     description: 'Internal rental operations platform.',
-    images: ['/brand/fabb-booking-source.png'],
+    images: ['/brand/fabb-booking-white.png'],
   },
 }
 

@@ -8,9 +8,9 @@ type BrandLogoProps = {
 
 export function BrandLogo({ className = '', imageClassName = '', priority = false }: BrandLogoProps) {
   return (
-    <span className={`inline-flex items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 ${className}`}>
+    <span className={`inline-flex items-center justify-center overflow-hidden rounded-2xl bg-white ${className}`}>
       <Image
-        src="/brand/fabb-logo.png"
+        src="/brand/fabb-booking-logo.png"
         alt="Fabb booking"
         width={192}
         height={64}

@@ -8,13 +8,13 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
-    background_color: '#e9ebf5',
+    background_color: '#ffffff',
     theme_color: '#4f46e5',
     orientation: 'any',
     icons: [
-      { src: '/brand/fabb-icon-180.png', sizes: '180x180', type: 'image/png' },
-      { src: '/brand/fabb-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/brand/fabb-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/brand/fabb-booking-icon-180.png', sizes: '180x180', type: 'image/png' },
+      { src: '/brand/fabb-booking-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/brand/fabb-booking-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }
 }
