@@ -358,6 +358,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
         {items.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-border">
             <p className="text-sm font-semibold text-foreground">Selected Items ({items.length})</p>
+            <div className="max-h-[45vh] min-h-24 overflow-y-auto overscroll-y-contain rounded-xl border border-border bg-muted/10 p-2 pr-1 touch-pan-y [scrollbar-gutter:stable]">
             {items.map((item) => (
               <div
                 key={item.variant_id}
@@ -392,6 +393,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
                 </div>
               </div>
             ))}
+            </div>
             <div className="text-right pt-1">
               <p className="text-sm text-muted-foreground">
                 Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/piece
