@@ -557,6 +557,8 @@ export type Database = {
           actual_pickup_at: string | null
           actual_return_at: string | null
           advance_amount: number
+          condition_notes: string | null
+          condition_photos: string[]
           alteration_notes: string | null
           amount_paid: number
           archived_at: string | null
@@ -606,6 +608,8 @@ export type Database = {
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
+          condition_notes?: string | null
+          condition_photos?: string[]
           alteration_notes?: string | null
           amount_paid?: number
           archived_at?: string | null
@@ -655,6 +659,8 @@ export type Database = {
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
+          condition_notes?: string | null
+          condition_photos?: string[]
           alteration_notes?: string | null
           amount_paid?: number
           archived_at?: string | null

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { AvailabilityDetails } from './AvailabilityDetails'
+import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -32,7 +34,9 @@ interface SearchResult {
 }
 
 export function ItemsStep({ items, setItems, dates, setDates }: Props) {
-  const { staff } = useAppStore()
+  const { staff, activeBranch } = useAppStore()
+  const branchId = activeBranch?.id ?? staff?.branch_id
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -47,7 +51,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
     let cancelled = false
     const fetchAvailability = async () => {
       setAvailableQuantities({})
-      if (!staff?.business_id || !staff.branch_id || !dates.pickup_date || !dates.return_date) {
+      if (!staff?.business_id || !branchId || !dates.pickup_date || !dates.return_date) {
         setCheckingAvailability(false)
         return
       }
@@ -56,7 +60,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
         const supabase = createClient()
         const { data, error } = await supabase.rpc('get_rental_availability', {
           p_business_id: staff.business_id,
-          p_branch_id: staff.branch_id,
+          p_branch_id: branchId,
           p_from: dates.pickup_date,
           p_to: dates.return_date,
           p_item_id: null,
@@ -80,7 +84,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [dates.pickup_date, dates.return_date, staff?.business_id, staff?.branch_id])
+  }, [dates.pickup_date, dates.return_date, staff?.business_id, branchId])
 
   // Synchronize missing stocks for items restored from drafts
   useEffect(() => {
@@ -126,12 +130,13 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
         .from('items')
         .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, total_stock)')
         .eq('business_id', staff.business_id)
-        .eq('branch_id', staff.branch_id)
+        .eq('branch_id', branchId)
         .eq('is_active', true)
         .limit(10)
 
-      if (query.length >= 1) {
-        dbQuery = dbQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+      const safeQuery = query.replace(/[,().%_*"\\]/g, ' ')
+      if (safeQuery.length >= 1) {
+        dbQuery = dbQuery.or(`name.ilike.%${safeQuery}%,sku.ilike.%${safeQuery}%`)
       }
 
       const { data, error } = await dbQuery.order('name', { ascending: true })
@@ -140,7 +145,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
       const normalized = ((data as SearchResult[]) || [])
         .map((item) => ({
           ...item,
-          item_variants: (item.item_variants || []).filter((v) => Number((v as any).total_stock || 0) > 0),
+          item_variants: (item.item_variants || []).filter((v) => Number(v.total_stock) >= 0),
         }))
         .filter((item) => item.item_variants.length > 0)
 
@@ -247,6 +252,15 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
         <CardDescription>Search and add items to this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+      <section className="space-y-3 rounded-lg border p-3" aria-label="Availability dates">
+        <h3 className="font-semibold">Check item availability by date</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label htmlFor="availability-from">Pickup date</Label><Input id="availability-from" type="date" value={dates.pickup_date} onChange={event => setDates({ ...dates, pickup_date: event.target.value })} /></div>
+          <div><Label htmlFor="availability-to">Return date</Label><Input id="availability-to" type="date" min={dates.pickup_date} value={dates.return_date} onChange={event => setDates({ ...dates, return_date: event.target.value })} /></div>
+        </div>
+        <p className="text-xs text-muted-foreground">Search by item code or name, then select “Full availability” to check every size for the whole rental period. These are the booking dates.</p>
+        {(!dates.pickup_date || !dates.return_date || dates.return_date < dates.pickup_date) && <p role="alert" className="text-sm text-destructive">Choose a pickup date and a return date on or after pickup.</p>}
+      </section>
         {/* Search */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -293,6 +307,8 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
                   </div>
                 </div>
 
+<Button type="button" variant="outline" size="sm" aria-expanded={expandedProduct === item.id} onClick={() => setExpandedProduct(expandedProduct === item.id ? null : item.id)}>Full availability</Button>
+                {expandedProduct === item.id && staff?.business_id && branchId && <AvailabilityDetails itemId={item.id} businessId={staff.business_id} branchId={branchId} from={dates.pickup_date} to={dates.return_date} variants={item.item_variants} items={items} />}
                 <div className="space-y-2 border-t border-border/60 pt-3">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Available Sizes & Stock</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -326,7 +342,7 @@ export function ItemsStep({ items, setItems, dates, setDates }: Props) {
                                     ? 'text-amber-600 dark:text-amber-400' 
                                     : 'text-emerald-600 dark:text-emerald-400'
                               }`}>
-                                {isOut ? '⚠️ Already booked (Conflict alert)' : `${dynamicAvailable} ${dynamicAvailable === 1 ? 'unit' : 'units'} left`}
+                                {checkingAvailability || availableQuantities[v.id] === undefined ? 'Availability not verified' : isOut ? '⚠️ Already booked (Conflict alert)' : `${dynamicAvailable} ${dynamicAvailable === 1 ? 'unit' : 'units'} left`}
                               </span>
                             </div>
                             <Button

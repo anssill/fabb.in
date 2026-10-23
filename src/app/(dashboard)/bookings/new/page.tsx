@@ -13,6 +13,7 @@ import {
   ChevronLeft, ChevronRight, CheckCircle, Loader2, X,
 } from 'lucide-react'
 import { CustomerStep } from './steps/CustomerStep'
+import { BookingPreparation } from './steps/BookingPreparation'
 import { ItemsStep } from './steps/ItemsStep'
 import { DatesStep } from './steps/DatesStep'
 import { PricingStep } from './steps/PricingStep'
@@ -45,6 +46,9 @@ export interface BookingItem {
 }
 
 export interface BookingDates {
+  alteration_notes?: string
+  condition_notes?: string
+  condition_photos?: string[]
   event_date: string
   pickup_date: string
   return_date: string
@@ -83,11 +87,18 @@ const STEPS = [
 ]
 
 export default function NewBookingPage() {
+  const { activeBranch, staff } = useAppStore()
+  if (!activeBranch || !staff) return <p>Loading booking…</p>
+  return <NewBookingForm key={staff.id + ':' + activeBranch.id} />
+}
+
+function NewBookingForm() {
   const router = useRouter()
-  const requestId = useRef<string | null>(null)
+  const requestId = useRef<string>(crypto.randomUUID())
   const { activeBranch, staff } = useAppStore()
   const [currentStep, setCurrentStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [uploadingCondition, setUploadingCondition] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
 
   // Step state
@@ -100,21 +111,26 @@ export default function NewBookingPage() {
   })
 
   // Draft auto-save
-  const { clearDraft } = useBookingDraft(
-    { currentStep, customer, items, dates, pricing, payment },
+  const { clearDraft, ready: draftReady } = useBookingDraft(
+    { currentStep, customer, items, dates, pricing, payment, requestId: requestId.current },
     {
       businessId: staff?.business_id ?? undefined,
       branchId: activeBranch?.id ?? undefined,
       staffId: staff?.id ?? undefined,
-      enabled: currentStep < 5, // Stop auto-saving once receipt shown
+      enabled: currentStep < 5 && !saving,
+      onRestore: useCallback((draft: import('./useBookingDraft').DraftState) => {
+        requestId.current = draft.requestId || crypto.randomUUID()
+        setCustomer(draft.customer); setItems(draft.items); setDates(draft.dates); setPayment(draft.payment)
+        setCurrentStep(Math.max(0, Math.min(draft.currentStep, 4)))
+      }, []), // Stop auto-saving once receipt shown
     }
   )
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
       case 0: return !!customer.name && !!customer.phone && customer.phone.length >= 10
-      case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date
-      case 2: return items.length > 0
+      case 1: return !!dates.event_date && !!dates.pickup_date && !!dates.return_date && dates.return_date >= dates.pickup_date
+      case 2: return items.length > 0 && !!dates.pickup_date && dates.return_date >= dates.pickup_date
       case 3: return items.length > 0 && pricing.total_amount >= 0
       case 4: return Number.isFinite(payment.advance_amount) && payment.advance_amount >= 0 && payment.advance_amount <= pricing.total_amount && Number.isFinite(payment.deposit_amount) && payment.deposit_amount >= 0
       default: return true
@@ -170,6 +186,8 @@ export default function NewBookingPage() {
     }
   }
 
+  if (!draftReady) return <p>Checking for a saved booking draft…</p>
+
   const progress = ((currentStep + 1) / STEPS.length) * 100
 
   return (
@@ -218,7 +236,7 @@ export default function NewBookingPage() {
       <Card className="shadow-sm border-border">
         {currentStep === 0 && <CustomerStep customer={customer} setCustomer={setCustomer} />}
         {currentStep === 1 && <DatesStep dates={dates} setDates={setDates} />}
-        {currentStep === 2 && <ItemsStep items={items} setItems={setItems} dates={dates} setDates={setDates} />}
+        {currentStep === 2 && <><ItemsStep items={items} setItems={setItems} dates={dates} setDates={setDates} /><BookingPreparation dates={dates} setDates={setDates} requestId={requestId.current} onUploadingChange={setUploadingCondition} /></>}
         {currentStep === 3 && <PricingStep items={items} setItems={setItems} />}
         {currentStep === 4 && <PaymentStep payment={payment} setPayment={setPayment} totalAmount={pricing.total_amount} />}
         {currentStep === 5 && <ReceiptStep bookingId={createdBookingId} customer={customer} items={items} dates={dates} pricing={pricing} payment={payment} />}
@@ -227,12 +245,12 @@ export default function NewBookingPage() {
       {/* Navigation */}
       {currentStep < 5 && (
         <div className="flex justify-between">
-          <Button variant="ghost" onClick={handleBack} disabled={currentStep === 0}>
+          <Button variant="ghost" onClick={handleBack} disabled={currentStep === 0 || uploadingCondition}>
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back
           </Button>
           {currentStep < 4 ? (
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNext} disabled={!canProceed()}>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleNext} disabled={!canProceed() || uploadingCondition}>
               Next
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>

@@ -332,6 +332,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <span className="text-slate-500">Created by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>
                   </div>
+                  {booking.alteration_notes && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Customer alterations</p><p className="whitespace-pre-wrap">{booking.alteration_notes}</p></div>}
+                  {booking.condition_notes && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Item condition</p><p className="whitespace-pre-wrap">{booking.condition_notes}</p></div>}
+                  {!!booking.condition_photos?.length && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Condition photos at booking</p><div className="grid grid-cols-2 gap-2">{booking.condition_photos.map((photo: string, index: number) => <a key={photo} href={photo} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo} alt={`Item condition ${index + 1}`} className="h-24 w-full rounded border object-contain" />
+                  </a>)}</div></div>}
                   {booking.notes && (
                     <div className="pt-2 border-t border-slate-100">
                       <p className="text-xs text-slate-500 mb-1">Notes</p>
