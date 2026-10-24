@@ -10,6 +10,7 @@ import { QRScanner } from '@/components/shared/QRScanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { AppleDateRange } from '@/components/shared/AppleDatePicker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -85,12 +86,14 @@ export function InventoryList({ initialItems, businessId, branchId }: Props) {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="pl-10" />
             </div>
-            <Popover>
+            <AppleDateRange range={range} onChange={setRange}>
+<Popover>
               <PopoverTrigger asChild><Button variant="outline" className="justify-start rounded-full px-4"><CalendarDays className="mr-2 h-4 w-4 text-primary" />{format(range.from, 'dd MMM yyyy')} – {format(range.to, 'dd MMM yyyy')}</Button></PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar mode="range" selected={range} defaultMonth={range.from} numberOfMonths={2} onSelect={(selection) => { if (selection?.from) setRange({ from: selection.from, to: selection.to ?? selection.from }) }} />
               </PopoverContent>
             </Popover>
+            </AppleDateRange>
             <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-full border bg-background px-4 text-sm">
               <option value="">All categories</option>
               {categories.map((value) => <option key={value} value={value}>{value}</option>)}

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { AppleDatePicker } from '@/components/shared/AppleDatePicker'
+import { updateBookingDate } from '@/lib/native-date'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -93,7 +95,9 @@ export function DatesStep({ dates, setDates }: Props) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2 flex flex-col">
-            <Label className="mb-1">Event date *</Label>
+            <Label htmlFor="booking-event_date" className="mb-1">Event date *</Label>
+            <AppleDatePicker id="booking-event_date" label="Event date" value={dates.event_date || ''} min={formatLocalDate(todayDate)} required
+              onChange={value => setDates(updateBookingDate(dates, 'event_date', value))}>
             <Popover open={isEventOpen} onOpenChange={setIsEventOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -117,13 +121,7 @@ export function DatesStep({ dates, setDates }: Props) {
                   selected={parseLocalDate(dates.event_date)}
                   onSelect={(date) => {
                     if (date) {
-                      const eventStr = formatLocalDate(date)
-                      const nextDates = { ...dates, event_date: eventStr }
-                      if (dates.pickup_date && new Date(dates.pickup_date) > date) {
-                        nextDates.pickup_date = ''
-                        nextDates.return_date = ''
-                      }
-                      setDates(nextDates)
+                      setDates(updateBookingDate(dates, 'event_date', formatLocalDate(date)))
                       setIsEventOpen(false)
                     }
                   }}
@@ -132,11 +130,14 @@ export function DatesStep({ dates, setDates }: Props) {
                 />
               </PopoverContent>
             </Popover>
+            </AppleDatePicker>
             <p className="text-xs text-muted-foreground">The day of the event / function</p>
           </div>
 
           <div className="space-y-2 flex flex-col">
-            <Label className="mb-1">Fitting date <span className="text-muted-foreground">(optional)</span></Label>
+            <Label htmlFor="booking-fitting_date" className="mb-1">Fitting date <span className="text-muted-foreground">(optional)</span></Label>
+            <AppleDatePicker id="booking-fitting_date" label="Fitting date" value={dates.fitting_date || ''} min={formatLocalDate(todayDate)} max={dates.pickup_date || undefined}
+              onChange={value => setDates(updateBookingDate(dates, 'fitting_date', value))}>
             <Popover open={isFittingOpen} onOpenChange={setIsFittingOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -159,7 +160,7 @@ export function DatesStep({ dates, setDates }: Props) {
                   mode="single"
                   selected={parseLocalDate(dates.fitting_date)}
                   onSelect={(date) => {
-                    setDates({ ...dates, fitting_date: date ? formatLocalDate(date) : '' })
+                    setDates(updateBookingDate(dates, 'fitting_date', formatLocalDate(date)))
                     setIsFittingOpen(false)
                   }}
                   disabled={isFittingDisabled}
@@ -167,13 +168,16 @@ export function DatesStep({ dates, setDates }: Props) {
                 />
               </PopoverContent>
             </Popover>
+            </AppleDatePicker>
             <p className="text-xs text-muted-foreground">If customer wants a trial fit</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2 flex flex-col">
-            <Label className="mb-1">Pickup date *</Label>
+            <Label htmlFor="booking-pickup_date" className="mb-1">Pickup date *</Label>
+            <AppleDatePicker id="booking-pickup_date" label="Pickup date" value={dates.pickup_date || ''} min={formatLocalDate(todayDate)} max={dates.event_date || undefined} required
+              onChange={value => setDates(updateBookingDate(dates, 'pickup_date', value))}>
             <Popover open={isPickupOpen} onOpenChange={setIsPickupOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -197,15 +201,7 @@ export function DatesStep({ dates, setDates }: Props) {
                   selected={parseLocalDate(dates.pickup_date)}
                   onSelect={(date) => {
                     if (date) {
-                      const pickupStr = formatLocalDate(date)
-                      const nextDates = { ...dates, pickup_date: pickupStr }
-                      if (dates.return_date && new Date(dates.return_date) < date) {
-                        nextDates.return_date = ''
-                      }
-                      if (dates.fitting_date && new Date(dates.fitting_date) > date) {
-                        nextDates.fitting_date = ''
-                      }
-                      setDates(nextDates)
+                      setDates(updateBookingDate(dates, 'pickup_date', formatLocalDate(date)))
                       setIsPickupOpen(false)
                     }
                   }}
@@ -214,11 +210,14 @@ export function DatesStep({ dates, setDates }: Props) {
                 />
               </PopoverContent>
             </Popover>
+            </AppleDatePicker>
             <p className="text-xs text-muted-foreground">When the customer collects the items</p>
           </div>
 
           <div className="space-y-2 flex flex-col">
-            <Label className="mb-1">Return date *</Label>
+            <Label htmlFor="booking-return_date" className="mb-1">Return date *</Label>
+            <AppleDatePicker id="booking-return_date" label="Return date" value={dates.return_date || ''} min={dates.pickup_date || formatLocalDate(todayDate)} required
+              onChange={value => setDates(updateBookingDate(dates, 'return_date', value))}>
             <Popover open={isReturnOpen} onOpenChange={setIsReturnOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -242,7 +241,7 @@ export function DatesStep({ dates, setDates }: Props) {
                   selected={parseLocalDate(dates.return_date)}
                   onSelect={(date) => {
                     if (date) {
-                      setDates({ ...dates, return_date: formatLocalDate(date) })
+                      setDates(updateBookingDate(dates, 'return_date', formatLocalDate(date)))
                       setIsReturnOpen(false)
                     }
                   }}
@@ -251,6 +250,7 @@ export function DatesStep({ dates, setDates }: Props) {
                 />
               </PopoverContent>
             </Popover>
+            </AppleDatePicker>
             <p className="text-xs text-muted-foreground">When items should be returned</p>
           </div>
         </div>

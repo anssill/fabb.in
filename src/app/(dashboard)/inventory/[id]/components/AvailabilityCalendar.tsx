@@ -6,6 +6,7 @@ import { CalendarDays, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { AppleDateRange } from '@/components/shared/AppleDatePicker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
@@ -42,12 +43,14 @@ export function AvailabilityCalendar({ itemId, businessId, branchId, variants }:
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <div><CardTitle className="text-base">Rental availability</CardTitle><p className="text-xs text-muted-foreground">Minimum availability and peak bookings for the selected period.</p></div>
-        <Popover>
+        <AppleDateRange range={range} onChange={setRange}>
+<Popover>
           <PopoverTrigger asChild><Button variant="outline"><CalendarDays className="mr-2 h-4 w-4" />{format(range.from, 'dd MMM')} – {format(range.to, 'dd MMM yyyy')}</Button></PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end"><Calendar mode="range" selected={range} numberOfMonths={2} onSelect={(value) => { if (value?.from) setRange({ from: value.from, to: value.to ?? value.from }) }} /></PopoverContent>
         </Popover>
+            </AppleDateRange>
       </CardHeader>
       <CardContent>
         {availabilityError ? <p role="alert" className="text-sm text-destructive">Availability could not be loaded. Refresh to retry. {availabilityError}</p> : loading ? <div className="flex items-center justify-center py-10 text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Calculating dates…</div> : (
