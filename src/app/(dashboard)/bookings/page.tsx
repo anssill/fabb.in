@@ -55,7 +55,15 @@ export default function BookingsPage() {
       setLoading(true)
       setError('')
       const supabase = createClient()
-      const { data, error: loadError } = await supabase
+      let matchingIds: string[] | null = null
+      if (search.trim()) {
+        const { data, error: searchError } = await (supabase as any).rpc('search_booking_ids', { p_branch_id: branchId, p_term: search.trim().replace(/[%_]/g, '').slice(0, 100) })
+        if (cancelled) return
+        if (searchError) { setError('Could not search bookings. Please retry.'); setLoading(false); return }
+        matchingIds = (data || []).map((row: { id: string }) => row.id)
+        if (!matchingIds?.length) { setBookings([]); setLoading(false); return }
+      }
+      let query = supabase
         .from('bookings')
         .select(`
           id, booking_number, physical_bill_number, status, pickup_date, return_date, total_amount, balance_due, advance_amount, created_at,
@@ -65,6 +73,8 @@ export default function BookingsPage() {
         `)
         .eq('business_id', businessId)
         .eq('branch_id', branchId)
+      if (matchingIds) query = query.in('id', matchingIds)
+      const { data, error: loadError } = await query
         .order('created_at', { ascending: false })
         .limit(200)
       if (cancelled) return
@@ -72,9 +82,9 @@ export default function BookingsPage() {
       else setBookings(data || [])
       setLoading(false)
     }
-    void fetchBookings()
-    return () => { cancelled = true }
-  }, [businessId, branchId, retry])
+    const timer = setTimeout(() => { void fetchBookings() }, 250)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [businessId, branchId, retry, search])
 
   // Count per status
   const counts = useMemo(() => {
@@ -86,17 +96,10 @@ export default function BookingsPage() {
   // Apply search + status filter client-side
   const filtered = useMemo(() => {
     return bookings.filter((booking) => {
-      const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
       const matchesStatus = statusFilter === 'all' || booking.status === statusFilter
       if (!matchesStatus) return false
       if (!search.trim()) return true
-      const q = search.toLowerCase()
-      return (
-        booking.booking_number?.toLowerCase().includes(q) ||
-        booking.physical_bill_number?.toLowerCase().includes(q) ||
-        (customer as any)?.name?.toLowerCase().includes(q) ||
-        (customer as any)?.phone?.includes(q)
-      )
+      return true // The database searches all bookings, including older bill numbers.
     }).sort((a, b) => {
       if (statusFilter !== 'all') return 0
       if (a.status === 'closed' && b.status !== 'closed') return 1
@@ -147,7 +150,7 @@ export default function BookingsPage() {
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input
-          placeholder="Search" aria-label="Search bookings by booking ID, bill number, or customer"
+          placeholder="Search booking / bill number, customer or phone" aria-label="Search bookings by booking ID, bill number, or customer"
           className="pl-10"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

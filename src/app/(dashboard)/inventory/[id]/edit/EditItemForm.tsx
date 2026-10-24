@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { SizePicker, categorySizePresets, CustomBulkSizes } from '../../components/SizePicker'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Trash2, Loader2, Upload, Layers } from 'lucide-react'
+import { Plus, Trash2, Loader2, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { updateItem } from '../../inventory-actions'
@@ -16,11 +17,6 @@ import { StorageService } from '@/lib/storage-service'
 import { useAppStore } from '@/lib/store'
 
 const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
-const SIZE_PRESETS = {
-  'Clothing': ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'],
-  'Numeric': ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'],
-  'Shoes': ['5', '6', '7', '8', '9', '10', '11', '12'],
-}
 
 interface Variant {
   id?: string
@@ -33,35 +29,6 @@ interface EditItemFormProps {
   item: any
 }
 
-function SizePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">Size *</Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. M / 40 / Free Size" />
-      <div className="space-y-1">
-        {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
-          <div key={group} className="flex flex-wrap gap-1">
-            {sizes.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => onChange(s)}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
-                  value === s
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card text-muted-foreground border-input hover:border-primary hover:text-primary'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function EditItemForm({ item }: EditItemFormProps) {
   const router = useRouter()
   const { staff } = useAppStore()
@@ -69,12 +36,12 @@ export function EditItemForm({ item }: EditItemFormProps) {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(item.cover_image_url || null)
   const [bulkSizes, setBulkSizes] = useState<string[]>([])
-  const [showBulk, setShowBulk] = useState(false)
+  const [showBulk, setShowBulk] = useState(true)
   const [bulkQty, setBulkQty] = useState(1)
 
   const [form, setForm] = useState({
     name: item.name,
-    sku: item.sku,
+    sku: item.sku ?? '',
     category: item.category,
     description: item.description || '',
     storage_location: item.storage_location || '',
@@ -101,7 +68,6 @@ export function EditItemForm({ item }: EditItemFormProps) {
     setVariants([...variants, { size: '', total_stock: 1, price_override: null }])
 
   const removeVariant = (index: number) => {
-    if (variants.length <= 1) return
     setVariants(variants.filter((_, i) => i !== index))
   }
 
@@ -112,13 +78,14 @@ export function EditItemForm({ item }: EditItemFormProps) {
   }
 
   const toggleBulkSize = (size: string) =>
-    setBulkSizes((prev) => prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size])
+    setBulkSizes((prev) => prev.some((s) => s.toLowerCase() === size.toLowerCase()) ? prev.filter((s) => s.toLowerCase() !== size.toLowerCase()) : [...prev, size])
 
   const applyBulkSizes = () => {
     if (bulkSizes.length === 0) return
-    const existingSizes = new Set(variants.map((v) => v.size))
+    if (!Number.isInteger(bulkQty) || bulkQty < 1) { toast.error('Enter a whole quantity of at least 1'); return }
+    const existingSizes = new Set(variants.map((v) => v.size.trim().toLowerCase()))
     const newVariants = bulkSizes
-      .filter((s) => !existingSizes.has(s))
+      .filter((s) => !existingSizes.has(s.trim().toLowerCase()))
       .map((s) => ({
         size: s,
         total_stock: bulkQty,
@@ -134,6 +101,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
   const handleSubmit = async () => {
     if (!form.name.trim()) { toast.error('Item name is required'); return }
     if (!form.price) { toast.error('Price is required'); return }
+    if (!variants.length) { toast.error('Add at least one size before saving'); return }
     if (variants.some((v) => !v.size.trim())) { toast.error('All variants need a size'); return }
 
     setSaving(true)
@@ -147,13 +115,13 @@ export function EditItemForm({ item }: EditItemFormProps) {
       }
 
       const formSubmitData = { ...form, cover_image_url: coverImageUrl }
-      await updateItem(item.id, formSubmitData, variants)
+      await updateItem(item.id, formSubmitData, variants.map((variant) => ({ ...variant, size: variant.size.trim() })))
       toast.success('Item updated!')
       router.push(`/inventory/${item.id}`)
       router.refresh()
     } catch (err) {
       console.error('Item update error:', err)
-      toast.error('Failed to update item')
+      toast.error(err instanceof Error ? err.message : 'Failed to update item')
     } finally {
       setSaving(false)
     }
@@ -173,8 +141,8 @@ export function EditItemForm({ item }: EditItemFormProps) {
                 <Input value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="e.g. Red Silk Kurtha Set" />
               </div>
               <div className="space-y-2">
-                <Label>SKU</Label>
-                <Input value={form.sku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder="KUR-001" />
+                <Label htmlFor="item-code">Item code (SKU)</Label>
+                <Input id="item-code" value={form.sku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder="KUR-001" />
               </div>
               <div className="space-y-2">
                 <Label>Category *</Label>
@@ -211,6 +179,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
                   setImagePreview(previewUrl || null)
                 }}
                 disabled={saving}
+                editable
               />
             </div>
           </CardContent>
@@ -256,7 +225,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
         {/* Variants */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Size & Stock Variants</CardTitle>
                 <CardDescription>Existing sizes are updated; removed sizes are archived to preserve rental history.</CardDescription>
@@ -277,21 +246,22 @@ export function EditItemForm({ item }: EditItemFormProps) {
               <div className="bg-muted/50 rounded-xl p-4 border border-border space-y-4">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select sizes to add</p>
-                  <p className="text-[11px] text-muted-foreground">Select multiple sizes, choose their default quantity and color, then add them all together.</p>
+                  <p className="text-[11px] text-muted-foreground">Select preset or custom sizes, choose their quantity, then add them together.</p>
                 </div>
-                {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
+                <CustomBulkSizes selected={bulkSizes} onChange={setBulkSizes} />
+                {Object.entries(categorySizePresets(form.category)).map(([group, sizes]) => (
                   <div key={group} className="space-y-1">
                     <p className="text-[11px] text-muted-foreground/80 font-medium">{group}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {sizes.map((s) => {
-                        const isSelected = bulkSizes.includes(s)
-                        const alreadyExists = variants.some((v) => v.size === s)
+                        const isSelected = bulkSizes.some((size) => size.toLowerCase() === s.toLowerCase())
+                        const alreadyExists = variants.some((v) => v.size.trim().toLowerCase() === s.toLowerCase())
                         return (
                           <button
                             key={s}
                             type="button"
                             disabled={alreadyExists}
-                            onClick={() => toggleBulkSize(s)}
+                            aria-pressed={isSelected} onClick={() => toggleBulkSize(s)}
                             className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
                               alreadyExists
                                 ? 'bg-muted text-muted-foreground/45 border-border cursor-not-allowed'
@@ -338,13 +308,14 @@ export function EditItemForm({ item }: EditItemFormProps) {
             )}
 
             {/* Variant rows */}
-            {variants.map((v, i) => (
+            {variants.length === 0 && <p role="status" className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No sizes added. Use Add size or Bulk add to choose the sizes you need.</p>}
+          {variants.map((v, i) => (
               <div key={v.id || i} className="p-3 bg-muted/20 rounded-xl border border-border space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <SizePicker value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
+                    <SizePicker category={form.category} value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
                   </div>
-                  <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 p-1 h-8 w-8 mt-5 hover:bg-red-500/10" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
+                  <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 p-1 h-8 w-8 mt-5 hover:bg-red-500/10" type="button" aria-label={`Remove size ${v.size || i + 1}`} onClick={() => removeVariant(i)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

@@ -45,6 +45,8 @@ function database(rows, auth = {}) {
         select(...args) { calls.push([table, 'select', ...args]); return query },
         eq(...args) { calls.push([table, 'eq', ...args]); filters[args[0]] = args[1]; return query },
         in(...args) { calls.push([table, 'in', ...args]); return query },
+        order() { return query },
+        async range() { return result() },
         update(...args) { calls.push([table, 'update', ...args]); return query },
         async single() { return result() },
         async maybeSingle() { return result() },
@@ -67,7 +69,7 @@ test('private image endpoint validates paths and never caches tenant images publ
  const p='11111111-1111-4111-8111-111111111111/items/photo.png';const res=await GET(new Request('https://fabb.test/api/images?path='+encodeURIComponent(p)));assert.equal(res.status,200);assert.equal(path,p);assert.equal(res.headers.get('cache-control'),'private, no-store');
 });
 test('inventory creation calls one atomic RPC and returns database errors',async()=>{
- const db=database({staff:{data:{business_id:'b',branch_id:'c',role:'owner',permissions:{}}}},{getUser:async()=>({data:{user:{id:'u'}}})});let call;
+ const db=database({staff:{data:{business_id:'b',branch_id:'c',role:'owner',permissions:{}}},businesses:{data:{settings:{}}},items:{data:[]}},{getUser:async()=>({data:{user:{id:'u'}}})});let call;
  db.rpc=async(name,input)=>{call={name,input};return {data:null,error:{message:'Each size must be unique'}}};
  const {createItem}=loadSource('src/app/(dashboard)/inventory/inventory-actions.ts',{'@/lib/supabase/server':{createClient:async()=>db},'next/cache':{revalidatePath(){}}});
  const result=await createItem({name:'Suit',category:'Suit',price:100},[{size:'M',total_stock:1}]);assert.equal(result.error,'Each size must be unique');assert.equal(call.name,'create_inventory_item');assert.equal(call.input.p_item.name,'Suit');

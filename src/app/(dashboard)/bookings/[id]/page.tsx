@@ -11,6 +11,8 @@ import {
   Shield, Camera
 } from 'lucide-react'
 import Link from 'next/link'
+import { BookingItemsPanel, type BookingPanelItem } from './components/BookingItemsPanel'
+import { EditBookingItemsDialog } from './components/EditBookingItemsDialog'
 import { EditPricingDialog } from './components/EditPricingDialog'
 import { AddPaymentDialog } from './components/AddPaymentDialog'
 import { hasPermission } from '@/lib/permissions'
@@ -48,11 +50,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     .from('bookings')
     .select(`
       *,
-      customer:customers(*),
+      customer:customers(*, customer_phones(phone)),
       branch:branches(name, city),
       created_by_staff:staff!bookings_created_by_fkey(name),
       booking_items(
-        id, quantity, picked_up_quantity, returned_quantity, price, rental_days, subtotal, discount_percent, discount_amount, line_total, rate_basis, item_name, size,
+        id, item_id, item_variant_id, quantity, picked_up_quantity, returned_quantity, price, rental_days, subtotal, discount_percent, discount_flat, discount_amount, line_total, rate_basis, item_name, size,
         item:items(id, name, cover_image_url, sku),
         variant:item_variants(size)
       ),
@@ -81,6 +83,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
   const customer = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
   const branch = Array.isArray(booking.branch) ? booking.branch[0] : booking.branch
   const createdBy = Array.isArray(booking.created_by_staff) ? booking.created_by_staff[0] : booking.created_by_staff
+  const contactNumbers = [...new Set([
+    customer?.phone,
+    ...(booking.additional_contact_numbers as string[] || []),
+    ...(customer?.customer_phones || []).map((contact: { phone: string }) => contact.phone),
+  ].filter((phone): phone is string => !!phone))]
   const statusConfig = STATUS_CONFIG[booking.status] || STATUS_CONFIG.draft
 
   const isOverdue = ['picked_up', 'partially_returned'].includes(booking.status) && new Date(booking.return_date) < new Date()
@@ -91,6 +98,21 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
     - payments.filter((payment: any) => payment.type === 'refund').reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
   const totalCollected = payments.filter((payment: any) => !['deposit_refund', 'refund'].includes(payment.type)).reduce((sum: number, payment: any) => sum + Number(payment.amount), 0)
   const balanceDue = Math.max(0, Number(booking.total_amount ?? 0) - rentalPaid)
+
+  const bookingEditorProps = {
+    bookingId: booking.id, branchId: booking.branch_id, updatedAt: booking.updated_at,
+    pickupDate: booking.pickup_date, returnDate: booking.return_date,
+    existingDiscount: Number(booking.discount_amount), tax: Number(booking.tax_amount), paid: rentalPaid,
+    reservesStock: booking.status === 'confirmed' || (booking.status === 'hold' && (!booking.hold_expires_at || new Date(booking.hold_expires_at) > new Date())),
+    items: (booking.booking_items || []).map((bi: { id: string; item_id: string; item_variant_id: string; item_name: string; size: string | null; price: number; quantity: number; rental_days: number; rate_basis: string; discount_percent: number; discount_flat: number | null; picked_up_quantity: number; returned_quantity: number; line_total: number; subtotal: number; item: { cover_image_url: string | null } | { cover_image_url: string | null }[] | null }) => ({
+      booking_item_id: bi.id, item_id: bi.item_id, variant_id: bi.item_variant_id,
+      cover_image_url: (Array.isArray(bi.item) ? bi.item[0] : bi.item)?.cover_image_url,
+      name: bi.item_name, size: bi.size || '', price: Number(bi.price), quantity: bi.quantity,
+      rental_days: bi.rental_days, rate_basis: bi.rate_basis, discount_percent: Number(bi.discount_percent), discount_flat: bi.discount_flat == null ? null : Number(bi.discount_flat),
+      picked_up_quantity: bi.picked_up_quantity || 0, returned_quantity: bi.returned_quantity || 0,
+      line_total: Number(bi.line_total ?? bi.subtotal ?? Number(bi.price) * bi.quantity * bi.rental_days),
+    })) as BookingPanelItem[],
+  }
 
   const statusSteps = ['hold', 'confirmed', 'picked_up', 'partially_returned', 'returned', 'closed']
   const currentStepIdx = statusSteps.indexOf(booking.status)
@@ -128,7 +150,8 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
             returnDate={booking.return_date}
           />
           <DownloadInvoiceButton booking={booking} />
-          {canPrice && !['closed','cancelled'].includes(booking.status) && <EditPricingDialog bookingId={booking.id} updatedAt={booking.updated_at} existingDiscount={Number(booking.discount_amount)} tax={Number(booking.tax_amount)} items={(booking.booking_items || []).map((bi: { id: string; item_name: string; size: string | null; price: number; quantity: number; rental_days: number; discount_percent: number; rate_basis: string }) => ({ id: bi.id, item_name: bi.item_name, size: bi.size || '', price: Number(bi.price), quantity: bi.quantity, rental_days: bi.rental_days, discount_percent: Number(bi.discount_percent), rate_basis: bi.rate_basis }))} />}
+          {canPrice && ['draft', 'quote', 'hold', 'confirmed'].includes(booking.status) && <EditBookingItemsDialog {...bookingEditorProps} />}
+          {canPrice && ['picked_up', 'partially_returned', 'returned'].includes(booking.status) && <EditPricingDialog bookingId={booking.id} updatedAt={booking.updated_at} existingDiscount={Number(booking.discount_amount)} tax={Number(booking.tax_amount)} items={(booking.booking_items || []).map((bi: { id: string; item_name: string; size: string | null; price: number; quantity: number; rental_days: number; discount_percent: number; discount_flat: number | null; rate_basis: string }) => ({ id: bi.id, item_name: bi.item_name, size: bi.size || '', price: Number(bi.price), quantity: bi.quantity, rental_days: bi.rental_days, discount_percent: Number(bi.discount_percent), discount_flat: bi.discount_flat == null ? null : Number(bi.discount_flat), rate_basis: bi.rate_basis }))} />}
           <BookingActions booking={{
             id: booking.id,
             status: booking.status,
@@ -190,10 +213,14 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-2">
                       <p className="text-base font-semibold text-slate-900">{(customer as any)?.name || '—'}</p>
-                      <p className="text-sm text-slate-500">{(customer as any)?.phone || ''}</p>
+                      {contactNumbers.map((phone, index) => <p key={phone} className="text-sm text-slate-500">{index === 0 ? 'Phone' : 'Additional phone'}: <a href={`tel:${phone}`} className="text-blue-600 hover:underline">{phone}</a></p>)}
+                      <p className="whitespace-pre-wrap break-words text-sm text-slate-500">Address / place: {customer?.address || '—'}</p>
+                      <p className="break-all text-sm text-slate-500">Email: {customer?.email || '—'}</p>
+                      <p className="text-sm text-slate-500">Booking branch: {branch?.name || '—'}{branch?.city ? ` · ${branch.city}` : ''}</p>
+                      <p className="text-sm text-slate-500">Order taken by: {booking.order_taken_by || createdBy?.name || '—'}</p>
                     </div>
                     {(customer as any)?.id && (
                       <Button variant="outline" size="sm" asChild>
@@ -259,7 +286,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                             )}
                             <div>
                               <p className="font-medium">{bi.item_name || item?.name || '—'}</p>
-                              <p className="text-xs text-slate-500">{bi.size} × {bi.quantity} · ₹{bi.price}/pc{bi.rate_basis === 'day' ? '/day' : ' for booking'} · {bi.discount_percent}% off</p>
+                              <p className="text-xs text-slate-500">{bi.size} × {bi.quantity} · ₹{bi.price}/pc{bi.rate_basis === 'day' ? '/day' : ' for booking'} · {bi.discount_flat != null ? `₹${bi.discount_flat}` : `${bi.discount_percent}%`} off</p>
                             </div>
                           </div>
                           <p className="font-semibold">₹{Number(subtotal).toLocaleString('en-IN')}</p>
@@ -332,6 +359,12 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
                     <span className="text-slate-500">Created by</span>
                     <span className="font-medium">{(createdBy as any)?.name || '—'}</span>
                   </div>
+                  {booking.alteration_notes && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Customer alterations</p><p className="whitespace-pre-wrap">{booking.alteration_notes}</p></div>}
+                  {booking.condition_notes && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Item condition</p><p className="whitespace-pre-wrap">{booking.condition_notes}</p></div>}
+                  {!!booking.condition_photos?.length && <div className="border-t pt-2"><p className="text-xs text-muted-foreground">Condition photos at booking</p><div className="grid grid-cols-2 gap-2">{booking.condition_photos.map((photo: string, index: number) => <a key={photo} href={photo} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo} alt={`Item condition ${index + 1}`} className="h-24 w-full rounded border object-contain" />
+                  </a>)}</div></div>}
                   {booking.notes && (
                     <div className="pt-2 border-t border-slate-100">
                       <p className="text-xs text-slate-500 mb-1">Notes</p>
@@ -412,38 +445,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{ 
 
         {/* TAB 3 — ITEMS */}
         <TabsContent value="items" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">Items in this Booking</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {((booking.booking_items || []) as any[]).map((bi: any) => {
-                  const item = Array.isArray(bi.item) ? bi.item[0] : bi.item
-                  const subtotal = bi.line_total ?? bi.subtotal ?? (Number(bi.price ?? 0) * Number(bi.quantity ?? 1) * rentalDays)
-                  return (
-                    <div key={bi.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
-                      {item?.cover_image_url ? (
-                        <img src={item.cover_image_url} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-14 h-14 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-slate-300" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">{bi.item_name || item?.name}</p>
-                        <p className="text-xs text-slate-500">Size: {bi.size} · Qty: {bi.quantity} · ₹{bi.price}/pc · {bi.discount_percent}% off · {bi.rate_basis === 'day' ? (bi.rental_days ?? rentalDays) + ' billable days' : 'entire booking'}</p>
-                        <p className="text-xs text-slate-600 mt-1">
-                          Picked up: {bi.picked_up_quantity || 0} · Returned: {bi.returned_quantity || 0} · Out: {Math.max(0, (bi.picked_up_quantity || 0) - (bi.returned_quantity || 0))}
-                        </p>
-                      </div>
-                      <p className="text-sm font-bold text-slate-900 flex-shrink-0">₹{Number(subtotal).toLocaleString('en-IN')}</p>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <BookingItemsPanel {...bookingEditorProps} canManage={canPrice} status={booking.status} />
         </TabsContent>
 
         {/* TAB 4 — TIMELINE */}

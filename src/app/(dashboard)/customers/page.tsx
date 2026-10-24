@@ -25,7 +25,7 @@ export default function CustomersPage() {
   useEffect(() => {
     let cancelled = false
     if (!staff?.business_id || !activeBranch?.id) return
-    setLoading(true); setError('')
+    setLoading(true); setError(''); setCustomers([]); setTotal(0)
     const timer = setTimeout(async () => {
       try {
         const supabase = createClient()
@@ -47,7 +47,7 @@ export default function CustomersPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[1.65rem] font-semibold tracking-normal text-slate-950">Customers</h1>
-          <p className="text-sm text-slate-500">{total} customer profiles in this branch</p>
+          <p className="text-sm text-slate-500">{loading ? 'Loading' : total} customer profiles · {activeBranch?.name || 'Current branch'}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="h-10 px-4" asChild>

@@ -2,10 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { nextInventorySku } from '@/lib/inventory-sku'
 
 type ItemForm = {
   name: string
   sku?: string
+  auto_sku?: boolean
   category: string
   description?: string
   price: number
@@ -40,20 +42,55 @@ async function context() {
   return { db: supabase as any, user, staff }
 }
 
+async function nextItemSku(db: any, businessId: string, category: string) {
+  const { data: business, error: settingsError } = await db.from('businesses').select('settings').eq('id', businessId).single()
+  if (settingsError) throw databaseError(settingsError)
+  const defaults: Record<string, string> = { Kurtha: 'KUR', Suits: 'SUT', Loafers: 'LOA', Shoes: 'SHO', Cap: 'CAP', Accessories: 'ACC' }
+  const configured = business?.settings?.categories?.find((entry: { name: string }) => entry.name.trim().toLowerCase() === category.trim().toLowerCase())
+  const prefix = String(configured?.prefix || defaults[category] || category.slice(0, 3)).trim().toUpperCase()
+  const items: { sku: string | null; category: string | null }[] = []
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await db.from('items').select('sku,category').eq('business_id', businessId).order('id').range(offset, offset + 999)
+    if (error) throw databaseError(error)
+    items.push(...(data || []))
+    if (!data || data.length < 1000) break
+  }
+  return nextInventorySku(items, category, prefix)
+}
+
+export async function suggestItemSku(category: string) {
+  const { db, staff } = await context()
+  return nextItemSku(db, staff.business_id, category)
+}
+
 export async function createItem(formData: ItemForm, variants: VariantForm[]) {
   const { db, user, staff } = await context()
-  const { data: id, error } = await db.rpc('create_inventory_item', { p_item: formData, p_variants: variants })
-  if (error || !id) return { error: error?.message || 'Could not save inventory item' }
-  revalidatePath('/inventory')
-  return { id: String(id) }
+  const { auto_sku, ...item } = formData
+  const automatic = auto_sku || !item.sku?.trim()
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const sku = automatic ? await nextItemSku(db, staff.business_id, item.category) : item.sku
+    const { data: id, error } = await db.rpc('create_inventory_item', { p_item: { ...item, sku }, p_variants: variants })
+    if (automatic && error?.code === '23505') continue
+    if (error || !id) return { error: error?.message || 'Could not save inventory item' }
+    revalidatePath('/inventory')
+    return { id: String(id) }
+  }
+  return { error: 'Another item used this number. Please save again to get the next SKU.' }
 }
 
 export async function updateItem(itemId: string, formData: ItemForm, variants: VariantForm[]) {
   const { db, user, staff } = await context()
-  const { data: current } = await db.from('items').select('id, name, tracking_mode').eq('id', itemId).eq('business_id', staff.business_id).single()
+  if (!variants.length || variants.some(v => !v.size.trim() || !Number.isInteger(v.total_stock) || v.total_stock < 0)) throw new Error('Add at least one valid size and quantity')
+  if (new Set(variants.map(v => v.size.trim().toLowerCase())).size !== variants.length) throw new Error('Each size must be unique')
+  const { data: current } = await db.from('items').select('id, name, sku, tracking_mode').eq('id', itemId).eq('business_id', staff.business_id).single()
   if (!current) throw new Error('Item not found')
 
+  const { data: existing = [], error: variantsError } = await db.from('item_variants').select('id, total_stock').eq('item_id', itemId).eq('branch_id', staff.branch_id).is('archived_at', null)
+  if (variantsError) throw databaseError(variantsError)
+  if (variants.some(v => v.id && !existing.some((row: { id: string }) => row.id === v.id))) throw new Error('Size does not belong to this item and branch')
+
   const { error } = await db.from('items').update({
+    ...(formData.sku !== undefined ? { sku: formData.sku.trim().toUpperCase() || null } : {}),
     name: formData.name, category: formData.category, description: formData.description || null,
     price: formData.price, deposit_amount: formData.deposit_amount ?? 0,
     purchase_cost: formData.purchase_price ?? formData.purchase_cost ?? null, storage_location: formData.storage_location || null,
@@ -64,10 +101,12 @@ export async function updateItem(itemId: string, formData: ItemForm, variants: V
   }).eq('id', itemId).eq('business_id', staff.business_id)
   if (error) throw databaseError(error)
 
-  const { data: existing = [] } = await db.from('item_variants').select('id, total_stock').eq('item_id', itemId).is('archived_at', null)
   const retained = new Set(variants.flatMap((variant) => variant.id ? [variant.id] : []))
   const removed = existing.filter((variant: { id: string }) => !retained.has(variant.id))
-  if (removed.length) await db.from('item_variants').update({ archived_at: new Date().toISOString() }).in('id', removed.map((variant: { id: string }) => variant.id))
+  if (removed.length) {
+    const { error: archiveError } = await db.from('item_variants').update({ archived_at: new Date().toISOString() }).in('id', removed.map((variant: { id: string }) => variant.id)).eq('item_id', itemId).eq('branch_id', staff.branch_id)
+    if (archiveError) throw databaseError(archiveError)
+  }
 
   for (const variant of variants) {
     if (variant.id) {
@@ -100,7 +139,7 @@ export async function updateItem(itemId: string, formData: ItemForm, variants: V
     if (formData.cover_image_url && !cover) await db.from('item_images').insert({ item_id: itemId, url: formData.cover_image_url, is_cover: true, display_order: 0, uploaded_by: user.id })
   }
 
-  await db.from('audit_log').insert({ business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id, action: 'item.updated', table_name: 'items', record_id: itemId, old_value: current, new_value: { name: formData.name, variants: variants.length } })
+  await db.from('audit_log').insert({ business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id, action: 'item.updated', table_name: 'items', record_id: itemId, old_value: current, new_value: { name: formData.name, sku: formData.sku !== undefined ? formData.sku.trim().toUpperCase() || null : current.sku, variants: variants.length } })
   revalidatePath('/inventory')
   revalidatePath(`/inventory/${itemId}`)
   return { success: true }
@@ -113,6 +152,22 @@ export async function archiveItem(itemId: string) {
   if (error) throw databaseError(error)
   await db.from('audit_log').insert({ business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id, action: 'item.archived', table_name: 'items', record_id: itemId })
   revalidatePath('/inventory')
+  return { success: true }
+}
+
+export async function updateItemPhoto(itemId: string, coverImageUrl: string) {
+  const { db, user, staff } = await context()
+  if (!/^(\/api\/images\?path=|https:\/\/)[^\s]+$/.test(coverImageUrl)) return { error: 'Invalid photo URL' }
+  const { data: item, error: itemError } = await db.from('items').select('id, cover_image_url, name').eq('id', itemId).eq('business_id', staff.business_id).eq('branch_id', staff.branch_id).single()
+  if (itemError || !item) return { error: 'Inventory item not found' }
+  const { error } = await db.from('items').update({ cover_image_url: coverImageUrl }).eq('id', itemId).eq('business_id', staff.business_id).eq('branch_id', staff.branch_id)
+  if (error) return { error: databaseError(error) }
+  const { data: cover } = await db.from('item_images').select('id').eq('item_id', itemId).eq('is_cover', true).maybeSingle()
+  if (cover) await db.from('item_images').update({ url: coverImageUrl }).eq('id', cover.id)
+  else await db.from('item_images').insert({ item_id: itemId, url: coverImageUrl, is_cover: true, display_order: 0, uploaded_by: user.id })
+  await db.from('audit_log').insert({ business_id: staff.business_id, branch_id: staff.branch_id, staff_id: user.id, action: 'item.photo_updated', table_name: 'items', record_id: itemId, old_value: { cover_image_url: item.cover_image_url }, new_value: { cover_image_url: coverImageUrl } })
+  revalidatePath('/inventory')
+  revalidatePath(`/inventory/${itemId}`)
   return { success: true }
 }
 

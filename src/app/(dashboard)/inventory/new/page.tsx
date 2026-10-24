@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { SizePicker, categorySizePresets, CustomBulkSizes } from '../components/SizePicker'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,16 +12,10 @@ import { ChevronLeft, Plus, Trash2, Loader2, Layers } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { createItem } from '../inventory-actions'
+import { createItem, suggestItemSku } from '../inventory-actions'
 import { ImageUpload } from '../components/ImageUpload'
 import { StorageService } from '@/lib/storage-service'
-
-const CATEGORIES = ['Kurtha', 'Suits', 'Loafers', 'Shoes', 'Cap', 'Accessories', 'Sherwani', 'Lehenga', 'Saree', 'Jewellery']
-const SIZE_PRESETS = {
-  'Clothing': ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'],
-  'Numeric': ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46'],
-  'Shoes': ['5', '6', '7', '8', '9', '10', '11', '12'],
-}
+import { createClient } from '@/lib/supabase/client'
 
 interface Variant {
   size: string
@@ -28,49 +23,27 @@ interface Variant {
   price_override: number | null
 }
 
-function SizePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs">Size *</Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. M / 40 / Free Size" />
-      <div className="space-y-1">
-        {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
-          <div key={group} className="flex flex-wrap gap-1">
-            {sizes.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => onChange(s)}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors ${
-                  value === s
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card text-muted-foreground border-input hover:border-primary hover:text-primary'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function NewItemPage() {
   const router = useRouter()
-  const { staff } = useAppStore()
+  const { staff, business } = useAppStore()
+  const [categories, setCategories] = useState<string[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+  const [categoriesError, setCategoriesError] = useState(false)
+  const [categoryRetry, setCategoryRetry] = useState(0)
+  const businessId = staff?.business_id || business?.id
+  const [suggestedSku, setSuggestedSku] = useState('')
+  const [skuLoading, setSkuLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [bulkSizes, setBulkSizes] = useState<string[]>([])
-  const [showBulk, setShowBulk] = useState(false)
+  const [showBulk, setShowBulk] = useState(true)
   const [bulkQty, setBulkQty] = useState(1)
 
   const [form, setForm] = useState({
     name: '',
     sku: '',
-    category: 'Kurtha',
+    category: '',
     description: '',
     storage_location: '',
     price: 0,
@@ -81,8 +54,45 @@ export default function NewItemPage() {
   })
 
   const [variants, setVariants] = useState<Variant[]>([
-    { size: 'M', total_stock: 1, price_override: null },
+    { size: '', total_stock: 1, price_override: null },
   ])
+  const category = categories.includes(form.category) ? form.category : categories[0] || ''
+
+  useEffect(() => {
+    if (!businessId) return
+    let cancelled = false
+    let request = 0
+    const loadCategories = async () => {
+      const currentRequest = ++request
+      setCategoriesLoading(true)
+      setCategoriesError(false)
+      try {
+        const { data, error } = await createClient().from('businesses').select('settings').eq('id', businessId).single()
+        if (error) throw error
+        const saved = data?.settings as { categories?: { name: string }[] } | null
+        if (!cancelled && currentRequest === request) setCategories(Array.from(new Set(saved?.categories?.map(entry => entry.name.trim()).filter(Boolean) || [])))
+      } catch {
+        if (!cancelled && currentRequest === request) setCategoriesError(true)
+      } finally {
+        if (!cancelled && currentRequest === request) setCategoriesLoading(false)
+      }
+    }
+    void loadCategories()
+    window.addEventListener('focus', loadCategories)
+    return () => { cancelled = true; window.removeEventListener('focus', loadCategories) }
+  }, [businessId, categoryRetry])
+
+  useEffect(() => {
+    if (!staff?.business_id || !category) { setSuggestedSku(''); setSkuLoading(false); return }
+    let cancelled = false
+    setSkuLoading(true)
+    setSuggestedSku('')
+    suggestItemSku(category).then(sku => {
+      if (!cancelled) setSuggestedSku(sku)
+    }).catch(error => { if (!cancelled) toast.error(error instanceof Error ? error.message : 'Could not load next SKU') })
+      .finally(() => { if (!cancelled) setSkuLoading(false) })
+    return () => { cancelled = true }
+  }, [category, staff?.business_id])
 
   const updateForm = (field: string, value: string | number) =>
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -91,7 +101,6 @@ export default function NewItemPage() {
     setVariants([...variants, { size: '', total_stock: 1, price_override: null }])
 
   const removeVariant = (index: number) => {
-    if (variants.length <= 1) return
     setVariants(variants.filter((_, i) => i !== index))
   }
 
@@ -102,14 +111,15 @@ export default function NewItemPage() {
   }
 
   const toggleBulkSize = (size: string) =>
-    setBulkSizes((prev) => prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size])
+    setBulkSizes((prev) => prev.some((s) => s.toLowerCase() === size.toLowerCase()) ? prev.filter((s) => s.toLowerCase() !== size.toLowerCase()) : [...prev, size])
 
   const applyBulkSizes = () => {
     if (bulkSizes.length === 0) return
+    if (!Number.isInteger(bulkQty) || bulkQty < 1) { toast.error('Enter a whole quantity of at least 1'); return }
     const existing = variants.filter((v) => v.size.trim())
-    const existingSizes = new Set(existing.map((v) => v.size))
+    const existingSizes = new Set(existing.map((v) => v.size.trim().toLowerCase()))
     const newVariants = bulkSizes
-      .filter((s) => !existingSizes.has(s))
+      .filter((s) => !existingSizes.has(s.trim().toLowerCase()))
       .map((s) => ({ size: s, total_stock: bulkQty, price_override: null }))
     const base = variants.filter((v) => v.size.trim() || variants.length === 1)
     setVariants([...base.filter((v) => v.size.trim()), ...newVariants])
@@ -120,8 +130,10 @@ export default function NewItemPage() {
   }
 
   const handleSubmit = async () => {
+    if (!category) { toast.error('Add and save a category in Inventory Settings first'); return }
     if (!form.name.trim()) { toast.error('Item name is required'); return }
     if (!form.price) { toast.error('Price is required'); return }
+    if (!variants.length) { toast.error('Add at least one size before saving'); return }
     if (variants.some((v) => !v.size.trim())) { toast.error('All variants need a size'); return }
     if (variants.some((v) => !Number.isFinite(v.total_stock) || !Number.isInteger(v.total_stock) || v.total_stock < 1)) {
       toast.error('Each variant must have stock of at least 1')
@@ -136,8 +148,8 @@ export default function NewItemPage() {
         coverImageUrl = await StorageService.uploadItemImage(staff.business_id, imageFile)
       }
 
-      const formSubmitData = { ...form, cover_image_url: coverImageUrl }
-      const result = await createItem(formSubmitData, variants)
+      const formSubmitData = { ...form, category, auto_sku: !form.sku.trim(), cover_image_url: coverImageUrl }
+      const result = await createItem(formSubmitData, variants.map((variant) => ({ ...variant, size: variant.size.trim() })))
       if ('error' in result) throw new Error(result.error)
       toast.success('Item added successfully!')
       router.push(`/inventory/${result.id}`)
@@ -171,17 +183,19 @@ export default function NewItemPage() {
               <Input value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="e.g. Red Silk Kurtha Set" />
             </div>
             <div className="space-y-2">
-              <Label>SKU <span className="text-muted-foreground">(auto-generated if empty)</span></Label>
-              <Input value={form.sku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder="KUR-001" />
+              <Label>SKU <span className="text-muted-foreground">(next number automatically)</span></Label>
+              <Input value={form.sku || suggestedSku} onChange={(e) => updateForm('sku', e.target.value.toUpperCase())} placeholder={skuLoading ? 'Loading next SKU…' : 'Automatic SKU'} />
+              <p className="text-xs text-muted-foreground">The next available number is assigned when saved. You can type a custom code.</p>
             </div>
             <div className="space-y-2">
               <Label>Category *</Label>
-              <Select value={form.category} onValueChange={(v) => updateForm('category', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={category} disabled={categoriesLoading || categoriesError || !categories.length} onValueChange={(v) => { setForm(prev => ({ ...prev, category: v, sku: '' })); setBulkSizes([]) }}>
+                <SelectTrigger><SelectValue placeholder={categoriesLoading ? 'Loading saved categories…' : 'Add a category in Settings'} /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {categoriesError ? <p role="alert" className="text-xs text-destructive">Could not load categories. <button type="button" className="underline" onClick={() => setCategoryRetry(value => value + 1)}>Retry</button></p> : !categoriesLoading && !categories.length && <p className="text-xs text-muted-foreground">Add categories in <Link className="underline" href="/settings/inventory">Inventory Settings</Link> first.</p>}
             </div>
           </div>
 
@@ -213,6 +227,7 @@ export default function NewItemPage() {
                 setImagePreview(previewUrl || null)
               }}
               disabled={saving}
+              editable
             />
           </div>
         </CardContent>
@@ -266,7 +281,7 @@ export default function NewItemPage() {
       {/* Variants */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base">Size & Stock Variants</CardTitle>
               <CardDescription>Add sizes and physical stock for this rental item</CardDescription>
@@ -290,19 +305,20 @@ export default function NewItemPage() {
                 <p className="text-[11px] text-muted-foreground">Select multiple sizes and choose their default quantity.</p>
               </div>
               
-              {Object.entries(SIZE_PRESETS).map(([group, sizes]) => (
+              <CustomBulkSizes selected={bulkSizes} onChange={setBulkSizes} />
+                {Object.entries(category ? categorySizePresets(category) : {}).map(([group, sizes]) => (
                 <div key={group} className="space-y-1">
                   <p className="text-[11px] text-muted-foreground/80 font-medium">{group}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {sizes.map((s) => {
-                      const isSelected = bulkSizes.includes(s)
-                      const alreadyExists = variants.some((v) => v.size === s)
+                      const isSelected = bulkSizes.some((size) => size.toLowerCase() === s.toLowerCase())
+                      const alreadyExists = variants.some((v) => v.size.trim().toLowerCase() === s.toLowerCase())
                       return (
                         <button
                           key={s}
                           type="button"
                           disabled={alreadyExists}
-                          onClick={() => toggleBulkSize(s)}
+                          aria-pressed={isSelected} onClick={() => toggleBulkSize(s)}
                           className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
                             alreadyExists
                               ? 'bg-muted text-muted-foreground/45 border-border cursor-not-allowed'
@@ -349,13 +365,14 @@ export default function NewItemPage() {
           )}
 
           {/* Variant rows */}
+          {variants.length === 0 && <p role="status" className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No sizes added. Use Add size or Bulk add to choose the sizes you need.</p>}
           {variants.map((v, i) => (
             <div key={i} className="p-3 bg-muted/20 rounded-xl border border-border space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <SizePicker value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
+                  <SizePicker category={category} value={v.size} onChange={(val) => updateVariant(i, 'size', val)} />
                 </div>
-                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 p-1 h-8 w-8 mt-5 hover:bg-red-500/10" onClick={() => removeVariant(i)} disabled={variants.length <= 1}>
+                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 p-1 h-8 w-8 mt-5 hover:bg-red-500/10" type="button" aria-label={`Remove size ${v.size || i + 1}`} onClick={() => removeVariant(i)}>
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -381,7 +398,7 @@ export default function NewItemPage() {
       {/* Submit */}
       <div className="flex justify-end gap-3 pb-8">
         <Button variant="outline" asChild><Link href="/inventory">Cancel</Link></Button>
-        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]" onClick={handleSubmit} disabled={saving}>
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[140px]" onClick={handleSubmit} disabled={saving || categoriesLoading || categoriesError || !category}>
           {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Add Item →'}
         </Button>
       </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { InvoiceDocument } from '@/components/invoices/InvoiceDocument'
+import { buildInvoice, invoiceSettings } from '@/lib/invoice'
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -47,124 +49,18 @@ function InvoicePreview({
   address: string
 }) {
   const sampleAmount = 2500
-  const gstAmount = gstEnabled ? Math.round(sampleAmount * gstRate / 100) : 0
-  const total = sampleAmount + gstAmount
-
-  return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm text-[10px] font-sans" style={{ width: '80mm', maxWidth: '100%', margin: '0 auto', padding: '3mm', color: '#000' }}>
-      {/* Header */}
-      <div className="flex justify-between items-start border-b border-slate-200 pb-3 mb-3">
-        <div>
-          {showLogo && (
-            logoUrl ? <img src={logoUrl} alt={businessName} className="h-10 max-w-24 object-contain mb-1" /> : null
-          )}
-          <p className="font-bold text-slate-900 text-xs">{businessName || 'Your Business Name'}</p>
-          {gstin && gstEnabled && <p className="text-slate-500">GSTIN: {gstin}</p>}
-          <p className="text-slate-500">{address}</p>
-        </div>
-        <div className="text-right">
-          <p className="font-bold text-blue-600 text-sm">INVOICE</p>
-          <p className="text-slate-500">{invoicePrefix || 'INV'}-2026-001</p>
-          <p className="text-slate-500 mt-1">Date: {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-        </div>
-      </div>
-
-      {/* Customer + Booking */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div>
-          <p className="text-slate-500 uppercase tracking-wide" style={{ fontSize: '8px' }}>Bill To</p>
-          <p className="font-semibold text-slate-900">Sample Customer</p>
-          <p className="text-slate-500">+91 98765 43210</p>
-        </div>
-        <div>
-          <p className="text-slate-500 uppercase tracking-wide" style={{ fontSize: '8px' }}>Booking</p>
-          <p className="font-mono text-slate-900">BK-2026-0001</p>
-          <p className="text-slate-500">Pickup / return: sample dates</p>
-        </div>
-      </div>
-
-      {/* Items table */}
-      <table className="w-full mb-3" style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f8fafc' }}>
-            <th className="text-left p-1 text-slate-500">Item</th>
-            <th className="text-right p-1 text-slate-500">Qty</th>
-            <th className="text-right p-1 text-slate-500">Rate/pc</th>
-            <th className="text-right p-1 text-slate-500">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-            <td className="p-1 text-slate-700">Bridal Lehenga Set · Size M</td>
-            <td className="p-1 text-right text-slate-700">1</td>
-            <td className="p-1 text-right text-slate-700">₹2,500</td>
-            <td className="p-1 text-right text-slate-700">₹2,500</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* Totals */}
-      <div className="flex justify-end mb-3">
-        <div className="w-40 space-y-1">
-          <div className="flex justify-between">
-            <span className="text-slate-500">Subtotal</span>
-            <span className="text-slate-700">₹{sampleAmount.toLocaleString('en-IN')}</span>
-          </div>
-          {gstEnabled && (
-            <div className="flex justify-between">
-              <span className="text-slate-500">GST ({gstRate}%)</span>
-              <span className="text-slate-700">₹{gstAmount.toLocaleString('en-IN')}</span>
-            </div>
-          )}
-          <div className="flex justify-between font-semibold border-t border-slate-200 pt-1">
-            <span className="text-slate-900">Total</span>
-            <span className="text-blue-600">₹{total.toLocaleString('en-IN')}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Advance Paid</span>
-            <span className="text-slate-700 text-emerald-600">-₹2,000</span>
-          </div>
-          <div className="flex justify-between font-semibold">
-            <span className="text-slate-700">Balance Due</span>
-            <span className="text-red-600">₹{(total - 2000).toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bank Details */}
-      {showBankDetails && (bankName || bankAccount) && (
-        <div className="border border-slate-200 rounded p-2 mb-2 bg-slate-50">
-          <p className="text-slate-500 uppercase tracking-wide mb-1" style={{ fontSize: '8px' }}>Bank Details</p>
-          <p className="text-slate-700">{bankName || 'Bank Name'}</p>
-          {bankAccount && <p className="text-slate-600">A/C: {bankAccount}</p>}
-          {bankIfsc && <p className="text-slate-600 font-mono">IFSC: {bankIfsc}</p>}
-        </div>
-      )}
-
-      {/* Terms */}
-      {termsText && (
-        <div className="mb-2">
-          <p className="text-slate-500 uppercase tracking-wide mb-0.5" style={{ fontSize: '8px' }}>Terms</p>
-          <p className="text-slate-500">{termsText.slice(0, 120)}{termsText.length > 120 ? '...' : ''}</p>
-        </div>
-      )}
-
-      {/* Footer */}
-      {footerText && (
-        <p className="text-center text-slate-500 border-t border-slate-200 pt-2">{footerText.slice(0, 80)}</p>
-      )}
-
-      {/* Signature */}
-      {signatureLine && (
-        <div className="flex justify-end mt-3">
-          <div className="text-center">
-            <div className="w-24 border-b border-slate-400 mb-0.5" />
-            <p className="text-slate-500">Authorised Signatory</p>
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  const tax = gstEnabled ? Math.round(sampleAmount * gstRate) / 100 : 0
+  const invoice = buildInvoice({
+    booking_number: 'BK-2026-0001', created_at: new Date().toISOString(), pickup_date: '2026-10-01', return_date: '2026-10-03',
+    customer: { name: 'Sample Customer', phone: '+91 98765 43210' },
+    subtotal: sampleAmount, discount_amount: 0, tax_amount: tax, total_amount: sampleAmount + tax,
+    booking_items: [{ item_name: 'Bridal Lehenga Set', size: 'M', quantity: 1, price: 2500, rate_basis: 'booking' }],
+    booking_payments: [{ type: 'advance', method: 'cash', amount: 2000 }],
+  }, { name: businessName, gst_number: gstin, logo_url: logoUrl, address }, { settings: { invoice: {
+    prefix: invoicePrefix, gst_enabled: gstEnabled, gst_rate: gstRate, footer_text: footerText, terms_text: termsText,
+    show_logo: showLogo, show_bank_details: showBankDetails, bank_name: bankName, bank_account: bankAccount, bank_ifsc: bankIfsc, signature_line: signatureLine,
+  } } })
+  return <div className="mx-auto w-fit max-w-full overflow-x-auto rounded-lg border bg-white shadow-sm"><InvoiceDocument invoice={invoice}/></div>
 }
 
 export function InvoiceSettingsClient() {
@@ -176,7 +72,7 @@ export function InvoiceSettingsClient() {
 function InvoiceSettingsClientForm() {
   const { activeBranch, setBranches, branches, business } = useAppStore()
   const supabase = createClient()
-  const settings = ((activeBranch?.settings as any)?.invoice) || {}
+  const settings = invoiceSettings(activeBranch?.settings?.invoice, business?.name || 'us')
   const [isSaving, setIsSaving] = useState(false)
 
   const [invoicePrefix, setInvoicePrefix] = useState(settings.prefix ?? 'INV')
@@ -190,6 +86,8 @@ function InvoiceSettingsClientForm() {
   const [bankAccount, setBankAccount] = useState(settings.bank_account ?? '')
   const [bankIfsc, setBankIfsc] = useState(settings.bank_ifsc ?? '')
   const [signatureLine, setSignatureLine] = useState(settings.signature_line ?? true)
+  const [invoiceTemplate, setInvoiceTemplate] = useState(settings.whatsapp_invoice_template)
+  const [statusTemplate, setStatusTemplate] = useState(settings.whatsapp_status_template)
 
   async function handleSave() {
     if (!activeBranch) return
@@ -211,6 +109,8 @@ function InvoiceSettingsClientForm() {
           bank_account: bankAccount,
           bank_ifsc: bankIfsc,
           signature_line: signatureLine,
+          whatsapp_invoice_template: invoiceTemplate,
+          whatsapp_status_template: statusTemplate,
         }
       }
       const { error } = await supabase
@@ -231,6 +131,16 @@ function InvoiceSettingsClientForm() {
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       {/* Left: Settings Form */}
       <div className="space-y-6">
+        <Card>
+          <CardHeader><CardTitle className="text-base">WhatsApp messages</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2"><Label htmlFor="whatsapp-invoice">Invoice message</Label><Textarea id="whatsapp-invoice" rows={6} value={invoiceTemplate} onChange={e => setInvoiceTemplate(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="whatsapp-status">Booking status message</Label><Textarea id="whatsapp-status" rows={5} value={statusTemplate} onChange={e => setStatusTemplate(e.target.value)} /></div>
+            <p className="text-xs text-muted-foreground">Use these placeholders to insert booking details automatically:</p>
+            <p className="break-words text-xs font-mono">{'{customer_name}, {business_name}, {booking_number}, {invoice_number}, {status}, {pickup_date}, {return_date}, {total}, {paid}, {balance}'}</p>
+            <p className="text-xs text-muted-foreground">Saved for this branch. Invoice sharing includes the invoice image; status sharing sends text.</p>
+          </CardContent>
+        </Card>
         {/* Invoice Numbering */}
         <Card className="shadow-sm border-slate-200">
           <CardHeader className="pb-4">
@@ -247,7 +157,7 @@ function InvoiceSettingsClientForm() {
               <div className="space-y-1.5">
                 <Label>Format Preview</Label>
                 <div className="h-9 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm font-mono text-slate-600">
-                  {invoicePrefix || 'INV'}-2026-001
+                  {invoicePrefix || 'INV'}-BK-2026-0001
                 </div>
               </div>
             </div>

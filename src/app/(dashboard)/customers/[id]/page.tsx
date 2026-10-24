@@ -25,20 +25,24 @@ export default async function CustomerDetailPage({ params, searchParams }: { par
   const { data: staff } = await supabase.from('staff').select('business_id, branch_id').eq('id', user.id).single()
   if (!staff?.branch_id) notFound()
 
-  const { data: customer, error: customerError } = await (supabase as any)
+  const { data: branchCustomer, error: customerError } = await (supabase as any)
     .from('customer_branch_summary')
     .select('*')
     .eq('id', id)
+    .eq('business_id', staff.business_id)
     .eq('branch_id', staff.branch_id)
     .single()
   if (customerError && customerError.code !== 'PGRST116') throw new Error('Could not load customer profile. Please retry.')
+  const { data: registeredCustomer } = branchCustomer ? { data: null } : await supabase.from('customers').select('*').eq('id', id).eq('business_id', staff.business_id!).single()
+  const customer = branchCustomer || (registeredCustomer ? { ...registeredCustomer, total_bookings: 0, total_spent: 0, outstanding_balance: 0 } : null)
   if (!customer) notFound()
+  const { data: contactNumbers } = await supabase.from('customer_phones').select('phone,label,is_primary').eq('customer_id', id).eq('business_id', staff.business_id!)
 
   const { data: bookings, error: bookingsError, count } = await supabase
     .from('bookings')
-    .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due', { count: 'exact' })
+    .select('id, booking_number, status, pickup_date, return_date, total_amount, balance_due, branch:branches(name)', { count: 'exact' })
     .eq('customer_id', id)
-    .eq('branch_id', staff.branch_id)
+    .eq('business_id', staff.business_id!)
     .order('created_at', { ascending: false })
     .order('id').range(page * 20, page * 20 + 19)
   if (bookingsError) throw new Error('Could not load booking history. Please retry.')
@@ -74,6 +78,7 @@ export default async function CustomerDetailPage({ params, searchParams }: { par
                   </div>
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-slate-600 flex items-center gap-2"><Phone className="w-4 h-4 text-slate-400" />{customer.phone}</p>
+                    {contactNumbers?.filter(contact => !contact.is_primary && contact.phone !== customer.phone).map(contact => <p key={contact.phone} className="text-sm text-slate-600">Additional: {contact.phone}</p>)}
                     {customer.email && <p className="text-sm text-slate-600 flex items-center gap-2"><Mail className="w-4 h-4 text-slate-400" />{customer.email}</p>}
                     {customer.address && <p className="text-sm text-slate-600 flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-400" />{customer.address}</p>}
                     {customer.id_type && <p className="text-sm text-slate-600 flex items-center gap-2"><Shield className="w-4 h-4 text-slate-400" />{customer.id_type}: {customer.id_number}</p>}
@@ -92,7 +97,7 @@ export default async function CustomerDetailPage({ params, searchParams }: { par
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-blue-600" />Booking History ({count || 0})</CardTitle>
+              <CardTitle className="text-base font-medium flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-blue-600" />Booking History ({count || 0}) · Accessible branches</CardTitle>
             </CardHeader>
             <CardContent>
               {bookings && bookings.length > 0 ? (
@@ -101,6 +106,7 @@ export default async function CustomerDetailPage({ params, searchParams }: { par
                     <Link key={b.id} href={`/bookings/${b.id}`} className="flex items-center justify-between py-3 hover:bg-slate-50 -mx-2 px-2 rounded transition-colors">
                       <div>
                         <p className="text-sm font-medium">{b.booking_number}</p>
+                        <p className="text-xs text-slate-500">{(Array.isArray(b.branch) ? b.branch[0] : b.branch)?.name || 'Branch'}</p>
                         <p className="text-xs text-slate-500">{b.pickup_date ? new Date(b.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''} → {b.return_date ? new Date(b.return_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -119,6 +125,7 @@ export default async function CustomerDetailPage({ params, searchParams }: { par
         <div className="space-y-4">
           <Card>
             <CardContent className="p-4 space-y-4">
+              <p className="text-sm font-semibold">Current branch totals</p>
               <div className="flex items-center justify-between"><span className="text-sm text-slate-600">Bookings</span><span className="text-lg font-semibold">{customer.total_bookings || 0}</span></div>
               <div className="flex items-center justify-between"><span className="text-sm text-slate-600">Total Spent</span><span className="text-lg font-semibold">₹{Number(customer.total_spent || 0).toLocaleString('en-IN')}</span></div>
               {Number(customer.outstanding_balance) > 0 && <div className="flex items-center justify-between"><span className="text-sm text-slate-600">Outstanding</span><span className="text-lg font-semibold text-amber-600">₹{Number(customer.outstanding_balance).toLocaleString('en-IN')}</span></div>}

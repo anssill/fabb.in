@@ -1,4 +1,4 @@
-export type PricedItem = { price: number; quantity: number; discount_percent?: number; rental_days?: number }
+export type PricedItem = { price: number; quantity: number; discount_percent?: number; discount_flat?: number | null; rental_days?: number }
 export const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100
 export function calculateItemPricing(item: PricedItem) {
   const days = item.rental_days ?? 1
@@ -9,8 +9,14 @@ export function calculateItemPricing(item: PricedItem) {
     throw new Error('Enter a valid per-piece price, quantity and discount between 0 and 100%.')
   }
   const subtotal = money(money(item.price) * item.quantity * days)
-  const discount_amount = money(subtotal * money(discount) / 100)
+  const flat = item.discount_flat
+  if (flat != null && (!Number.isFinite(flat) || flat < 0 || money(flat) > subtotal)) throw new Error('Rupee discount must be between zero and the item subtotal.')
+  const discount_amount = flat != null ? money(flat) : money(subtotal * money(discount) / 100)
   return { subtotal, discount_amount, total_amount: money(subtotal - discount_amount) }
+}
+
+export function clampItemDiscount<T extends PricedItem>(item: T): T {
+  return item.discount_flat == null ? item : { ...item, discount_flat: Math.min(item.discount_flat, money(money(item.price) * item.quantity * (item.rental_days ?? 1))) }
 }
 export function calculateBookingPricing(items: PricedItem[]) {
   return items.reduce((total, item) => {

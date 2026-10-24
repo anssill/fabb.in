@@ -14,6 +14,15 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_number_settings: {
+        Row: { branch_id: string; business_id: string; prefix: string; next_number: number; updated_at: string }
+        Insert: { branch_id: string; business_id: string; prefix: string; next_number: number; updated_at?: string }
+        Update: { branch_id?: string; business_id?: string; prefix?: string; next_number?: number; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "booking_number_settings_branch_id_fkey"; columns: ["branch_id"]; isOneToOne: true; referencedRelation: "branches"; referencedColumns: ["id"] },
+          { foreignKeyName: "booking_number_settings_business_id_fkey"; columns: ["business_id"]; isOneToOne: false; referencedRelation: "businesses"; referencedColumns: ["id"] }
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -283,6 +292,7 @@ export type Database = {
       booking_items: {
         Row: {
           discount_percent: number
+          discount_flat: number | null
           discount_amount: number
           line_total: number
           rate_basis: string
@@ -309,6 +319,7 @@ export type Database = {
         }
         Insert: {
           discount_percent?: number
+          discount_flat?: number | null
           rate_basis?: string
           booking_id: string
           branch_id: string
@@ -333,6 +344,7 @@ export type Database = {
         }
         Update: {
           discount_percent?: number
+          discount_flat?: number | null
           rate_basis?: string
           booking_id?: string
           branch_id?: string
@@ -553,10 +565,14 @@ export type Database = {
       }
       bookings: {
         Row: {
+          order_taken_by: string | null
+          additional_contact_numbers: Json
           creation_request_id: string | null
           actual_pickup_at: string | null
           actual_return_at: string | null
           advance_amount: number
+          condition_notes: string | null
+          condition_photos: string[]
           alteration_notes: string | null
           amount_paid: number
           archived_at: string | null
@@ -602,10 +618,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          order_taken_by?: string | null
           creation_request_id?: string | null
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
+          condition_notes?: string | null
+          condition_photos?: string[]
           alteration_notes?: string | null
           amount_paid?: number
           archived_at?: string | null
@@ -651,10 +670,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          order_taken_by?: string | null
           creation_request_id?: string | null
           actual_pickup_at?: string | null
           actual_return_at?: string | null
           advance_amount?: number
+          condition_notes?: string | null
+          condition_photos?: string[]
           alteration_notes?: string | null
           amount_paid?: number
           archived_at?: string | null
@@ -3659,6 +3681,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      search_booking_ids: { Args: { p_branch_id: string; p_term: string }; Returns: { id: string }[] }
+      search_business_customers: { Args: { p_term: string }; Returns: Json }
+      update_booking_items: { Args: { p_booking_id: string; p_items: Json; p_expected_updated_at: string; p_overbook_reason?: string }; Returns: undefined }
+      save_booking_number_settings: { Args: { p_branch_id: string; p_prefix: string; p_next_number: number }; Returns: Json }
       create_priced_booking: { Args: { p_input: Json }; Returns: Json }
       update_booking_item_pricing: { Args: { p_booking_id: string; p_items: Json; p_expected_updated_at: string }; Returns: undefined }
       advance_inventory_transfer: {

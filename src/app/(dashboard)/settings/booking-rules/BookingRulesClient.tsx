@@ -11,11 +11,12 @@ import { useAppStore } from '@/lib/store'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Save } from 'lucide-react'
+import { BookingNumberingSettings } from './BookingNumberingSettings'
 
 export function BookingRulesClient() {
   const branch = useAppStore(state => state.activeBranch)
   if (!branch) return <p className="text-sm text-muted-foreground">Loading branch settings...</p>
-  return <BookingRulesClientForm key={branch.id} />
+  return <div className="space-y-6"><BookingNumberingSettings key={branch.id} branchId={branch.id} branchPrefix={branch.prefix} /><BookingRulesClientForm key={branch.id} /></div>
 }
 
 function BookingRulesClientForm() {
@@ -68,9 +69,9 @@ function BookingRulesClientForm() {
         <CardContent className="space-y-6">
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <Label>Minimum Advance Payment</Label>
+              <Label>Suggested Advance Payment</Label>
               <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{advancePct}%</span>
-              <Input aria-label="Minimum advance percentage" type="number" min={0} max={100} className="w-24" value={advancePct} onChange={e => setAdvancePct(Number(e.target.value))} />
+              <Input aria-label="Suggested advance percentage" type="number" min={0} max={100} className="w-24" value={advancePct} onChange={e => setAdvancePct(Number(e.target.value))} />
             </div>
             <Slider
               value={[advancePct]}
@@ -78,7 +79,7 @@ function BookingRulesClientForm() {
               min={0} max={100} step={1}
               className="w-full"
             />
-            <p className="text-xs text-slate-400">Minimum percentage of total amount collected at booking time.</p>
+            <p className="text-xs text-slate-400">Suggested advance preset at booking time. Staff can enter any amount from zero to the booking total.</p>
           </div>
 
           <Separator />

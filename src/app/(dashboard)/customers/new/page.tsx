@@ -46,19 +46,14 @@ export default function NewCustomerPage() {
         .select('id')
         .eq('phone', normalizedPhone)
         .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
         .maybeSingle()
 
       let customerId;
 
       if (existing) {
-        const { error } = await supabase.from('customers').update({
-          name: form.name, email: form.email || null,
-          address: form.address || null, id_type: form.id_type || null,
-          id_number: form.id_number || null, notes: form.notes || null,
-        }).eq('id', existing.id)
-        if (error) throw error
-        customerId = existing.id
+        toast.info('This customer is already registered. Opening their existing profile.', { id: 'validation' })
+        router.push('/customers/' + existing.id)
+        return
       } else {
         const { data, error } = await supabase.from('customers').insert({
           business_id: staff.business_id,

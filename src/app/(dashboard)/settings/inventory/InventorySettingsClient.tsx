@@ -24,7 +24,13 @@ const DEFAULT_CATEGORIES = [
 ]
 
 export function InventorySettingsClient() {
-  const { business } = useAppStore()
+  const business = useAppStore(state => state.business)
+  if (!business) return <p className="text-sm text-muted-foreground">Loading inventory settings…</p>
+  return <InventorySettingsForm key={business.id} />
+}
+
+function InventorySettingsForm() {
+  const { business, setBusiness } = useAppStore()
   const supabase = createClient()
   const [isSaving, setIsSaving] = useState(false)
 
@@ -49,33 +55,42 @@ export function InventorySettingsClient() {
     setIsDialogOpen(true)
   }
 
-  function saveCategory() {
+  async function saveCategory() {
     if (!catForm.name.trim()) { toast.error('Category name required'); return }
-    if (editingIndex !== null) {
-      setCategories(prev => prev.map((c, i) => i === editingIndex ? catForm : c))
-    } else {
-      setCategories(prev => [...prev, { name: catForm.name, prefix: catForm.prefix.toUpperCase().slice(0, 4) || catForm.name.slice(0, 3).toUpperCase() }])
-    }
-    setIsDialogOpen(false)
+    const category = { name: catForm.name.trim(), prefix: catForm.prefix.trim().toUpperCase().slice(0, 4) || catForm.name.trim().slice(0, 3).toUpperCase() }
+    if (categories.some((entry, index) => index !== editingIndex && entry.name.trim().toLowerCase() === category.name.toLowerCase())) { toast.error('This category already exists'); return }
+    const next = editingIndex !== null ? categories.map((entry, index) => index === editingIndex ? category : entry) : [...categories, category]
+    if (await persistSettings(next)) { setCategories(next); setIsDialogOpen(false) }
   }
 
-  function deleteCategory(idx: number) {
-    setCategories(prev => prev.filter((_, i) => i !== idx))
+  async function deleteCategory(idx: number) {
+    const next = categories.filter((_, i) => i !== idx)
+    if (await persistSettings(next)) setCategories(next)
   }
 
   async function handleSave() {
-    if (!business) return
+    await persistSettings(categories)
+  }
+
+  async function persistSettings(nextCategories: { name: string; prefix: string }[]) {
+    if (!business || isSaving) return false
     setIsSaving(true)
     try {
-      const newSettings = { ...bizSettings, categories, low_stock_threshold: lowStockThreshold }
+      const { data: saved, error: loadError } = await supabase.from('businesses').select('settings').eq('id', business.id).single()
+      if (loadError) throw loadError
+      const newSettings = { ...(saved?.settings as Record<string, unknown> || {}), categories: nextCategories, low_stock_threshold: lowStockThreshold }
       const { error } = await supabase
         .from('businesses')
         .update({ settings: newSettings })
         .eq('id', business.id)
+        .select('id').single()
       if (error) throw error
+      setBusiness({ ...business, settings: newSettings })
       toast.success('Inventory settings saved')
+      return true
     } catch (error: any) {
       toast.error(error.message || 'Failed to save inventory settings')
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -90,7 +105,7 @@ export function InventorySettingsClient() {
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Package className="w-4 h-4 text-slate-500" /> Item Categories
             </CardTitle>
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={openAdd}>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={openAdd} disabled={isSaving}>
               <Plus className="w-3.5 h-3.5 mr-1" /> Add Category
             </Button>
           </div>
@@ -104,12 +119,12 @@ export function InventorySettingsClient() {
                   <span className="text-sm text-slate-800">{cat.name}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(idx)}>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(idx)} disabled={isSaving}>
                     <Pencil className="w-3.5 h-3.5 text-slate-400" />
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" disabled={isSaving}>
                         <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </Button>
                     </AlertDialogTrigger>
@@ -117,7 +132,7 @@ export function InventorySettingsClient() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete category?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Removing &quot;{cat.name}&quot; will not affect existing items but they will lose their category.
+                          Removing &quot;{cat.name}&quot; hides it from Add Item. Existing items keep their category.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -167,7 +182,7 @@ export function InventorySettingsClient() {
       </div>
 
       {/* Category Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={value => { if (!isSaving) setIsDialogOpen(value) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{editingIndex !== null ? 'Edit Category' : 'Add Category'}</DialogTitle>
@@ -184,9 +199,9 @@ export function InventorySettingsClient() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={saveCategory}>
-              {editingIndex !== null ? 'Save Changes' : 'Add Category'}
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={saveCategory} disabled={isSaving}>
+              {isSaving ? 'Saving…' : editingIndex !== null ? 'Save Changes' : 'Add Category'}
             </Button>
           </DialogFooter>
         </DialogContent>

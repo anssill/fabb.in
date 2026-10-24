@@ -1,7 +1,7 @@
 'use server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-export async function updateBookingPricing(bookingId: string, items: { id: string; price: number; discount_percent: number }[], updatedAt: string) {
+export async function updateBookingPricing(bookingId: string, items: { id: string; price: number; discount_percent: number; discount_flat?: number | null }[], updatedAt: string) {
   const supabase = await createClient()
   const { error } = await supabase.rpc('update_booking_item_pricing', { p_booking_id: bookingId, p_items: items, p_expected_updated_at: updatedAt })
   if (error) return { error: error.message }

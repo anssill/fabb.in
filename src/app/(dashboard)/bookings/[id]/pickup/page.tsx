@@ -1,5 +1,8 @@
 'use client'
 
+import { SplitPaymentFields } from '@/components/payments/SplitPaymentFields'
+import { paymentParts, paymentError, paymentSummary, type PaymentPart, type PaymentMethod } from '@/lib/payment-splits'
+
 import { useRef, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -9,13 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+
 import { Textarea } from '@/components/ui/textarea'
 import {
   User, Package, IndianRupee, CheckCircle2, ChevronLeft,
@@ -26,12 +23,7 @@ import { toast } from 'sonner'
 import { safeJsonParse, isValidUuid } from '@/lib/api-utils'
 import { MediaUpload } from '@/components/shared/MediaUpload'
 
-const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'upi', label: 'UPI' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'card', label: 'Card' },
-]
+
 
 type BookingItem = {
   id: string
@@ -76,14 +68,16 @@ export default function PickupPage() {
   const [customerVerified, setCustomerVerified] = useState(false)
 
   // Step 2 — balance payment
-  const [balanceMethod, setBalanceMethod] = useState('cash')
+  const [balanceSplits, setBalanceSplits] = useState<PaymentPart[]>()
+  const [balanceMethod, setBalanceMethod] = useState<PaymentMethod>('cash')
   const [balanceAmount, setBalanceAmount] = useState('')
   const [balanceRef, setBalanceRef] = useState('')
   const [balanceNotes, setBalanceNotes] = useState('')
   const [skipBalance, setSkipBalance] = useState(false)
 
   // Step 3 — deposit
-  const [depositMethod, setDepositMethod] = useState('cash')
+  const [depositSplits, setDepositSplits] = useState<PaymentPart[]>()
+  const [depositMethod, setDepositMethod] = useState<PaymentMethod>('cash')
   const [depositAmount, setDepositAmount] = useState('')
   const [depositRef, setDepositRef] = useState('')
   const [depositNotes, setDepositNotes] = useState('')
@@ -154,17 +148,19 @@ export default function PickupPage() {
   const [isEditingDeposit, setIsEditingDeposit] = useState(false)
   const [newDepositTotal, setNewDepositTotal] = useState('')
 
-  const pickupRequest = useRef<string | null>(null)
+  const pickupRequest = useRef<{ payload: string; key: string } | null>(null)
   const handleConfirmPickup = async () => {
     if (!booking) return
     setSubmitting(true)
     try {
       const payments = []
-      if (balanceDue > 0 && !skipBalance && Number(balanceAmount) > 0) payments.push({ type: 'balance', amount: Number(balanceAmount), method: balanceMethod, reference: balanceRef.trim() || null, notes: balanceNotes.trim() || null })
-      if (depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected && Number(depositAmount) > 0) payments.push({ type: 'deposit', amount: Number(depositAmount), method: depositMethod, reference: depositRef.trim() || null, notes: depositNotes.trim() || null })
+      if (balanceDue > 0 && !skipBalance && Number(balanceAmount) > 0) payments.push(...paymentParts(Number(balanceAmount), { method: balanceMethod, reference: balanceRef, splits: balanceSplits }).map(part => ({ ...part, type: 'balance', notes: balanceNotes.trim() || null })))
+      if (depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected && Number(depositAmount) > 0) payments.push(...paymentParts(Number(depositAmount), { method: depositMethod, reference: depositRef, splits: depositSplits }).map(part => ({ ...part, type: 'deposit', notes: depositNotes.trim() || null })))
+      const payload = JSON.stringify({ payments, pickupPhotos })
+      if (pickupRequest.current?.payload !== payload) pickupRequest.current = { payload, key: crypto.randomUUID() }
       const res = await fetch(`/api/bookings/${booking.id}/status`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'picked_up', idempotencyKey: pickupRequest.current ?? (pickupRequest.current = crypto.randomUUID()), payments, pickupPhotos }),
+        body: JSON.stringify({ status: 'picked_up', idempotencyKey: pickupRequest.current.key, payments, pickupPhotos }),
       })
       if (!res.ok) { const result = await safeJsonParse(res); throw new Error(result.error || 'Failed to confirm pickup') }
       toast.success('Pickup confirmed! Booking is now active.')
@@ -356,23 +352,7 @@ export default function PickupPage() {
                         placeholder={String(balanceDue)}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Payment Method</Label>
-                      <Select value={balanceMethod} onValueChange={setBalanceMethod}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_METHODS.map((m) => (
-                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {(balanceMethod === 'upi' || balanceMethod === 'bank_transfer') && (
-                      <div className="space-y-1.5">
-                        <Label>Reference / UTR (optional)</Label>
-                        <Input value={balanceRef} onChange={(e) => setBalanceRef(e.target.value)} placeholder="Transaction reference" />
-                      </div>
-                    )}
+                    <SplitPaymentFields total={Number(balanceAmount)} value={{ method: balanceMethod, reference: balanceRef, splits: balanceSplits }} onChange={value => { setBalanceMethod(value.method); setBalanceRef(value.reference ?? ''); setBalanceSplits(value.splits) }}/>
                     <div className="space-y-1.5">
                       <Label>Notes (optional)</Label>
                       <Textarea value={balanceNotes} onChange={(e) => setBalanceNotes(e.target.value)} rows={2} placeholder="Any notes..." />
@@ -384,7 +364,7 @@ export default function PickupPage() {
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => setStep(3)}>
+              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => { const error = !skipBalance ? paymentError(Number(balanceAmount), { method: balanceMethod, splits: balanceSplits }) : null; if (error) { toast.error(error); return } setStep(3) }}>
                 Continue <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -478,23 +458,7 @@ export default function PickupPage() {
                         placeholder={String(depositNeeded)}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Payment Method</Label>
-                      <Select value={depositMethod} onValueChange={setDepositMethod}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_METHODS.map((m) => (
-                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {(depositMethod === 'upi' || depositMethod === 'bank_transfer') && (
-                      <div className="space-y-1.5">
-                        <Label>Reference / UTR (optional)</Label>
-                        <Input value={depositRef} onChange={(e) => setDepositRef(e.target.value)} placeholder="Transaction reference" />
-                      </div>
-                    )}
+                    <SplitPaymentFields total={Number(depositAmount)} value={{ method: depositMethod, reference: depositRef, splits: depositSplits }} onChange={value => { setDepositMethod(value.method); setDepositRef(value.reference ?? ''); setDepositSplits(value.splits) }}/>
                     <div className="space-y-1.5">
                       <Label>Notes (optional)</Label>
                       <Textarea value={depositNotes} onChange={(e) => setDepositNotes(e.target.value)} rows={2} placeholder="Any notes..." />
@@ -506,7 +470,7 @@ export default function PickupPage() {
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Back</Button>
-              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => setStep(4)}>
+              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => { const error = !skipDeposit ? paymentError(Number(depositAmount), { method: depositMethod, splits: depositSplits }) : null; if (error) { toast.error(error); return } setStep(4) }}>
                 Continue <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -536,7 +500,7 @@ export default function PickupPage() {
             />
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(3)}>Back</Button>
+              <Button variant="outline" className="flex-1" onClick={() => { const error = !skipBalance ? paymentError(Number(balanceAmount), { method: balanceMethod, splits: balanceSplits }) : null; if (error) { toast.error(error); return } setStep(3) }}>Back</Button>
               <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => setStep(5)}>
                 Continue <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -574,14 +538,14 @@ export default function PickupPage() {
               {(balanceDue > 0 && !skipBalance) && (
                 <div className="bg-amber-50 rounded-lg p-4 flex justify-between text-sm">
                   <span className="font-medium text-amber-800">Balance to collect</span>
-                  <span className="font-bold text-amber-900">₹{parseFloat(balanceAmount || '0').toLocaleString('en-IN')} via {balanceMethod}</span>
+                  <span className="font-bold text-amber-900">{paymentSummary(Number(balanceAmount), { method: balanceMethod, splits: balanceSplits })}</span>
                 </div>
               )}
 
               {(depositNeeded > 0 && !skipDeposit && !depositAlreadyCollected) && (
                 <div className="bg-blue-50 rounded-lg p-4 flex justify-between text-sm">
                   <span className="font-medium text-blue-800">Deposit to collect</span>
-                  <span className="font-bold text-blue-900">₹{parseFloat(depositAmount || '0').toLocaleString('en-IN')} via {depositMethod}</span>
+                  <span className="font-bold text-blue-900">{paymentSummary(Number(depositAmount), { method: depositMethod, splits: depositSplits })}</span>
                 </div>
               )}
 
@@ -594,7 +558,7 @@ export default function PickupPage() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(4)} disabled={submitting}>Back</Button>
+              <Button variant="outline" className="flex-1" onClick={() => { const error = !skipDeposit ? paymentError(Number(depositAmount), { method: depositMethod, splits: depositSplits }) : null; if (error) { toast.error(error); return } setStep(4) }} disabled={submitting}>Back</Button>
               <Button
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
                 onClick={handleConfirmPickup}

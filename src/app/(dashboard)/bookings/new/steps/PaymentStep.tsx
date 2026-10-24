@@ -3,25 +3,29 @@
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SplitPaymentFields } from '@/components/payments/SplitPaymentFields'
 import { CreditCard } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { BookingPayment } from '../page'
+import { bookingNumberError, normalizeBookingNumber } from '@/lib/booking-number'
 
 interface Props {
+  customBookingNumber: string
+  setCustomBookingNumber: (value: string) => void
   payment: BookingPayment
   setPayment: (p: BookingPayment) => void
   totalAmount: number
 }
 
-export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
+export function PaymentStep({ payment, setPayment, totalAmount, customBookingNumber, setCustomBookingNumber }: Props) {
   const settings = useAppStore(state => state.activeBranch?.settings)
   const minPct = Number(settings?.min_advance_pct ?? 0)
   const depositPct = Number(settings?.deposit_default_pct ?? 0)
+  const numberError = bookingNumberError(customBookingNumber)
   const balanceDue = totalAmount - payment.advance_amount
 
   const presets = [
-    { label: `Minimum ${minPct}%`, value: Math.ceil(totalAmount * minPct) / 100 },
+    { label: `Suggested ${minPct}%`, value: Math.min(totalAmount, Math.round(totalAmount * minPct) / 100) },
     { label: '50%', value: Math.round(totalAmount * 0.5) },
     { label: 'Full', value: totalAmount },
   ]
@@ -44,18 +48,25 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
 
         {/* Advance amount */}
         <div className="space-y-2">
-          <Label>Advance amount * (minimum {minPct}%)</Label>
+          <Label htmlFor="advance-amount">Advance amount (₹)</Label>
           <Input
             type="number"
+            id="advance-amount"
+            step="0.01"
             value={payment.advance_amount || ''}
-            onChange={(e) => setPayment({ ...payment, advance_amount: Math.max(0, Math.min(Number(e.target.value), totalAmount)) })}
+            onChange={(e) => setPayment({ ...payment, advance_amount: Number(e.target.value) })}
             placeholder="0"
             min={0}
             max={totalAmount}
           />
+          <p className="text-xs text-muted-foreground">Enter any amount from ₹0 to the booking total, or choose a preset below.</p>
+          {(!Number.isFinite(payment.advance_amount) || payment.advance_amount < 0 || payment.advance_amount > totalAmount) && (
+            <p role="alert" className="text-xs text-destructive">Enter an advance between ₹0 and ₹{totalAmount.toLocaleString('en-IN')}.</p>
+          )}
           <div className="flex gap-2">
             {presets.map((preset) => (
               <button
+                type="button"
                 key={preset.label}
                 onClick={() => setPayment({ ...payment, advance_amount: preset.value })}
                 className={`px-3 py-1 text-xs rounded-full border transition-colors ${
@@ -70,34 +81,18 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           </div>
         </div>
 
-        {/* Payment method */}
-        <div className="space-y-2">
-          <Label>Payment method</Label>
-          <Select
-            value={payment.method}
-            onValueChange={(v) => setPayment({ ...payment, method: v as BookingPayment['method'] })}
-          >
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cash">💵 Cash</SelectItem>
-              <SelectItem value="upi">📱 UPI</SelectItem>
-              <SelectItem value="card">💳 Card</SelectItem>
-              <SelectItem value="bank_transfer">🏦 Bank Transfer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <SplitPaymentFields label="Advance" total={payment.advance_amount} value={payment} onChange={value => setPayment({ ...payment, ...value })}/>
 
-        {/* Reference */}
-        {payment.method !== 'cash' && (
-          <div className="space-y-2">
-            <Label>Transaction reference <span className="text-muted-foreground">(optional)</span></Label>
-            <Input
-              value={payment.reference || ''}
-              onChange={(e) => setPayment({ ...payment, reference: e.target.value })}
-              placeholder="UPI ref / transaction ID"
-            />
-          </div>
-        )}
+        <div className="space-y-2">
+          <Label htmlFor="custom-booking-number">Custom booking number <span className="text-muted-foreground">(optional)</span></Label>
+          <Input id="custom-booking-number" value={customBookingNumber} maxLength={40}
+            onChange={event => setCustomBookingNumber(event.target.value.toUpperCase())}
+            onBlur={() => setCustomBookingNumber(normalizeBookingNumber(customBookingNumber))}
+            aria-invalid={!!numberError} aria-describedby="custom-booking-number-help"
+            placeholder="Automatic if left blank" />
+          <p id="custom-booking-number-help" className="text-xs text-muted-foreground">Leave blank for this branch’s automatic numbering, or enter your own unique number using letters, numbers, hyphens, underscores or slashes.</p>
+          {numberError && <p role="alert" className="text-xs text-destructive">{numberError}</p>}
+        </div>
 
         {/* Physical bill number */}
         <div className="space-y-2">
@@ -123,6 +118,8 @@ export function PaymentStep({ payment, setPayment, totalAmount }: Props) {
           />
           <p className="text-xs text-muted-foreground">Refundable deposit collected now, separate from rental payment</p>
         </div>
+
+        {payment.deposit_amount > 0 && <SplitPaymentFields label="Deposit" total={payment.deposit_amount} value={{ method: payment.deposit_method ?? payment.method, reference: payment.deposit_reference, splits: payment.deposit_splits }} onChange={value => setPayment({ ...payment, deposit_method: value.method, deposit_reference: value.reference, deposit_splits: value.splits })}/>}
 
         {/* Notes */}
         <div className="space-y-2">

@@ -85,6 +85,12 @@ export function DatesStep({ dates, setDates }: Props) {
         <CardDescription>Set event, pickup, and return dates for this booking</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="order-taken-by">Order taken by</Label>
+          <Input id="order-taken-by" value={dates.order_taken_by ?? ''} maxLength={120}
+            onChange={event => setDates({ ...dates, order_taken_by: event.target.value })}
+            placeholder="Name of the person taking this order" />
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2 flex flex-col">
             <Label className="mb-1">Event date *</Label>

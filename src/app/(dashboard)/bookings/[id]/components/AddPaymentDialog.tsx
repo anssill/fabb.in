@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { IndianRupee } from 'lucide-react'
+import { SplitPaymentFields } from '@/components/payments/SplitPaymentFields'
+import { paymentParts, type PaymentPart, type PaymentMethod } from '@/lib/payment-splits'
 import { safeJsonParse } from '@/lib/api-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,13 +41,6 @@ const PAYMENT_TYPES = [
   { value: 'refund', label: 'Refund' },
 ]
 
-const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'upi', label: 'UPI' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'card', label: 'Card' },
-]
-
 export function AddPaymentDialog({
   bookingId,
   balanceDue,
@@ -58,13 +53,15 @@ export function AddPaymentDialog({
 
   const [paymentType, setPaymentType] = useState('balance')
   const [amount, setAmount] = useState(String(balanceDue > 0 ? balanceDue : 0))
-  const [method, setMethod] = useState('cash')
+  const [method, setMethod] = useState<PaymentMethod>('cash')
   const [reference, setReference] = useState('')
+  const [splits, setSplits] = useState<PaymentPart[]>()
   const [notes, setNotes] = useState('')
 
   // Update default amount when payment type changes
   const handleTypeChange = (type: string) => {
     setPaymentType(type)
+    setSplits(undefined)
     if (type === 'balance') {
       setAmount(String(balanceDue > 0 ? balanceDue : 0))
     } else if (type === 'deposit_refund') {
@@ -74,7 +71,6 @@ export function AddPaymentDialog({
     }
   }
 
-  const showReference = method === 'upi' || method === 'bank_transfer'
 
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount)
@@ -83,7 +79,9 @@ export function AddPaymentDialog({
       return
     }
 
-    const payload = JSON.stringify({ paymentType, parsedAmount, method, reference, notes })
+    let parts: PaymentPart[]
+    try { parts = paymentParts(parsedAmount, { method, reference, splits }) } catch (error) { toast.error((error as Error).message); return }
+    const payload = JSON.stringify({ paymentType, parsedAmount, parts, notes })
     if (request.current?.payload !== payload) request.current = { payload, key: crypto.randomUUID() }
     setIsSubmitting(true)
     try {
@@ -93,6 +91,7 @@ export function AddPaymentDialog({
         body: JSON.stringify({
         type: paymentType,
         amount: parsedAmount,
+        parts,
         method,
         reference: reference.trim() || null,
         notes: notes.trim() || null,
@@ -114,19 +113,19 @@ export function AddPaymentDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={value => { if (!isSubmitting) { setOpen(value); if (value) { setAmount(String(balanceDue)); setPaymentType("balance"); setSplits(undefined) } } }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full">
           <IndianRupee className="w-4 h-4 mr-2" />
           Add Payment
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
           <DialogDescription>Record rental payments and refundable deposits separately.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <fieldset disabled={isSubmitting} className="space-y-4 py-2">
           {/* Payment Type */}
           <div className="space-y-1.5">
             <Label htmlFor="payment-type">Payment Type</Label>
@@ -151,42 +150,15 @@ export function AddPaymentDialog({
               id="amount"
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter amount"
             />
           </div>
 
-          {/* Payment Method */}
-          <div className="space-y-1.5">
-            <Label htmlFor="method">Payment Method</Label>
-            <Select value={method} onValueChange={setMethod}>
-              <SelectTrigger id="method">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Reference / UTR — shown for UPI and Bank Transfer */}
-          {showReference && (
-            <div className="space-y-1.5">
-              <Label htmlFor="reference">Reference / UTR Number (optional)</Label>
-              <Input
-                id="reference"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="Enter transaction reference"
-              />
-            </div>
-          )}
+          <SplitPaymentFields total={Number(amount)} value={{ method, reference, splits }} onChange={value => { setMethod(value.method); setReference(value.reference ?? ''); setSplits(value.splits) }}/>
+          <p className="text-xs text-muted-foreground">Collect part or all of the balance. Any unpaid rental amount stays due.</p>
 
           {/* Notes */}
           <div className="space-y-1.5">
@@ -207,7 +179,7 @@ export function AddPaymentDialog({
           >
             {isSubmitting ? 'Recording...' : 'Record Payment'}
           </Button>
-        </div>
+        </fieldset>
       </DialogContent>
     </Dialog>
   )

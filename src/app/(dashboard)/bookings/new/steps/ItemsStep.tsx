@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Search, Package, Plus, Minus, Trash2 } from 'lucide-react'
+import { Search, Package, Plus, Minus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
+import { calculateBookingPricing, calculateItemPricing, clampItemDiscount } from '@/lib/booking-pricing'
+import { ItemDiscountInput } from '@/components/payments/ItemDiscountInput'
 import type { BookingItem, BookingDates } from '../page'
 
 interface Props {
@@ -15,399 +19,229 @@ interface Props {
   setItems: (items: BookingItem[]) => void
   dates: BookingDates
   setDates: (dates: BookingDates) => void
+  branchId?: string
+  reservedQuantities?: Record<string, number>
 }
-
 interface SearchResult {
   id: string
   name: string
   sku: string | null
-  category: string
   price: number
   cover_image_url: string | null
-  item_variants: {
-    id: string
-    size: string
-    total_stock: number
-  }[]
+  item_variants: { id: string; size: string; total_stock: number; price_override: number | null }[]
+}
+const NO_RESERVATIONS: Record<string, number> = {}
+type AvailabilityRow = { variant_id: string; physical_stock: number; peak_booked: number; out_quantity: number; unavailable_quantity: number; available_quantity: number }
+
+function ItemPhoto({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false)
+  return <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/30">
+    {src && !failed
+      ? <Image unoptimized src={src} alt={`${name} photo`} width={48} height={48} className="h-full w-full object-contain" onError={() => setFailed(true)} />
+      : <Package aria-hidden="true" className="h-5 w-5 text-muted-foreground" />}
+  </div>
 }
 
-export function ItemsStep({ items, setItems, dates, setDates }: Props) {
-  const { staff } = useAppStore()
+export function ItemsStep({ items, setItems, dates, setDates, branchId, reservedQuantities = NO_RESERVATIONS }: Props) {
+  const { staff, activeBranch } = useAppStore()
+  const businessId = staff?.business_id
+  const branch = branchId ?? activeBranch?.id ?? staff?.branch_id
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
-  const [searching, setSearching] = useState(false)
+  const [searching, setSearching] = useState(true)
+  const [searchError, setSearchError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [available, setAvailable] = useState<Record<string, number>>({})
+  const [availabilityRows, setAvailabilityRows] = useState<AvailabilityRow[]>([])
+  const [checkedPeriod, setCheckedPeriod] = useState('')
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
+  const period = `${branch}:${dates.pickup_date}:${dates.return_date}`
+  const validPeriod = !!dates.pickup_date && !!dates.return_date && dates.return_date >= dates.pickup_date
+  const [checking, setChecking] = useState(true)
+  const [availabilityError, setAvailabilityError] = useState(false)
+  const [selectedListRef, setSelectedListRef] = useState<HTMLDivElement | null>(null)
 
-  // Real-time stock states
-  const [availableQuantities, setAvailableQuantities] = useState<Record<string, number>>({})
-  const [variantTotalStocks, setVariantTotalStocks] = useState<Record<string, number>>({})
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
-
-  // Ignore in-flight results when the selected dates or branch change.
   useEffect(() => {
     let cancelled = false
-    const fetchAvailability = async () => {
-      setAvailableQuantities({})
-      if (!staff?.business_id || !staff.branch_id || !dates.pickup_date || !dates.return_date) {
-        setCheckingAvailability(false)
-        return
-      }
-      setCheckingAvailability(true)
-      try {
-        const supabase = createClient()
-        const { data, error } = await supabase.rpc('get_rental_availability', {
-          p_business_id: staff.business_id,
-          p_branch_id: staff.branch_id,
-          p_from: dates.pickup_date,
-          p_to: dates.return_date,
-          p_item_id: null,
-          p_requested_quantity: 0,
-        })
-        if (cancelled) return
-        if (error) throw error
-        setAvailableQuantities(Object.fromEntries((data ?? []).map(
-          (row: { variant_id: string; available_quantity: number }) => [row.variant_id, row.available_quantity]
-        )))
-      } catch (error) {
-        if (cancelled) return
-        console.error('Failed to fetch calendar availability:', error)
-        toast.error('Could not verify availability. Stock shown is the total; availability will be checked again before confirmation.')
-      } finally {
-        if (!cancelled) setCheckingAvailability(false)
-      }
-    }
-    const timer = window.setTimeout(() => { void fetchAvailability() }, 0)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [dates.pickup_date, dates.return_date, staff?.business_id, staff?.branch_id])
-
-  // Synchronize missing stocks for items restored from drafts
-  useEffect(() => {
-    const missingIds = items
-      .map(i => i.variant_id)
-      .filter(id => variantTotalStocks[id] === undefined)
-
-    if (missingIds.length === 0) return
-
-    const fetchMissingTotalStocks = async () => {
-      try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from('item_variants')
-          .select('id, total_stock')
-          .in('id', missingIds)
-        
-        if (error) throw error
-        
-        setVariantTotalStocks(prev => {
-          const next = { ...prev }
-          data?.forEach(v => {
-            next[v.id] = v.total_stock
-          })
-          return next
-        })
-      } catch (err) {
-        console.error('Failed to fetch missing total stocks:', err)
-      }
-    }
-
-    fetchMissingTotalStocks()
-  }, [items, variantTotalStocks])
-
-  const handleSearch = async (rawQuery?: string) => {
-    if (!staff?.business_id) return
-    const query = (rawQuery ?? searchQuery).trim()
-    await Promise.resolve()
-    setSearching(true)
-    try {
-      const supabase = createClient()
-      let dbQuery = supabase
-        .from('items')
-        .select('id, name, sku, category, price, cover_image_url, item_variants(id, size, total_stock)')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', staff.branch_id)
-        .eq('is_active', true)
-        .limit(10)
-
-      if (query.length >= 1) {
-        dbQuery = dbQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
-      }
-
-      const { data, error } = await dbQuery.order('name', { ascending: true })
-      if (error) throw error
-
-      const normalized = ((data as SearchResult[]) || [])
-        .map((item) => ({
-          ...item,
-          item_variants: (item.item_variants || []).filter((v) => Number((v as any).total_stock || 0) > 0),
-        }))
-        .filter((item) => item.item_variants.length > 0)
-
-      setResults(normalized)
-      setVariantTotalStocks((previous) => {
-        const next = { ...previous }
-        for (const item of normalized) for (const variant of item.item_variants) next[variant.id] = variant.total_stock
-        return next
-      })
-    } catch (error) {
-      console.error('Items search failed:', error)
-      toast.error('Could not load items. Please refresh and try again.')
+    const timer = window.setTimeout(async () => {
+      setSearching(true)
+      setSearchError('')
       setResults([])
-    } finally {
-      setSearching(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!staff?.business_id) return
-    const timer = window.setTimeout(() => { void handleSearch('') }, 0)
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff?.business_id])
-
-  useEffect(() => {
-    if (!staff?.business_id) return
-    if (searchQuery.trim().length === 0) return
-
-    const delayDebounce = setTimeout(() => {
-      handleSearch(searchQuery)
-    }, 250)
-
-    return () => clearTimeout(delayDebounce)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, staff?.business_id])
-
-  const addItem = (item: SearchResult, variant: SearchResult['item_variants'][0]) => {
-    const exists = items.find((i) => i.variant_id === variant.id)
-    if (exists) {
-      toast.warning('This variant is already added')
-      return
-    }
-
-    const dynamicAvailable = availableQuantities[variant.id] ?? variant.total_stock
-    if (dynamicAvailable <= 0) {
-      toast.warning('Booking Conflict: This variant is already booked for the selected dates!', {
-        description: 'Allowed as override. Please verify availability manually.',
-      })
-    }
-
-    setVariantTotalStocks(prev => ({ ...prev, [variant.id]: variant.total_stock }))
-
-    setItems([
-      ...items,
-      {
-        item_id: item.id,
-        variant_id: variant.id,
-        name: item.name,
-        sku: item.sku || undefined,
-        size: variant.size,
-        price: item.price,
-        quantity: 1,
-        cover_image_url: item.cover_image_url,
-      },
-    ])
-  }
-
-  const updateQuantity = (variantId: string, delta: number) => {
-    const selectedItem = items.find((i) => i.variant_id === variantId)
-    if (!selectedItem) return
-
-    if (delta > 0) {
-      const totalStockVal = variantTotalStocks[variantId] ?? 999
-      const dynamicAvailable = availableQuantities[variantId] ?? totalStockVal
-
-      if (selectedItem.quantity + delta > dynamicAvailable) {
-        toast.warning(`Conflict: Quantity exceeds available stock (${dynamicAvailable} available) for these dates.`, {
-          description: 'Override allowed. Please verify manually.',
-        })
+      if (!businessId || !branch) { setSearching(false); return }
+      try {
+        let query = createClient().from('items')
+          .select('id, name, sku, price, cover_image_url, item_variants!inner(id, size, total_stock, price_override)')
+          .eq('business_id', businessId).eq('branch_id', branch).eq('is_active', true).is('archived_at', null)
+          .eq('item_variants.branch_id', branch).is('item_variants.archived_at', null)
+        const term = searchQuery.trim().replace(/[,().%_*"\\]/g, ' ')
+        if (term) query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`)
+        const { data, error } = await query.order('name').limit(30)
+        if (error) throw error
+        if (!cancelled) setResults(data ?? [])
+      } catch {
+        if (!cancelled) setSearchError('Could not load products. Try again.')
+      } finally {
+        if (!cancelled) setSearching(false)
       }
-    }
+    }, 250)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [businessId, branch, searchQuery, retry])
 
-    setItems(
-      items.map((i) =>
-        i.variant_id === variantId ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i
-      )
-    )
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      setAvailable({})
+      setAvailabilityError(false)
+      setChecking(true)
+      if (!businessId || !branch || !dates.pickup_date || !dates.return_date || dates.return_date < dates.pickup_date) { setChecking(false); return }
+      try {
+        const { data, error } = await createClient().rpc('get_rental_availability', {
+          p_business_id: businessId, p_branch_id: branch,
+          p_from: dates.pickup_date, p_to: dates.return_date, p_requested_quantity: 0,
+        })
+        if (error) throw error
+        if (!cancelled) { setAvailabilityRows(data ?? []); setCheckedPeriod(`${branch}:${dates.pickup_date}:${dates.return_date}`) }
+        if (!cancelled) setAvailable(Object.fromEntries((data ?? []).map((row: { variant_id: string; available_quantity: number }) => [row.variant_id, row.available_quantity + (reservedQuantities[row.variant_id] ?? 0)])))
+      } catch {
+        if (!cancelled) setAvailabilityError(true)
+      } finally {
+        if (!cancelled) setChecking(false)
+      }
+    }, 0)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [businessId, branch, dates.pickup_date, dates.return_date, reservedQuantities, retry])
+
+  const addItem = (product: SearchResult, variant: SearchResult['item_variants'][number]) => {
+    if (items.some(item => item.variant_id === variant.id)) return
+    setItems([...items, {
+      item_id: product.id, variant_id: variant.id, name: product.name, sku: product.sku ?? undefined,
+      cover_image_url: product.cover_image_url,
+      size: variant.size, price: Number(variant.price_override ?? product.price), quantity: 1,
+      discount_percent: 0, discount_flat: 0, rental_days: 1, rate_basis: 'booking',
+    }])
+    toast.success(`${product.name} · ${variant.size} added`)
   }
-
-  const removeItem = (variantId: string) => {
-    setItems(items.filter((i) => i.variant_id !== variantId))
+  const change = (id: string, field: 'quantity' | 'price' | 'discount_percent', value: number) => {
+    if (!Number.isFinite(value)) return
+    const maximum = field === 'quantity' ? 100000 : field === 'price' ? 99999999 : 100
+    const normalized = Math.min(maximum, Math.max(field === 'quantity' ? 1 : 0, field === 'quantity' ? Math.trunc(value) : value))
+    setItems(items.map(item => item.variant_id === id ? clampItemDiscount({ ...item, [field]: normalized }) : item))
   }
+  const hasConflict = items.some(item => available[item.variant_id] !== undefined && item.quantity > available[item.variant_id])
+  const totals = calculateBookingPricing(items)
 
-  const hasConflict = items.some((item) => item.quantity > (availableQuantities[item.variant_id] ?? variantTotalStocks[item.variant_id] ?? item.quantity))
-
-  return (
-    <>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="w-5 h-5 text-primary" />
-          Select Items
-        </CardTitle>
-        <CardDescription>Search and add items to this booking</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Search */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items by name or SKU..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => {
-                const next = e.target.value
-                setSearchQuery(next)
-                if (next.trim().length === 0) handleSearch('')
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-          </div>
-          <Button variant="outline" onClick={() => handleSearch()} disabled={searching}>
-            Search
-          </Button>
+  return <>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5 text-primary" />Booking products</CardTitle>
+      <CardDescription>Add multiple products and sizes to the same booking. Adjust each quantity, price and discount below.</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <section className="space-y-3 rounded-lg border p-3" aria-label="Availability dates">
+        <h3 className="font-semibold">Check item availability by date</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label htmlFor="availability-from">Pickup date</Label><Input id="availability-from" type="date" disabled={!!branchId} value={dates.pickup_date} onChange={event => setDates({ ...dates, pickup_date: event.target.value })} /></div>
+          <div><Label htmlFor="availability-to">Return date</Label><Input id="availability-to" type="date" disabled={!!branchId} min={dates.pickup_date} value={dates.return_date} onChange={event => setDates({ ...dates, return_date: event.target.value })} /></div>
         </div>
-
-        {/* Search Results */}
-        {!searching && results.length === 0 && (
-          <div className="text-center py-4 text-sm text-muted-foreground border border-border rounded-lg bg-muted/20">
-            No available items found
-          </div>
-        )}
-
-        {results.length > 0 && (
-          <div className="space-y-3 max-h-[380px] overflow-y-auto border border-border rounded-xl p-3 bg-muted/10">
-            {results.map((item) => (
-              <div key={item.id} className="border border-border rounded-xl p-3.5 bg-background shadow-sm space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
-                    {item.cover_image_url ? (
-                      <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-cover rounded-lg" />
-                    ) : (
-                      <Package className="w-6 h-6 text-muted-foreground/60" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.category} · ₹{item.price}/piece</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 border-t border-border/60 pt-3">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Available Sizes & Stock</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {item.item_variants
-                      ?.map((v) => {
-                        const isAdded = items.some((i) => i.variant_id === v.id)
-                        const dynamicAvailable = availableQuantities[v.id] ?? v.total_stock
-                        const isLowStock = dynamicAvailable <= 2 && dynamicAvailable > 0
-                        const isOut = dynamicAvailable <= 0
-                        return (
-                          <div 
-                            key={v.id} 
-                            className={`flex items-center justify-between p-2 rounded-lg border text-xs transition-colors ${
-                              isAdded 
-                                ? 'bg-muted/50 border-muted text-muted-foreground' 
-                                : isOut
-                                  ? 'bg-amber-500/10 border-amber-500/30 text-foreground'
-                                  : 'bg-card border-border hover:border-primary/50 text-foreground shadow-sm'
-                            }`}
-                          >
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded text-[10px]">
-                                  {v.size}
-                                </span>
-                              </div>
-                              <span className={`text-[10px] font-medium ${
-                                isOut 
-                                  ? 'text-amber-600 dark:text-amber-400 font-semibold' 
-                                  : isLowStock 
-                                    ? 'text-amber-600 dark:text-amber-400' 
-                                    : 'text-emerald-600 dark:text-emerald-400'
-                              }`}>
-                                {isOut ? '⚠️ Already booked (Conflict alert)' : `${dynamicAvailable} ${dynamicAvailable === 1 ? 'unit' : 'units'} left`}
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={isAdded ? "secondary" : isOut ? "outline" : "default"}
-                              className={`h-7 px-2.5 text-[10px] font-semibold ${
-                                isOut && !isAdded ? 'border-amber-500/50 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400' : ''
-                              }`}
-                              onClick={() => addItem(item, v)}
-                              disabled={isAdded}
-                            >
-                              {isAdded ? 'Selected' : isOut ? 'Select Anyway' : 'Select'}
-                            </Button>
-                          </div>
-                        )
-                      })}
-                    {(!item.item_variants || item.item_variants.length === 0) && (
-                      <span className="text-xs text-destructive font-medium col-span-full">No variants found</span>
-                    )}
-                  </div>
-                </div>
+        <p className="text-xs text-muted-foreground">Search by item code or name, then select “Full availability” to check every size for the whole rental period. These are the booking dates.</p>
+        {!validPeriod && <p role="alert" className="text-sm text-destructive">Choose a pickup date and a return date on or after pickup.</p>}
+        <Button type="button" variant="outline" size="sm" onClick={() => setRetry(value => value + 1)}>Refresh availability</Button>
+      </section>
+      <section className="space-y-3" aria-label="Add products">
+        <Label htmlFor="booking-product-search">Add another product</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input id="booking-product-search" className="pl-10" placeholder="Search by product name or code…" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} />
+        </div>
+        {searchError ? <div role="alert" className="text-sm text-destructive">{searchError} <Button type="button" variant="outline" size="sm" onClick={() => setRetry(value => value + 1)}>Retry</Button></div>
+          : searching ? <p role="status" className="text-sm text-muted-foreground">Loading products…</p>
+          : !results.length ? <p className="rounded-lg border p-4 text-sm text-muted-foreground">No matching products with active sizes. Try another name or code.</p>
+          : <div className="max-h-72 space-y-3 overflow-y-auto rounded-xl border p-3">
+            {results.map(product => <div key={product.id} className="space-y-2 rounded-lg border bg-background p-3">
+              <div className="flex items-center gap-3">
+                <ItemPhoto key={product.cover_image_url || product.id} src={product.cover_image_url} name={product.name} />
+                <div className="min-w-0"><p className="break-words font-medium">{product.name}</p><p className="text-xs text-muted-foreground">{product.sku}</p></div>
+                <Button type="button" variant="outline" size="sm" className="ml-auto" aria-expanded={expandedProduct === product.id} onClick={() => setExpandedProduct(expandedProduct === product.id ? null : product.id)}>Full availability</Button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Selected Items */}
-        {items.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-border">
-            <p className="text-sm font-semibold text-foreground">Selected Items ({items.length})</p>
-            {items.map((item) => (
-              <div
-                key={item.variant_id}
-                className="flex items-center justify-between p-3 bg-muted/40 border border-border text-foreground rounded-xl transition-all hover:bg-muted/60"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded bg-muted border border-border flex items-center justify-center shrink-0">
-                    {item.cover_image_url ? (
-                      <img src={item.cover_image_url} alt={item.name} className="w-full h-full object-cover rounded" />
-                    ) : (
-                      <Package className="w-5 h-5 text-muted-foreground/60" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.size} · ₹{item.price}/piece
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="w-7 h-7 p-0 border-border" onClick={() => updateQuantity(item.variant_id, -1)}>
-                    <Minus className="w-3 h-3" />
-                  </Button>
-                  <span className="text-sm font-medium w-6 text-center text-foreground">{item.quantity}</span>
-                  <Button variant="outline" size="sm" className="w-7 h-7 p-0 border-border" onClick={() => updateQuantity(item.variant_id, 1)}>
-                    <Plus className="w-3 h-3" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="w-7 h-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-500/10" onClick={() => removeItem(item.variant_id)}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            <div className="text-right pt-1">
-              <p className="text-sm text-muted-foreground">
-                Subtotal: <span className="font-bold text-foreground">₹{items.reduce((s, i) => s + i.price * i.quantity, 0).toLocaleString('en-IN')}</span>/piece
-              </p>
-            </div>
-          </div>
-        )}
-        {hasConflict && (
-          <div className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/20">
-            <label htmlFor="overbook-reason" className="text-sm font-semibold text-amber-900 dark:text-amber-200">Overbooking reason *</label>
-            <textarea id="overbook-reason" value={dates.overbook_reason || ''} onChange={(event) => setDates({ ...dates, overbook_reason: event.target.value })} className="min-h-20 w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="Why is this shortage being overridden?" />
-            <p className="text-xs text-amber-800 dark:text-amber-300">This reason is stored permanently with the booking audit.</p>
-          </div>
-        )}
-      </CardContent>
-    </>
-  )
+              {expandedProduct === product.id && <div aria-live="polite" className="overflow-x-auto">
+                {!validPeriod ? <p>Choose valid dates above.</p> : availabilityError ? <p role="alert">Availability could not be checked. Use Refresh availability to retry.</p> : checking || checkedPeriod !== period ? <p role="status">Checking availability…</p> : <>
+                  <p className="my-2 text-xs">{dates.pickup_date} through {dates.return_date} (inclusive)</p>
+                  <table className="w-full text-left text-xs"><thead><tr>{['Size', 'Stock', 'Peak booked', 'Out now', 'Damaged / missing', 'Available', 'In this booking'].map(label => <th key={label} className="p-2">{label}</th>)}</tr></thead>
+                    <tbody>{product.item_variants.map(variant => { const row = availabilityRows.find(entry => entry.variant_id === variant.id); return <tr key={variant.id} className="border-t"><td className="p-2">{variant.size}</td>{[row?.physical_stock, row?.peak_booked, row?.out_quantity, row?.unavailable_quantity, row ? available[variant.id] : undefined, items.find(item => item.variant_id === variant.id)?.quantity ?? 0].map((value, index) => <td key={index} className="p-2">{value ?? 'Unknown'}</td>)}</tr> })}</tbody>
+                  </table><p className="my-2 text-xs text-muted-foreground">Available is the minimum over the period. Out-now and peak-booked counts may overlap.{branchId ? ' Available includes the quantity already reserved by this booking.' : ''}</p>
+                </>}
+              </div>}
+              <div className="flex flex-wrap gap-2">{product.item_variants.map(variant => {
+                const selected = items.some(item => item.variant_id === variant.id)
+                const capacity = available[variant.id]
+                return <Button key={variant.id} type="button" variant={selected ? 'secondary' : 'outline'} size="sm" disabled={selected} onClick={() => addItem(product, variant)} aria-label={`Add ${product.name} size ${variant.size}`}>
+                  {selected ? 'Added' : '+'} {variant.size}
+                  {!selected && validPeriod && !availabilityError && !checking && checkedPeriod === period && capacity !== undefined && <span className="text-xs"> · {capacity} available</span>}
+                </Button>
+              })}</div>
+            </div>)}
+            <p className="text-xs text-muted-foreground">Showing up to 30 products. Search to find more.</p>
+          </div>}
+      </section>
+      <section className="space-y-3" aria-label="Selected booking products">
+        <h3 className="font-semibold">Selected products ({items.length}) · {items.reduce((sum, item) => sum + item.quantity, 0)} pieces</h3>
+        <div className="flex items-stretch gap-2">
+        <div
+          ref={setSelectedListRef}
+          aria-label="Selected items scroll area"
+          tabIndex={0}
+          className="h-[55dvh] min-h-64 max-h-[36rem] min-w-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto overscroll-y-contain rounded-xl border-2 border-border bg-muted/10 p-3 pr-2 [scrollbar-width:thin] [scrollbar-color:hsl(var(--foreground)/.35)_transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {!items.length && <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">No products selected. Add one or more products above.</p>}
+          {items.map(item => <SelectedBookingItem key={item.variant_id} item={item} onChange={(updated) => setItems(items.map(line => line.variant_id === item.variant_id ? updated : line))} onRemove={() => setItems(items.filter(line => line.variant_id !== item.variant_id))} />)}
+        </div>
+        <div className="flex w-10 shrink-0 flex-col justify-center gap-2" aria-label="Scroll selected items">
+          <Button type="button" variant="outline" size="icon" aria-label="Scroll selected items up" onClick={() => selectedListRef?.scrollBy({ top: -260, behavior: 'smooth' })}><ChevronUp className="h-5 w-5" /></Button>
+          <Button type="button" variant="outline" size="icon" aria-label="Scroll selected items down" onClick={() => selectedListRef?.scrollBy({ top: 260, behavior: 'smooth' })}><ChevronDown className="h-5 w-5" /></Button>
+        </div>
+        </div>
+        <p className="text-right font-semibold" aria-live="polite">Products total: ₹{totals.total_amount.toLocaleString('en-IN')}</p>
+      </section>
+      {(availabilityError || checking) && <p className="text-xs text-muted-foreground" role="status">{checking ? 'Checking date availability…' : 'Availability preview unavailable. Stock will be checked when you save.'}</p>}
+      {(hasConflict || !!branchId) && <div className="space-y-2 rounded-lg border p-3">
+        {hasConflict && <p className="text-sm text-amber-700">The selected quantity exceeds available stock. An authorized override is required.</p>}
+        <Label htmlFor="overbook-reason">Overbooking reason{hasConflict ? ' *' : ' (only if needed)'}</Label>
+        <Input id="overbook-reason" value={dates.overbook_reason ?? ''} onChange={event => setDates({ ...dates, overbook_reason: event.target.value })} placeholder="Explain any approved stock shortage" />
+      </div>}
+    </CardContent>
+  </>
 }
 
+function SelectedBookingItem({ item, onChange, onRemove }: { item: BookingItem; onChange: (item: BookingItem) => void; onRemove: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const setField = (field: 'quantity' | 'price', raw: number) => {
+    if (!Number.isFinite(raw)) return
+    const value = field === 'quantity' ? Math.min(100000, Math.max(1, Math.trunc(raw))) : Math.min(99999999, Math.max(0, raw))
+    onChange(clampItemDiscount({ ...item, [field]: value }))
+  }
+  return <div className="space-y-3 rounded-xl border bg-muted/20 p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <ItemPhoto key={item.cover_image_url || item.item_id} src={item.cover_image_url} name={item.name} />
+              <div className="min-w-0"><p className="break-words font-medium">{item.name}</p><p className="text-xs text-muted-foreground">Size {item.size}{item.sku ? ` · ${item.sku}` : ''} · {item.rate_basis === 'day' ? `${item.rental_days} billable day(s)` : 'Price for the entire booking'}</p></div>
+            </div>
+            <div className="flex shrink-0 gap-1"><Button type="button" variant="outline" size="sm" onClick={() => setEditing(value => !value)} aria-expanded={editing}>{editing ? 'Done' : 'Edit'}</Button><Button type="button" variant="ghost" size="sm" className="text-destructive" aria-label={`Remove ${item.name} size ${item.size}`} onClick={onRemove}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove</span></Button></div>
+          </div>
+          {editing && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1"><Label htmlFor={`${item.variant_id}-edit-size`}>Size</Label><Input id={`${item.variant_id}-edit-size`} value={item.size} onChange={event => onChange({ ...item, size: event.target.value })} /></div>
+            <div className="space-y-1"><Label htmlFor={`${item.variant_id}-quantity`}>Quantity</Label><div className="flex items-center gap-1">
+              <Button type="button" variant="outline" size="icon" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => setField('quantity', item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
+              <Input id={`${item.variant_id}-quantity`} type="number" min="1" max="100000" step="1" value={item.quantity} onChange={event => setField('quantity', Number(event.target.value))} className="min-w-0 text-center" />
+              <Button type="button" variant="outline" size="icon" aria-label={`Increase ${item.name} quantity`} onClick={() => setField('quantity', item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+            </div></div>
+            <div className="space-y-1"><Label htmlFor={`${item.variant_id}-price`}>Price per piece (₹)</Label><Input id={`${item.variant_id}-price`} type="number" min="0" max="99999999" step="0.01" value={item.price} onChange={event => setField('price', Number(event.target.value))} /></div>
+            <ItemDiscountInput item={item} onChange={discount => onChange(clampItemDiscount({ ...item, ...discount }))} />
+          </div>}
+          {!editing && <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-1"><Label>Quantity</Label><p className="rounded-md border bg-background px-3 py-2">{item.quantity}</p></div>
+            <div className="space-y-1"><Label>Price per piece</Label><p className="rounded-md border bg-background px-3 py-2">₹{item.price.toLocaleString('en-IN')}</p></div>
+            <div className="space-y-1"><Label>Discount</Label><p className="rounded-md border bg-background px-3 py-2">{item.discount_flat != null ? `₹${item.discount_flat.toLocaleString('en-IN')}` : `${item.discount_percent ?? 0}%`}</p></div>
+          </div>}
+          <p className="text-right text-sm font-semibold">Line total: ₹{calculateItemPricing(item).total_amount.toLocaleString('en-IN')}</p>
+        </div>
+}

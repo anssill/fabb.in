@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, UserPlus, User, Loader2 } from 'lucide-react'
+import { Search, UserPlus, User, Loader2, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAppStore } from '@/lib/store'
 import { ImageUpload } from '../../../inventory/components/ImageUpload'
@@ -64,13 +65,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
       try {
         const supabase = createClient()
         const { data, error } = await (supabase as any)
-          .from('customer_branch_summary')
-          .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
-          .eq('business_id', staff.business_id)
-          .eq('branch_id', activeBranch?.id || staff.branch_id)
-          .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
-          .order('name', { ascending: true })
-          .limit(5)
+          .rpc('search_business_customers', { p_term: query })
         if (error) throw error
         setLoadError('')
         setSearchResults(data || [])
@@ -92,13 +87,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     try {
       const supabase = createClient()
       const { data, error } = await (supabase as any)
-        .from('customer_branch_summary')
-        .select('id, name, phone, email, address, id_type, id_number, blacklisted, total_bookings')
-        .eq('business_id', staff.business_id)
-        .eq('branch_id', activeBranch?.id || staff.branch_id)
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
-        .order('name', { ascending: true })
-        .limit(5)
+        .rpc('search_business_customers', { p_term: query })
 
       if (error) throw error
         setLoadError('')
@@ -111,11 +100,24 @@ export function CustomerStep({ customer, setCustomer }: Props) {
     }
   }
 
-  const selectCustomer = (c: BookingCustomer) => {
-    setCustomer(c)
+  const selectCustomer = async (c: BookingCustomer) => {
+    if (!staff?.business_id || !c.id) return
+    const { data, error } = await createClient().from('customer_phones').select('phone,is_primary').eq('customer_id', c.id).eq('business_id', staff.business_id)
+    if (error) { setLoadError('Could not load customer contacts. Please retry.'); return }
+    setCustomer({ ...c, additional_phones: data?.filter(entry => !entry.is_primary && entry.phone !== c.phone).map(entry => entry.phone) || [] })
     setIsNew(false)
     setSearchResults([])
   }
+
+  useEffect(() => {
+    if (!isNew || customer.phone.length < 10) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const { data, error } = await (createClient() as any).rpc('search_business_customers', { p_term: customer.phone })
+      if (!cancelled && !error) setSearchResults((data || []).filter((entry: BookingCustomer) => [entry.phone, ...(entry.additional_phones || [])].some(phone => phone.replace(/\D/g, '') === customer.phone.replace(/\D/g, ''))))
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [customer.phone, isNew])
 
   const startNew = () => {
     setIsNew(true)
@@ -130,7 +132,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
           <User className="w-5 h-5 text-primary" />
           Customer Details
         </CardTitle>
-        <CardDescription>Search for an existing customer or add a new one</CardDescription>
+        <CardDescription>Search customers across your business. Recent customers belong to the active branch.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loadError && <p role="alert" className="text-sm text-red-600">{loadError}</p>}
@@ -173,6 +175,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                     <div>
                       <p className="text-sm font-medium text-foreground">{c.name}</p>
                       <p className="text-xs text-muted-foreground">{c.phone} {c.email ? `· ${c.email}` : ''}</p>
+                      {c.branch_id && c.branch_id !== (activeBranch?.id || staff?.branch_id) && <p className="text-xs text-primary">Existing customer from another branch</p>}
                     </div>
                     <div className="flex items-center gap-2">
                       {(c as unknown as { blacklisted?: boolean }).blacklisted && <Badge variant="destructive" className="text-xs">Blacklisted</Badge>}
@@ -238,6 +241,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 <div>
                   <p className="text-sm font-semibold">{customer.name}</p>
                   <p className="text-xs font-medium text-muted-foreground">{customer.phone}</p>
+                  <Link className="text-xs text-primary underline" href={`/customers/${customer.id}`} target="_blank" rel="noopener noreferrer">View customer history</Link>
                 </div>
                 <Button variant="ghost" size="sm" className="hover:bg-muted text-primary" onClick={() => { setCustomer({ name: '', phone: '' }); setIsNew(false) }}>
                   Change
@@ -247,6 +251,7 @@ export function CustomerStep({ customer, setCustomer }: Props) {
 
             {isNew && (
               <>
+                {searchResults.length > 0 && <div className="rounded-lg border p-3 space-y-2"><p className="text-sm font-medium">This number belongs to an existing customer.</p>{searchResults.map(existing => <Button key={existing.id} type="button" variant="outline" onClick={() => selectCustomer(existing)}>Use {existing.name} · {existing.phone}</Button>)}</div>}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Full name *</Label>
@@ -310,6 +315,10 @@ export function CustomerStep({ customer, setCustomer }: Props) {
                 </div>
               </>
             )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2"><Label>Additional contact numbers</Label><Button type="button" size="sm" variant="outline" disabled={(customer.additional_phones?.length || 0) >= 8} onClick={() => setCustomer({ ...customer, additional_phones: [...(customer.additional_phones || []), ''] })}><Plus className="mr-1 h-3 w-3" />Add number</Button></div>
+              {(customer.additional_phones || []).map((phone, index) => <div key={index} className="flex gap-2"><Input aria-label={`Additional contact number ${index + 1}`} type="tel" value={phone} placeholder="Additional phone number" onChange={event => setCustomer({ ...customer, additional_phones: customer.additional_phones?.map((value, i) => i === index ? event.target.value.replace(/\D/g, '').slice(0, 15) : value) })} /><Button type="button" variant="ghost" size="icon" aria-label={`Remove contact number ${index + 1}`} onClick={() => setCustomer({ ...customer, additional_phones: customer.additional_phones?.filter((_, i) => i !== index) })}><Trash2 className="h-4 w-4" /></Button></div>)}
+            </div>
             
             {customer.id && !customer.id_proof_url && (
               <div className="space-y-2 pt-4 border-t border-border">
